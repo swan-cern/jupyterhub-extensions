@@ -27,7 +27,7 @@ class CERNSpawner(SystemUserSpawner):
             container = resp.result()
             container_pid = container['State']['Pid']
             self.log.debug("We are in CERNSpawner. Container requested by %s has pid %s.", self.user.name, container_pid)
-            subprocess.call([os.environ["AUTHSCRIPT"]])
+            subprocess.call([os.environ["AUTHSCRIPT"], self.user.name, container_pid])
 
         tornadoFuture.add_done_callback(get_and_bind_ticket)
         yield tornadoFuture
