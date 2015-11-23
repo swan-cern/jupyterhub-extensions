@@ -20,14 +20,14 @@ class CERNSpawner(SystemUserSpawner):
 
         def get_and_bind_ticket(pippo):
             # Temporary limitation
-            if not self.user.name in ["dpiparo","etejedor"]: return
+            if not self.user.name in ["dpiparo","etejedor","dmaas","rw15u095"]: return
             resp = self.docker('inspect_container',self.container_id)
             if not resp:
                 self.log.warn("Container not found")
             container = resp.result()
             container_pid = container['State']['Pid']
             self.log.debug("We are in CERNSpawner. Container requested by %s has pid %s.", self.user.name, container_pid)
-            subprocess.call([os.environ["AUTHSCRIPT"], self.user.name, container_pid])
+            subprocess.call([os.environ["AUTHSCRIPT"], self.user.name, str(container_pid)])
 
         tornadoFuture.add_done_callback(get_and_bind_ticket)
         yield tornadoFuture
