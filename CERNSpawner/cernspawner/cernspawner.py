@@ -18,7 +18,7 @@ class CERNSpawner(SystemUserSpawner):
             image=image
         )
 
-        def get_and_bind_ticket(pippo):
+        def get_and_bind_ticket(dummy):
             # Temporary limitation
             if not self.user.name in ["dpiparo","etejedor","dmaas","rw15u095"]: return
             resp = self.docker('inspect_container',self.container_id)
