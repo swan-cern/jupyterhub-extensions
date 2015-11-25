@@ -12,8 +12,13 @@ class CERNSpawner(SystemUserSpawner):
     def start(self, image=None):
         """Start the container and perform the operations necessary for mounting
         EOS.
-
         """
+
+        # Create a temporary home for the user.
+        home_dir = "/home/%s" %self.user.name
+        subprocess.call(["mkdir","-p", home_dir])
+        subprocess.call(["chown", self.user.name, home_dir])
+
         tornadoFuture = super(CERNSpawner, self).start(
             image=image
         )
