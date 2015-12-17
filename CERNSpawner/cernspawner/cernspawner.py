@@ -4,9 +4,27 @@ import subprocess
 import os
 from dockerspawner import SystemUserSpawner
 from tornado import gen
+from traitlets import Unicode
 
 
 class CERNSpawner(SystemUserSpawner):
+
+    lcg_view_path = Unicode(
+        default_value = '/cvmfs/sft.cern.ch/lcg/views',
+        config = True,
+        help = """Path where LCG views are stored in CVMFS."""
+    )
+
+    def _env_default(self):
+        env = super(CERNSpawner, self)._env_default()
+
+        env.update(dict(
+            ROOT_LCG_VIEW_PATH     = self.lcg_view_path,
+            ROOT_LCG_VIEW_NAME     = 'LCG_82rootaas2',
+            ROOT_LCG_VIEW_PLATFORM = 'x86_64-slc6-gcc49-opt'
+        ))
+
+        return env
 
     @gen.coroutine
     def start(self, image=None):
