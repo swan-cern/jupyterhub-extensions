@@ -10,18 +10,35 @@ from traitlets import Unicode
 class CERNSpawner(SystemUserSpawner):
 
     lcg_view_path = Unicode(
-        default_value = '/cvmfs/sft.cern.ch/lcg/views',
-        config = True,
-        help = """Path where LCG views are stored in CVMFS."""
+        default_value='/cvmfs/sft.cern.ch/lcg/views',
+        config=True,
+        help='Path where LCG views are stored in CVMFS.'
     )
+
+    lcg_rel_field = Unicode(
+        default_value='LCG-rel',
+        help='LCG release field of the Spawner form.'
+    )
+
+    platform_field = Unicode(
+        default_value='platform',
+        help='Platform field of the Spawner form.'
+    )
+
+
+    def options_from_form(self, formdata):
+        options = {}
+        options[self.lcg_rel_field]   = formdata[self.lcg_rel_field][0]
+        options[self.platform_field]  = formdata[self.platform_field][0]
+        return options
 
     def _env_default(self):
         env = super(CERNSpawner, self)._env_default()
 
         env.update(dict(
             ROOT_LCG_VIEW_PATH     = self.lcg_view_path,
-            ROOT_LCG_VIEW_NAME     = 'LCG_82rootaas2',
-            ROOT_LCG_VIEW_PLATFORM = 'x86_64-slc6-gcc49-opt'
+            ROOT_LCG_VIEW_NAME     = 'LCG_' + self.user_options[self.lcg_rel_field],
+            ROOT_LCG_VIEW_PLATFORM = self.user_options[self.platform_field]
         ))
 
         return env
