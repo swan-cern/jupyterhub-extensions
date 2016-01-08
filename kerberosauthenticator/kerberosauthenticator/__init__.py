@@ -1,3 +1,6 @@
+# Author: Danilo Piparo, Enric Tejedor 2015
+# Copyright CERN
+
 """Kerberos authenticator"""
 
 import os
