@@ -59,9 +59,6 @@ class CERNSpawner(SystemUserSpawner):
         )
 
         def get_and_bind_ticket(dummy):
-            # Temporary limitation
-            allowed_users = map(lambda s: s[:-1], open(os.environ["AUTHUSERS"]).readlines())
-            if not username in allowed_users: return
             resp = self.docker('inspect_container',self.container_id)
             if not resp:
                 self.log.warn("Container not found")
