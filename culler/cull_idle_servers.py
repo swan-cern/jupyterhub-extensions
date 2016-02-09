@@ -37,11 +37,12 @@ def delete_container(username):
 
 def delete_ticket(username):
     app_log.info("Deleting ticket for user %s", username)
-    call(["rm", ticketpath + username]) 
+    call(["sudo", "-u", "etejedor", "eosfusebind", "-ug"])
+    call(["kdestroy", "-c", ticketpath + username]) 
 
 def check_ticket(username):
-    app_log.debug("Checking ticket for user %s", username)
-    call(["check_ticket.sh", username, ticketpath]) 
+    app_log.info("Checking ticket for user %s", username)
+    call(["/srv/jupyterhub/check_ticket.sh", username, ticketpath])
 
 @coroutine
 def cull_idle(url, api_token, timeout):
@@ -59,19 +60,18 @@ def cull_idle(url, api_token, timeout):
     users = json.loads(resp.body.decode('utf8', 'replace'))
     futures = []
     for user in users:
-        if user['name'] != 'etejedor': continue
-        print("User " + user['name'])
+        username = user['name']
         last_activity = parse_date(user['last_activity'])
         if user['server'] and last_activity < cull_limit:
-            app_log.info("Culling %s (inactive since %s)", user['name'], last_activity)
-            req = HTTPRequest(url=url + '/api/users/%s/server' % user['name'],
+            app_log.info("Culling %s (inactive since %s)", username, last_activity)
+            req = HTTPRequest(url=url + '/api/users/%s/server' % username,
                 method='DELETE',
                 headers=auth_header,
             )
-            futures.append((user['name'], client.fetch(req)))
+            futures.append((username, client.fetch(req)))
         elif user['server'] and last_activity > cull_limit:
-            app_log.debug("Not culling %s (active since %s)", user['name'], last_activity)
-            check_ticket(name)
+            app_log.debug("Not culling %s (active since %s)", username, last_activity)
+            check_ticket(username)
     
     for (name, f) in futures:
         yield f
@@ -89,7 +89,9 @@ if __name__ == '__main__':
         options.cull_every = options.timeout // 2
     
     api_token = os.environ['JPY_API_TOKEN']
-    
+   
+    app_log.info("Culling every %s seconds, timeout for containers is %s seconds", options.cull_every, options.timeout)
+ 
     loop = IOLoop.current()
     cull = lambda : cull_idle(options.url, api_token, options.timeout)
     # run once before scheduling periodic call
