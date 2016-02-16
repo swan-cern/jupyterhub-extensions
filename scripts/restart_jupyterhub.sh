@@ -15,8 +15,8 @@ echo "Removing all containers..."
 docker rm -f $(docker ps -a -q)
 
 echo "Killing the current JupyterHub processes..."
-pidhub=`ps -Txa | grep /usr/bin/jupyterhub | head -1 | awk '{print $1}'`
-pidproxy=`ps -Txa | grep configurable-http-proxy | head -1 | awk '{print $1}'`
+pidhub=`ps -Txa | grep /usr/bin/jupyterhub | grep -v grep | head -1 | awk '{print $1}'`
+pidproxy=`ps -Txa | grep configurable-http-proxy | grep -v grep | head -1 | awk '{print $1}'`
 kill -9 $pidhub
 kill -9 $pidproxy
 
