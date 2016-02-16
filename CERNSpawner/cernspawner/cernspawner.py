@@ -53,10 +53,6 @@ class CERNSpawner(SystemUserSpawner):
         """
         username = self.user.name
 
-        # Obtain credentials for the user
-        subprocess.call([os.environ["AUTHSCRIPT"], username])
-        self.log.debug("We are in CERNSpawner. Credentials for %s were requested.", username)
-
         # Create a temporary home for the user.
         home_dir = "/home/%s" %username
         subprocess.call(["mkdir","-p", home_dir])
@@ -66,12 +62,10 @@ class CERNSpawner(SystemUserSpawner):
             image=image
         )
 
-        #def get_and_bind_ticket(dummy):
-            #resp = self.docker('inspect_container',self.container_id)
-            #if not resp:
-                #self.log.warn("Container not found")
-            #container = resp.result()
-            #container_pid = container['State']['Pid']
+        def get_and_bind_ticket(dummy):
+            # Obtain credentials for the user
+            subprocess.call([os.environ["AUTHSCRIPT"], username])
+            self.log.debug("We are in CERNSpawner. Credentials for %s were requested.", username)
 
 
         tornadoFuture.add_done_callback(get_and_bind_ticket)
