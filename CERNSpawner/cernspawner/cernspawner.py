@@ -62,9 +62,9 @@ class CERNSpawner(SystemUserSpawner):
         subprocess.call(["mkdir","-p", home_dir])
         subprocess.call(["chown", username, home_dir])
 
-        #tornadoFuture = super(CERNSpawner, self).start(
-            #image=image
-        #)
+        tornadoFuture = super(CERNSpawner, self).start(
+            image=image
+        )
 
         #def get_and_bind_ticket(dummy):
             #resp = self.docker('inspect_container',self.container_id)
@@ -74,5 +74,5 @@ class CERNSpawner(SystemUserSpawner):
             #container_pid = container['State']['Pid']
 
 
-        #tornadoFuture.add_done_callback(get_and_bind_ticket)
-        #yield tornadoFuture
+        tornadoFuture.add_done_callback(get_and_bind_ticket)
+        yield tornadoFuture
