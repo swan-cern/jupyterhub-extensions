@@ -58,15 +58,16 @@ class CERNSpawner(SystemUserSpawner):
         subprocess.call(["mkdir","-p", home_dir])
         subprocess.call(["chown", username, home_dir])
 
+        # Obtain credentials for the user
+        subprocess.call([os.environ["AUTHSCRIPT"], username])
+
         tornadoFuture = super(CERNSpawner, self).start(
             image=image
         )
 
-        def get_and_bind_ticket(dummy):
-            # Obtain credentials for the user
-            subprocess.call([os.environ["AUTHSCRIPT"], username])
-            self.log.debug("We are in CERNSpawner. Credentials for %s were requested.", username)
+        #def get_and_bind_ticket(dummy):
+            #self.log.debug("We are in CERNSpawner. Credentials for %s were requested.", username)
 
 
-        tornadoFuture.add_done_callback(get_and_bind_ticket)
+        #tornadoFuture.add_done_callback(get_and_bind_ticket)
         yield tornadoFuture
