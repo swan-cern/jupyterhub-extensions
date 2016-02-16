@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+
+# Author: Danilo Piparo, Enric Tejedor 2016
+# Copyright CERN
+
 """script to monitor and cull idle single-user servers
 
 Caveats:
@@ -38,7 +42,7 @@ def delete_container(username):
 def delete_ticket(username):
     app_log.info("Deleting ticket for user %s", username)
     call(["sudo", "-u", "etejedor", "eosfusebind", "-ug"])
-    call(["kdestroy", "-c", ticketpath + username]) 
+    call(["kdestroy", "-c", ticketpath + username])
 
 def check_ticket(username):
     app_log.info("Checking ticket for user %s", username)
@@ -72,7 +76,7 @@ def cull_idle(url, api_token, timeout):
         elif user['server'] and last_activity > cull_limit:
             app_log.debug("Not culling %s (active since %s)", username, last_activity)
             check_ticket(username)
-    
+
     for (name, f) in futures:
         yield f
         app_log.debug("Finished culling %s", name)
@@ -83,15 +87,15 @@ if __name__ == '__main__':
     define('url', default='http://127.0.0.1:8081/hub', help="The JupyterHub API URL")
     define('timeout', default=600, help="The idle timeout (in seconds)")
     define('cull_every', default=0, help="The interval (in seconds) for checking for idle servers to cull")
-    
+
     parse_command_line()
     if not options.cull_every:
         options.cull_every = options.timeout // 2
-    
+
     api_token = os.environ['JPY_API_TOKEN']
-   
+
     app_log.info("Culling every %s seconds, timeout for containers is %s seconds", options.cull_every, options.timeout)
- 
+
     loop = IOLoop.current()
     cull = lambda : cull_idle(options.url, api_token, options.timeout)
     # run once before scheduling periodic call
@@ -103,4 +107,4 @@ if __name__ == '__main__':
         loop.start()
     except KeyboardInterrupt:
         pass
-    
+
