@@ -52,23 +52,27 @@ class CERNSpawner(SystemUserSpawner):
         EOS.
         """
         username = self.user.name
+
+        # Obtain credentials for the user
+        subprocess.call([os.environ["AUTHSCRIPT"], username])
+        self.log.debug("We are in CERNSpawner. Credentials for %s were requested.", username)
+
         # Create a temporary home for the user.
         home_dir = "/home/%s" %username
         subprocess.call(["mkdir","-p", home_dir])
         subprocess.call(["chown", username, home_dir])
 
-        tornadoFuture = super(CERNSpawner, self).start(
-            image=image
-        )
+        #tornadoFuture = super(CERNSpawner, self).start(
+            #image=image
+        #)
 
-        def get_and_bind_ticket(dummy):
-            resp = self.docker('inspect_container',self.container_id)
-            if not resp:
-                self.log.warn("Container not found")
-            container = resp.result()
-            container_pid = container['State']['Pid']
-            self.log.debug("We are in CERNSpawner. Container requested by %s has pid %s.", username, container_pid)
-            subprocess.call([os.environ["AUTHSCRIPT"], username, str(container_pid)])
+        #def get_and_bind_ticket(dummy):
+            #resp = self.docker('inspect_container',self.container_id)
+            #if not resp:
+                #self.log.warn("Container not found")
+            #container = resp.result()
+            #container_pid = container['State']['Pid']
 
-        tornadoFuture.add_done_callback(get_and_bind_ticket)
-        yield tornadoFuture
+
+        #tornadoFuture.add_done_callback(get_and_bind_ticket)
+        #yield tornadoFuture
