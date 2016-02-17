@@ -36,12 +36,15 @@ class CERNSpawner(SystemUserSpawner):
         return options
 
     def _env_default(self):
+        username = self.user.name
+        eoshomepath = "/eos/user/%s/%s" %(username[0], username)
         env = super(CERNSpawner, self)._env_default()
 
         env.update(dict(
             ROOT_LCG_VIEW_PATH     = self.lcg_view_path,
             ROOT_LCG_VIEW_NAME     = 'LCG_' + self.user_options[self.lcg_rel_field],
-            ROOT_LCG_VIEW_PLATFORM = self.user_options[self.platform_field]
+            ROOT_LCG_VIEW_PLATFORM = self.user_options[self.platform_field],
+            HOME                   = eoshomepath
         ))
 
         return env
@@ -54,9 +57,9 @@ class CERNSpawner(SystemUserSpawner):
         username = self.user.name
 
         # Create a temporary home for the user.
-        home_dir = "/home/%s" %username
-        subprocess.call(["mkdir","-p", home_dir])
-        subprocess.call(["chown", username, home_dir])
+        #home_dir = "/home/%s" %username
+        #subprocess.call(["mkdir","-p", home_dir])
+        #subprocess.call(["chown", username, home_dir])
 
         # Obtain credentials for the user
         subprocess.call([os.environ["AUTHSCRIPT"], username])
