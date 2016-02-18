@@ -43,8 +43,8 @@ class CERNSpawner(SystemUserSpawner):
         env.update(dict(
             ROOT_LCG_VIEW_PATH     = self.lcg_view_path,
             ROOT_LCG_VIEW_NAME     = 'LCG_' + self.user_options[self.lcg_rel_field],
-            ROOT_LCG_VIEW_PLATFORM = self.user_options[self.platform_field],
-            HOME                   = eoshomepath
+            ROOT_LCG_VIEW_PLATFORM = self.user_options[self.platform_field] #,
+            #HOME                   = eoshomepath
         ))
 
         return env
