@@ -57,9 +57,9 @@ class CERNSpawner(SystemUserSpawner):
         username = self.user.name
 
         # Create a temporary home for the user.
-        #home_dir = "/home/%s" %username
-        #subprocess.call(["mkdir","-p", home_dir])
-        #subprocess.call(["chown", username, home_dir])
+        home_dir = "/home/%s" %username
+        subprocess.call(["mkdir","-p", home_dir])
+        subprocess.call(["chown", username, home_dir])
 
         # Obtain credentials for the user
         subprocess.call([os.environ["AUTHSCRIPT"], username])
