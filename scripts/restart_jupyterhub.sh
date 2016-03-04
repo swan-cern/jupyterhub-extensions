@@ -21,7 +21,7 @@ kill -9 $pidhub
 kill -9 $pidproxy
 
 echo "Starting JupyterHub..."
-AUTHSCRIPT=/root/eos-fuse.sh AUTHUSERS=/root/allowedUsers.txt nohup jupyterhub --config /srv/jupyterhub/jupyterhub_config.py > /srv/jupyterhub/jh.out &
+AUTHUSERS=/root/allowedUsers.txt nohup jupyterhub --config /srv/jupyterhub/jupyterhub_config.py > /srv/jupyterhub/jh.out &
 
 echo "Restarting finished!"
 
