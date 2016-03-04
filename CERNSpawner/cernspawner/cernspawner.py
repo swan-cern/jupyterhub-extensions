@@ -23,7 +23,7 @@ class CERNSpawner(SystemUserSpawner):
         help='LCG release field of the Spawner form.'
     )
 
-    authscript = Unicode(
+    auth_script = Unicode(
         default_value='',
         help='Script to authenticate.'
     )
@@ -67,7 +67,7 @@ class CERNSpawner(SystemUserSpawner):
         #subprocess.call(["chown", username, home_dir])
 
         # Obtain credentials for the user
-        subprocess.call([self.authscript, username])
+        subprocess.call([self.auth_script, username])
         self.log.debug("We are in CERNSpawner. Credentials for %s were requested.", username)
 
         tornadoFuture = super(CERNSpawner, self).start(
