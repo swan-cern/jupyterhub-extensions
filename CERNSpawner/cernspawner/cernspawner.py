@@ -25,6 +25,7 @@ class CERNSpawner(SystemUserSpawner):
 
     auth_script = Unicode(
         default_value='',
+        config=True,
         help='Script to authenticate.'
     )
 
@@ -42,7 +43,7 @@ class CERNSpawner(SystemUserSpawner):
 
     def _env_default(self):
         username = self.user.name
-        eoshomepath = "/eos/user/%s/%s" %(username[0], username)
+        eoshomepath = "/eos/scratch/user/%s/%s" %(username[0], username)
         env = super(CERNSpawner, self)._env_default()
 
         env.update(dict(
