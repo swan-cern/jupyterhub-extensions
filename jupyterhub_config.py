@@ -5,8 +5,10 @@ from jupyter_client.localinterfaces import public_ips
 c.JupyterHub.hub_ip = public_ips()[0]
 
 # Authenticator
-c.Authenticator.admin_users = {'jhadmin'}
 c.JupyterHub.authenticator_class = 'ssoauthenticator.SSOAuthenticator'
+c.SSOAuthenticator.admin_users = {'dpiparo', 'etejedor'}
+#c.SSOAuthenticator.accepted_egroup = 'dmaas-test-users'
+
 
 # Spawner
 c.JupyterHub.spawner_class = 'cernspawner.CERNSpawner'
@@ -15,6 +17,7 @@ c.CERNSpawner.read_only_volumes = { '/cvmfs':'/cvmfs' }
 c.CERNSpawner.volumes = { '/eos' : '/eos'}
 c.CERNSpawner.auth_script  = '/root/eos-fuse.sh'
 c.CERNSpawner.eos_path_prefix  = '/eos/scratch/user'
+
 
 c.CERNSpawner.options_form = """
 <label for="LCG-rel">LCG release</label>
