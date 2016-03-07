@@ -29,6 +29,12 @@ class CERNSpawner(SystemUserSpawner):
         help='Script to authenticate.'
     )
 
+    eos_path_prefix = Unicode(
+        default_value='/eos/user',
+        config=True,
+        help='Path in eos preceeding the /t/theuser directory (e.g. /eos/user, /eos/scratch/user).'
+    )
+
     platform_field = Unicode(
         default_value='platform',
         help='Platform field of the Spawner form.'
@@ -43,7 +49,7 @@ class CERNSpawner(SystemUserSpawner):
 
     def _env_default(self):
         username = self.user.name
-        eoshomepath = "/eos/scratch/user/%s/%s" %(username[0], username)
+        eoshomepath = "%s/%s/%s" %(self.eos_path_prefix, username[0], username)
         env = super(CERNSpawner, self)._env_default()
 
         env.update(dict(
@@ -61,11 +67,6 @@ class CERNSpawner(SystemUserSpawner):
         EOS.
         """
         username = self.user.name
-
-        # Create a temporary home for the user.
-        #home_dir = "/home/%s" %username
-        #subprocess.call(["mkdir","-p", home_dir])
-        #subprocess.call(["chown", username, home_dir])
 
         # Obtain credentials for the user
         subprocess.call([self.auth_script, username])
