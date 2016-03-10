@@ -84,7 +84,9 @@ def cull_idle(url, api_token, timeout):
         delete_ticket(name)
 
 if __name__ == '__main__':
-    define('url', default='http://127.0.0.1:8081/hub', help="The JupyterHub API URL")
+    from jupyter_client.localinterfaces import public_ips
+   
+    define('url', default="http://%s:8081/hub" % public_ips()[0], help="The JupyterHub API URL")
     define('timeout', default=600, help="The idle timeout (in seconds)")
     define('cull_every', default=0, help="The interval (in seconds) for checking for idle servers to cull")
 
