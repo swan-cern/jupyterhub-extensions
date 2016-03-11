@@ -46,7 +46,7 @@ def delete_ticket(username):
 
 def check_ticket(username):
     app_log.info("Checking ticket for user %s", username)
-    call(["%s/jh_gitlab/culler/check_ticket.sh" % options.jh_dir, username, ticketpath])
+    call(["%s/check_ticket.sh" % options.culler_dir, username, ticketpath])
 
 @coroutine
 def cull_idle(url, api_token, timeout):
@@ -89,7 +89,7 @@ if __name__ == '__main__':
     define('url', default="http://%s:8081/hub" % public_ips()[0], help="The JupyterHub API URL")
     define('timeout', default=600, help="The idle timeout (in seconds)")
     define('cull_every', default=0, help="The interval (in seconds) for checking for idle servers to cull")
-    define('jh_dir', default="/srv/jupyterhub", help="Path to the JupyterHub directory")
+    define('culler_dir', default="/srv/jupyterhub/culler", help="Path to the directory for the culler")
 
     parse_command_line()
     if not options.cull_every:
