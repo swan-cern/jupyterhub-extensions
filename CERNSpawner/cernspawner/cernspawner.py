@@ -69,7 +69,7 @@ class CERNSpawner(SystemUserSpawner):
         username = self.user.name
 
         # Obtain credentials for the user
-        subprocess.call([self.auth_script, username])
+        subprocess.call(['sudo', self.auth_script, username])
         self.log.debug("We are in CERNSpawner. Credentials for %s were requested.", username)
 
         tornadoFuture = super(CERNSpawner, self).start(
