@@ -39,14 +39,13 @@ def delete_container(username):
     app_log.info("Deleting container for user %s", username)
     call(["docker", "rm", "-f", "jupyter-" + username])
 
-def delete_ticket(username):
-    app_log.info("Deleting ticket for user %s", username)
-    call(["sudo", "-u", username, "eosfusebind", "-ug"])
-    call(["kdestroy", "-c", ticketpath + username])
-
 def check_ticket(username):
     app_log.info("Checking ticket for user %s", username)
-    call(["%s/check_ticket.sh" % options.culler_dir, username, ticketpath])
+    call(['sudo', "%s/check_ticket.sh" % options.culler_dir, username, ticketpath])
+
+def delete_ticket(username):
+    app_log.info("Deleting ticket for user %s", username)
+    call(['sudo', "%s/delete_ticket.sh" % options.culler_dir, username, ticketpath])
 
 @coroutine
 def cull_idle(url, api_token, timeout):
@@ -110,4 +109,3 @@ if __name__ == '__main__':
         loop.start()
     except KeyboardInterrupt:
         pass
-
