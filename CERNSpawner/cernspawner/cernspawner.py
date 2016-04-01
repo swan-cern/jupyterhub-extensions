@@ -33,7 +33,7 @@ class CERNSpawner(SystemUserSpawner):
     )
 
     local_home = Bool(
-        False, 
+        default_value=False, 
         config=True, 
         help="If True, a physical directory on the host will be the home and not eos.")
 
@@ -58,7 +58,7 @@ class CERNSpawner(SystemUserSpawner):
     def _env_default(self):
         username = self.user.name
         if self.local_home:
-            homepath = "home/%s" %(username)
+            homepath = "/home/%s" %(username)
         else:
             homepath = "%s/%s/%s" %(self.eos_path_prefix, username[0], username)
         env = super(CERNSpawner, self)._env_default()
