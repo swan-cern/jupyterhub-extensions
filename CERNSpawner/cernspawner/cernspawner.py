@@ -7,7 +7,10 @@ import subprocess
 import os
 from dockerspawner import SystemUserSpawner
 from tornado import gen
-from traitlets import Unicode
+from traitlets import (
+    Unicode,
+    Bool,
+)
 
 
 class CERNSpawner(SystemUserSpawner):
