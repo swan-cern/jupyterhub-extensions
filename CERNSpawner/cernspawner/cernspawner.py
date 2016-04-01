@@ -29,6 +29,11 @@ class CERNSpawner(SystemUserSpawner):
         help='Script to authenticate.'
     )
 
+    local_home = Bool(
+        False, 
+        config=True, 
+        help="If True, a physical directory on the host will be the home and not eos.")
+
     eos_path_prefix = Unicode(
         default_value='/eos/user',
         config=True,
@@ -49,7 +54,10 @@ class CERNSpawner(SystemUserSpawner):
 
     def _env_default(self):
         username = self.user.name
-        eoshomepath = "%s/%s/%s" %(self.eos_path_prefix, username[0], username)
+        if local_home:
+            homepath = "home/%s" %(username)
+        else:
+            homepath = "%s/%s/%s" %(self.eos_path_prefix, username[0], username)
         env = super(CERNSpawner, self)._env_default()
 
         env.update(dict(
