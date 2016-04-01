@@ -57,7 +57,7 @@ class CERNSpawner(SystemUserSpawner):
 
     def _env_default(self):
         username = self.user.name
-        if local_home:
+        if self.local_home:
             homepath = "home/%s" %(username)
         else:
             homepath = "%s/%s/%s" %(self.eos_path_prefix, username[0], username)
