@@ -88,3 +88,14 @@ class CERNSpawner(SystemUserSpawner):
         )
 
         yield tornadoFuture
+
+    @property
+    def volume_mount_points(self):
+        """
+        Override the method of SystemUserSpawner to avoid to mount the home
+        of the host.
+        """
+        return super(SystemUserSpawner, self).volume_mount_points
+
+
+
