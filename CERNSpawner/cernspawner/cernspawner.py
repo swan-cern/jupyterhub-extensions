@@ -97,5 +97,10 @@ class CERNSpawner(SystemUserSpawner):
         """
         return super(SystemUserSpawner, self).volume_mount_points
 
-
-
+    @property
+    def volume_binds(self):
+        """
+        Override the method of SystemUserSpawner to avoid to mount the home
+        of the host.
+        """
+        return super(SystemUserSpawner, self).volume_binds
