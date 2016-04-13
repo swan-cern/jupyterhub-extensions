@@ -56,8 +56,9 @@ class CERNSpawner(SystemUserSpawner):
 
     def options_from_form(self, formdata):
         options = {}
-        options[self.lcg_rel_field]   = formdata[self.lcg_rel_field][0]
-        options[self.platform_field]  = formdata[self.platform_field][0]
+        options[self.lcg_rel_field]         = formdata[self.lcg_rel_field][0]
+        options[self.platform_field]        = formdata[self.platform_field][0]
+        options[self.user_script_env_field] = formdata[self.user_script_env_field][0]
         return options
 
     def _env_default(self):
