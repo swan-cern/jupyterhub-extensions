@@ -25,6 +25,16 @@ class CERNSpawner(SystemUserSpawner):
         default_value='LCG-rel',
         help='LCG release field of the Spawner form.'
     )
+    
+    platform_field = Unicode(
+        default_value='platform',
+        help='Platform field of the Spawner form.'
+    )
+    
+    user_script_env_field = Unicode(
+        default_value='scriptenv',
+        help='User environment script field of the Spawner form.'
+    )
 
     auth_script = Unicode(
         default_value='',
@@ -43,11 +53,6 @@ class CERNSpawner(SystemUserSpawner):
         help='Path in eos preceeding the /t/theuser directory (e.g. /eos/user, /eos/scratch/user).'
     )
 
-    platform_field = Unicode(
-        default_value='platform',
-        help='Platform field of the Spawner form.'
-    )
-
 
     def options_from_form(self, formdata):
         options = {}
@@ -61,13 +66,21 @@ class CERNSpawner(SystemUserSpawner):
             homepath = "/home/%s" %(username)
         else:
             homepath = "%s/%s/%s" %(self.eos_path_prefix, username[0], username)
-        env = super(CERNSpawner, self)._env_default()
 
+        env = super(CERNSpawner, self)._env_default()
         env.update(dict(
             ROOT_LCG_VIEW_PATH     = self.lcg_view_path,
+            HOME                   = homepath
+        ))
+
+        return env
+
+    def get_env(self):
+        env = super().get_env()
+        env.update(dict(
             ROOT_LCG_VIEW_NAME     = 'LCG_' + self.user_options[self.lcg_rel_field],
             ROOT_LCG_VIEW_PLATFORM = self.user_options[self.platform_field],
-            HOME                   = homepath
+            USER_ENV_SCRIPT        = self.user_options[self.user_script_env_field],
         ))
 
         return env
