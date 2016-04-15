@@ -35,10 +35,6 @@ from subprocess import call
 
 ticketpath = '/tmp/eos_'
 
-def delete_container(username):
-    app_log.info("Deleting container for user %s", username)
-    call(["docker", "rm", "-f", "jupyter-" + username])
-
 def check_ticket(username):
     app_log.info("Checking ticket for user %s", username)
     call(['sudo', "%s/check_ticket.sh" % options.culler_dir, username, ticketpath])
@@ -79,7 +75,6 @@ def cull_idle(url, api_token, timeout):
     for (name, f) in futures:
         yield f
         app_log.debug("Finished culling %s", name)
-        delete_container(name)
         delete_ticket(name)
 
 if __name__ == '__main__':
