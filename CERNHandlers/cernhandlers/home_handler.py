@@ -16,7 +16,7 @@ class HomeHandler(BaseHandler):
     def get(self):
         the_projurl = self.get_argument('projurl','')
         if the_projurl:
-           check_url(is_good_url)
+           check_url(the_projurl)
         html = self.render_template('home.html',
             user=self.get_current_user(),
             projurl = the_projurl
