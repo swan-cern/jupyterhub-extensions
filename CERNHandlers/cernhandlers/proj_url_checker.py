@@ -10,7 +10,7 @@ import re
 def check_url(url):
 
     # Limit the sources
-    is_good_server = url.beginswith('https://gitlab.cern.ch') or url.beginswith('https://github.com'):
+    is_good_server = url.beginswith('https://gitlab.cern.ch') or url.beginswith('https://github.com')
     if not is_good_server:
         raise ValueError('Project URL is not a github or CERN gitlab URL')
 
