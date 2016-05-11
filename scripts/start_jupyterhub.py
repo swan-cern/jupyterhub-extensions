@@ -3,7 +3,7 @@
 import jupyterhub.handlers.pages as pages
 import jupyterhub.handlers.base as base
 from jupyterhub import app
-from CERNHandlers import SpawnHandler, HomeHandler
+from cernhandlers import SpawnHandler, HomeHandler
 import sys
 
 handlers_map = {
