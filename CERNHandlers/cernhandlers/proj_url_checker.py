@@ -4,8 +4,7 @@
 """Check the project url"""
 
 import requests
-import http
-import re
+import string
 from urllib import parse
 
 from tornado import web
@@ -24,13 +23,21 @@ def check_url(url):
     if not is_good_server:
         raise_error('The URL of the project is not a github or CERN gitlab URL')
 
+    # Check if contains only good characters
+    allowed = string.ascii_lowercase +\
+              string.ascii_uppercase +\
+              '/.'
+    has_allowd_chars = set(url[len('https:'):]) <= set(allowed)
+    if not has_allowd_chars:
+        raise_error('The URL of the project is invalid.')
+
     # Limit the kind of project
     is_good_ext = url.endswith('.git') or url.endswith('.ipynb')
     if not is_good_ext:
         raise_error('The project must be a repository or a notebook.')
 
-    # Avoid code injection
-    forbidden_seqs = ['&&', '|', ';', ' ']
+    # Avoid code injection: paranoia mode
+    forbidden_seqs = ['&&', '|', ';', ' ', '..', '@']
     is_valid_url = any(i in url for i in forbidden_seqs)
     if not forbidden_seqs:
         raise_error('The URL of the project is invalid.')
