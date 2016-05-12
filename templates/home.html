@@ -10,7 +10,11 @@
       {% endif %}
       <a id="start" class="btn btn-lg btn-success"
       {% if user.running %}
+      {% if home_url %}
+        href="{{base_url}}user/{{user.name}}/tree/{{home_url}}"
+      {% else %}
         href="{{base_url}}user/{{user.name}}/"
+      {% endif %}
       {% else %}
       {% if projurl %}
         href="{{base_url}}spawn?projurl={{projurl}}"
