@@ -26,7 +26,7 @@ def check_url(url):
     # Check if contains only good characters
     allowed = string.ascii_lowercase +\
               string.ascii_uppercase +\
-              '/.'
+              '/._+-'
     has_allowd_chars = set(url[len('https:'):]) <= set(allowed)
     if not has_allowd_chars:
         raise_error('The URL of the project is invalid.')
