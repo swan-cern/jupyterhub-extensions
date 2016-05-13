@@ -102,7 +102,7 @@ class SpawnHandler(BaseHandler):
         url = user.url
         projurl_key = 'projurl'
         if projurl_key in self.request.body_arguments:
-            the_projurl = self.request.body_arguments['projurl'][0]
+            the_projurl = self.request.body_arguments['projurl'][0].decode('utf8')
             redirect_url = self.handle_redirection(the_projurl)
             url = os.path.join(url, 'tree', redirect_url)
         self.redirect(url)
