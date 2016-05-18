@@ -34,7 +34,7 @@ def check_url(url):
     # Limit the kind of project
     is_good_ext = url.endswith('.git') or url.endswith('.ipynb')
     if not is_good_ext:
-        raise_error('The project must be a repository or a notebook.')
+        raise_error('The project must be a notebook.')
 
     # Avoid code injection: paranoia mode
     forbidden_seqs = ['&&', '|', ';', ' ', '..', '@']
