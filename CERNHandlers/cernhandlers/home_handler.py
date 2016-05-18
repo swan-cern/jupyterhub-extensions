@@ -21,10 +21,10 @@ class HomeHandler(BaseHandler):
 
         if the_projurl:
             check_url(the_projurl)
-            self.redirect(os.path.join('user', the_user.name, 'tree', the_home_url))
+            self.redirect(os.path.join('spawn?projurl=%s' %the_projurl))
+        else:
+            html = self.render_template('home.html',
+                user = the_user
+            )
 
-        html = self.render_template('home.html',
-            user = the_user
-        )
-
-        self.finish(html)
+            self.finish(html)

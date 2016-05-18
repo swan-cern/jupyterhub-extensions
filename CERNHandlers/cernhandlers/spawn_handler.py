@@ -44,7 +44,7 @@ class SpawnHandler(BaseHandler):
         check_url(the_projurl)
 
         the_user = self.get_current_user()
-        if not the_user.running: return ''
+#        if not the_user.running: return ''
 
         the_user_name = the_user.name
         self.log.info('User %s is running. Fetching project %s.' %(the_user_name,the_projurl))
