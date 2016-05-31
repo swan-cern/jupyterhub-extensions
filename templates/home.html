@@ -6,7 +6,7 @@
   <div class="row">
     <div class="text-center">
       {% if user.running %}
-      <a id="stop" class="btn btn-lg btn-danger">Stop My Server</a>
+      <a id="stop" class="btn btn-lg btn-danger">Close my Environment</a>
       {% endif %}
       <a id="start" class="btn btn-lg btn-success"
       {% if user.running %}
@@ -16,9 +16,9 @@
       {% endif %}
       >
       {% if not user.running %}
-      Start
+      Create my Environment
       {% endif %}
-        My Server
+        Go to my Notebooks
       </a>
       {% if user.admin %}
       <a id="admin" class="btn btn-lg btn-primary" href="{{base_url}}admin">Admin</a>
