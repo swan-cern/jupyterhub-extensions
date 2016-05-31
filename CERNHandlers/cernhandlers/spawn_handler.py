@@ -4,6 +4,7 @@
 """CERN Spawn handler"""
 
 import os
+import requests
 import subprocess
 
 from tornado import web, gen
@@ -12,7 +13,7 @@ from tornado.httputil import url_concat
 from jupyterhub.utils import url_path_join
 from jupyterhub.handlers.base import BaseHandler
 
-from .proj_url_checker import check_url
+from .proj_url_checker import check_url, is_good_proj_name
 
 class SpawnHandler(BaseHandler):
     """Handle spawning of single-user servers via form.
@@ -44,17 +45,35 @@ class SpawnHandler(BaseHandler):
         check_url(the_projurl)
 
         the_user = self.get_current_user()
-#        if not the_user.running: return ''
 
         the_user_name = the_user.name
         self.log.info('User %s is running. Fetching project %s.' %(the_user_name,the_projurl))
-        command = 'sudo /srv/jupyterhub/fetcher/fetcher.py %s %s %s' %(the_projurl,the_user_name,'SWAN_projects')
+        command = ['sudo', '/srv/jupyterhub/fetcher/fetcher.py', the_projurl, the_user_name, 'SWAN_projects']
         self.log.info('Calling command: %s' %command)
-        subprocess.call(command.split())
+        subprocess.call(command)
         proj_name = os.path.basename(the_projurl)
         the_home_url = ''
-        if proj_name.endswith('.ipynb'): # git repo to be added
-            the_home_url = os.path.join('SWAN_projects',proj_name)
+        if is_good_proj_name(proj_name): # git repo to be added
+            if proj_name.endswith('.ipynb'):
+                the_home_url = os.path.join('SWAN_projects', proj_name)
+            else:
+                # Default case
+                path_to_proj = os.path.splitext(proj_name)[0]
+
+                # Check for an index.ipynb in the github and gitlab case
+                the_projurl_noext = os.path.splitext(the_projurl)[0]
+                index_name = 'index.ipynb'
+                index_nb = ''
+                if the_projurl.startswith('https://github.com'):
+                    raw_projurl_noext = the_projurl_noext.replace('https://github.com', 'https://raw.githubusercontent.com')
+                    index_nb = os.path.join(raw_projurl_noext, 'master', index_name)
+                if the_projurl.startswith('https://gitlab.cern.ch'):
+                    index_nb = os.path.join(the_projurl_noext, 'raw', 'master', index_name)
+
+                if '' != index_nb and requests.get(index_nb).status_code == 200:
+                    the_home_url = os.path.join('SWAN_projects', path_to_proj, index_name)
+                else:
+                    the_home_url = os.path.join('SWAN_projects', path_to_proj)
         return the_home_url
 
     @web.authenticated

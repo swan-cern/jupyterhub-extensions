@@ -12,6 +12,9 @@ from tornado import web
 def raise_error(emsg):
     raise web.HTTPError(500, reason = emsg)
 
+def is_good_proj_name(proj_name):
+    return proj_name.endswith('.git') or proj_name.endswith('.ipynb')
+
 def check_url(url):
 
     url = parse.unquote(url)
@@ -32,9 +35,9 @@ def check_url(url):
         raise_error('The URL of the project is invalid.')
 
     # Limit the kind of project
-    is_good_ext = url.endswith('.git') or url.endswith('.ipynb')
+    is_good_ext = is_good_proj_name(url)
     if not is_good_ext:
-        raise_error('The project must be a notebook.')
+        raise_error('The project must be a notebook or a git repository.')
 
     # Avoid code injection: paranoia mode
     forbidden_seqs = ['&&', '|', ';', ' ', '..', '@']
