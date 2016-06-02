@@ -6,7 +6,7 @@
   <div class="row">
     <div class="text-center">
       {% if user.running %}
-      <a id="stop" class="btn btn-lg btn-danger">Close my Environment</a>
+      <a id="stop" class="btn btn-lg btn-danger">Shutdown my Notebooks</a>
       {% endif %}
       <a id="start" class="btn btn-lg btn-success"
       {% if user.running %}
@@ -18,14 +18,20 @@
       {% if not user.running %}
       Create my Environment
       {% endif %}
-        Go to my Notebooks
+      Go to my Notebooks
       </a>
+      Go to my Notebooks
       {% if user.admin %}
       <a id="admin" class="btn btn-lg btn-primary" href="{{base_url}}admin">Admin</a>
       {% endif %}
     </div>
   </div>
 </div>
+
+<footer>
+  <p align="center"><b><a href="https://swan.web.cern.ch">SWAN</a></b>: <b>S</b>ervice for <b>W</b>eb based <b>AN</b>alysis</p>
+  <p align="center">Copyright CERN</p>
+</footer>
 
 {% endblock %}
 
