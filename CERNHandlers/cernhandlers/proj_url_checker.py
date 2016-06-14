@@ -29,6 +29,7 @@ def check_url(url):
     # Check if contains only good characters
     allowed = string.ascii_lowercase +\
               string.ascii_uppercase +\
+              string.digits +\
               '/._+-'
     has_allowd_chars = set(url[len('https:'):]) <= set(allowed)
     if not has_allowd_chars:
