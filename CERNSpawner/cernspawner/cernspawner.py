@@ -11,7 +11,7 @@ from traitlets import (
     Unicode,
     Bool,
 )
-
+from cernhandlers.proj_url_checker import has_good_chars
 
 class CERNSpawner(SystemUserSpawner):
 
@@ -25,12 +25,12 @@ class CERNSpawner(SystemUserSpawner):
         default_value='LCG-rel',
         help='LCG release field of the Spawner form.'
     )
-    
+
     platform_field = Unicode(
         default_value='platform',
         help='Platform field of the Spawner form.'
     )
-    
+
     user_script_env_field = Unicode(
         default_value='scriptenv',
         help='User environment script field of the Spawner form.'
@@ -43,8 +43,8 @@ class CERNSpawner(SystemUserSpawner):
     )
 
     local_home = Bool(
-        default_value=False, 
-        config=True, 
+        default_value=False,
+        config=True,
         help="If True, a physical directory on the host will be the home and not eos.")
 
     eos_path_prefix = Unicode(
@@ -91,6 +91,13 @@ class CERNSpawner(SystemUserSpawner):
         """Start the container and perform the operations necessary for mounting
         EOS.
         """
+
+        # Check the environment script
+        script_name = self.user_options[self.user_script_env_field]
+        if not has_good_chars(script_name, extra_chars = '$'):
+            self.log.warning('Customisation script found and it has an issue with its name: %s', script_name)
+            raise Exception('The specified path for the customisation script is not valid.')
+
         username = self.user.name
 
         # Obtain credentials for the user

@@ -22,11 +22,15 @@ def has_good_chars(name, extra_chars=''):
               string.ascii_uppercase +\
               string.digits +\
               '/._+-' + extra_chars
-    has_allowd_chars = set(url[len('https:'):]) <= set(allowed)
+
+    if name.startswith('https:'):
+        name = name[len('https:'):]
+
+    has_allowd_chars = set(name) <= set(allowed)
     if not has_allowd_chars: return False
 
     forbidden_seqs = ['&&', '|', ';', ' ', '..', '@']
-    is_valid_url = any(i in url for i in forbidden_seqs)
+    is_valid_url = any(i in name for i in forbidden_seqs)
     if not forbidden_seqs: return False
 
     return True

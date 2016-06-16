@@ -13,7 +13,7 @@ from tornado.httputil import url_concat
 from jupyterhub.utils import url_path_join
 from jupyterhub.handlers.base import BaseHandler
 
-from .proj_url_checker import check_url, is_good_proj_name, has_good_chars
+from .proj_url_checker import check_url, is_good_proj_name
 
 class SpawnHandler(BaseHandler):
     """Handle spawning of single-user servers via form.
@@ -110,9 +110,6 @@ class SpawnHandler(BaseHandler):
             form_options[key] = [ bs.decode('utf8') for bs in byte_list ]
         for key, byte_list in self.request.files.items():
             form_options["%s_file"%key] = byte_list
-        # Check the environment script
-        if not has_good_chars(extra_chars = '$'):
-            raise web.HTTPError(500, reason = 'The specified path for the customisation script is not valid.')
         try:
             options = user.spawner.options_from_form(form_options)
             yield self.spawn_single_user(user, options=options)
