@@ -15,6 +15,22 @@ def raise_error(emsg):
 def is_good_proj_name(proj_name):
     return proj_name.endswith('.git') or proj_name.endswith('.ipynb')
 
+def has_good_chars(name, extra_chars=''):
+    '''Check if contains only good characters.
+    Avoid code injection: paranoia mode'''
+    allowed = string.ascii_lowercase +\
+              string.ascii_uppercase +\
+              string.digits +\
+              '/._+-' + extra_chars
+    has_allowd_chars = set(url[len('https:'):]) <= set(allowed)
+    if not has_allowd_chars: return False
+
+    forbidden_seqs = ['&&', '|', ';', ' ', '..', '@']
+    is_valid_url = any(i in url for i in forbidden_seqs)
+    if not forbidden_seqs: return False
+
+    return True
+
 def check_url(url):
 
     url = parse.unquote(url)
@@ -26,25 +42,15 @@ def check_url(url):
     if not is_good_server:
         raise_error('The URL of the project is not a github or CERN gitlab URL')
 
-    # Check if contains only good characters
-    allowed = string.ascii_lowercase +\
-              string.ascii_uppercase +\
-              string.digits +\
-              '/._+-'
-    has_allowd_chars = set(url[len('https:'):]) <= set(allowed)
-    if not has_allowd_chars:
+    # Check the chars
+    has_allowed_chars = has_good_chars(url)
+    if not has_allowed_chars:
         raise_error('The URL of the project is invalid.')
 
     # Limit the kind of project
     is_good_ext = is_good_proj_name(url)
     if not is_good_ext:
         raise_error('The project must be a notebook or a git repository.')
-
-    # Avoid code injection: paranoia mode
-    forbidden_seqs = ['&&', '|', ';', ' ', '..', '@']
-    is_valid_url = any(i in url for i in forbidden_seqs)
-    if not forbidden_seqs:
-        raise_error('The URL of the project is invalid.')
 
     # Check it exists
     request = requests.get(url)

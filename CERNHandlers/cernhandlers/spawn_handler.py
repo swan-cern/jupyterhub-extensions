@@ -13,7 +13,7 @@ from tornado.httputil import url_concat
 from jupyterhub.utils import url_path_join
 from jupyterhub.handlers.base import BaseHandler
 
-from .proj_url_checker import check_url, is_good_proj_name
+from .proj_url_checker import check_url, is_good_proj_name, has_good_chars
 
 class SpawnHandler(BaseHandler):
     """Handle spawning of single-user servers via form.
@@ -53,7 +53,7 @@ class SpawnHandler(BaseHandler):
         subprocess.call(command)
         proj_name = os.path.basename(the_projurl)
         the_home_url = ''
-        if is_good_proj_name(proj_name): # git repo to be added
+        if is_good_proj_name(proj_name):
             if proj_name.endswith('.ipynb'):
                 the_home_url = os.path.join('SWAN_projects', proj_name)
             else:
@@ -110,6 +110,9 @@ class SpawnHandler(BaseHandler):
             form_options[key] = [ bs.decode('utf8') for bs in byte_list ]
         for key, byte_list in self.request.files.items():
             form_options["%s_file"%key] = byte_list
+        # Check the environment script
+        if not has_good_chars(extra_chars = '$'):
+            raise web.HTTPError(500, reason = 'The specified path for the customisation script is not valid.')
         try:
             options = user.spawner.options_from_form(form_options)
             yield self.spawn_single_user(user, options=options)
