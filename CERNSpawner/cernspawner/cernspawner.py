@@ -5,6 +5,7 @@
 
 import subprocess
 import os
+from pprint import pformat
 from dockerspawner import SystemUserSpawner
 from tornado import gen
 from traitlets import (
@@ -85,6 +86,34 @@ class CERNSpawner(SystemUserSpawner):
         ))
 
         return env
+
+
+    @gen.coroutine
+    def poll(self):
+        """Check for my id in `docker ps`"""
+        container = yield self.get_container()
+        if not container:
+            self.log.warn("container not found")
+            return ""
+        container_state = container['State']
+        self.log.debug(
+            "Container %s status: %s",
+            self.container_id[:7],
+            pformat(container_state),
+        )
+
+        if container_state["Running"]:
+            return None
+        else:
+            if 'exited' == container_state['Status']:
+                id = container['Id']
+                self.client.remove_container(id)
+                return ("The container exited. Please check that the customisation script is correct.")
+            return (
+                "ExitCode={ExitCode}, "
+                "Error='{Error}', "
+                "FinishedAt={FinishedAt}".format(**container_state)
+                )
 
     @gen.coroutine
     def start(self, image=None):
