@@ -42,7 +42,8 @@ def check_url(url):
     # Limit the sources
     is_good_server = url.startswith('https://gitlab.cern.ch') or \
                      url.startswith('https://github.com') or \
-                     url.startswith('https://raw.githubusercontent.com')
+                     url.startswith('https://raw.githubusercontent.com') or \
+                     url.startswith('https://root.cern.ch')
     if not is_good_server:
         raise_error('The URL of the project is not a github or CERN gitlab URL')
 
