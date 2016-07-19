@@ -45,7 +45,7 @@ def check_url(url):
                      url.startswith('https://raw.githubusercontent.com') or \
                      url.startswith('https://root.cern.ch')
     if not is_good_server:
-        raise_error('The URL of the project is not a github or CERN gitlab URL')
+        raise_error('The URL of the project is not a github, CERN gitlab or root.cern.ch URL')
 
     # Check the chars
     has_allowed_chars = has_good_chars(url)
