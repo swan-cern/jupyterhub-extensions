@@ -101,9 +101,9 @@ fieldset[disabled] .btn-shutdownnotebooks.active {
   <div class="row">
     <div class="text-center">
       {% if user.running %}
-      <a id="stop" class="btn btn-lg btn-danger">Shutdown my Notebooks</a>
+      <a id="stop" class="btn btn-lg btn-shutdownnotebooks">Shutdown my Notebooks</a>
       {% endif %}
-      <a id="start" class="btn btn-lg btn-success"
+      <a id="start" class="btn btn-lg btn-gonotebooks"
       {% if user.running %}
         href="{{base_url}}user/{{user.name}}/"
       {% else %}
