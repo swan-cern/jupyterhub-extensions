@@ -108,7 +108,7 @@ class CERNSpawner(SystemUserSpawner):
             if 'exited' == container_state['Status']:
                 id = container['Id']
                 self.client.remove_container(id)
-                return ("The container exited. Please check that the customisation script is correct.")
+                return ("The container exited. Please check that you have a cernbox and that the customisation script is correct.")
             return (
                 "ExitCode={ExitCode}, "
                 "Error='{Error}', "
