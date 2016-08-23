@@ -80,7 +80,7 @@ class CERNSpawner(SystemUserSpawner):
     def get_env(self):
         env = super().get_env()
         env.update(dict(
-            ROOT_LCG_VIEW_NAME     = 'LCG_' + self.user_options[self.lcg_rel_field],
+            ROOT_LCG_VIEW_NAME     = self.user_options[self.lcg_rel_field],
             ROOT_LCG_VIEW_PLATFORM = self.user_options[self.platform_field],
             USER_ENV_SCRIPT        = self.user_options[self.user_script_env_field],
         ))
