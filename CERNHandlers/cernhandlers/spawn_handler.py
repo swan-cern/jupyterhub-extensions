@@ -27,7 +27,7 @@ class SpawnHandler(BaseHandler):
         user = self.get_current_user()
         # We inject an extra field if there is a project set
         the_projurl = self.get_argument('projurl','')
-        the_form = file(user.spawner.options_form).read
+        the_form = open(user.spawner.options_form).read()
         if the_projurl:
             the_form +='<input type="hidden" name="projurl" value="%s">' %the_projurl
         return self.render_template('spawn.html',
