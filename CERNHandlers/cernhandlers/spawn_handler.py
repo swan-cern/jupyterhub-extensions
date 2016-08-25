@@ -48,7 +48,7 @@ class SpawnHandler(BaseHandler):
 
         the_user_name = the_user.name
         self.log.info('User %s is running. Fetching project %s.' %(the_user_name,the_projurl))
-        isFileOnEos = is_file_on_eos(proj_name)
+        isFileOnEos = is_file_on_eos(the_projurl)
         if not isFileOnEos:
             command = ['sudo', '/srv/jupyterhub/fetcher/fetcher.py', the_projurl, the_user_name, 'SWAN_projects']
             self.log.info('Calling command: %s' %command)

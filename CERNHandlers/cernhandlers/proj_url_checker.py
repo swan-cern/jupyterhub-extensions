@@ -16,7 +16,7 @@ def is_good_proj_name(proj_name):
     return proj_name.endswith('.git') or proj_name.endswith('.ipynb')
 
 def is_file_on_eos(proj_name):
-    return name.startswith('file://eos/user')
+    return proj_name.startswith('file://eos/user')
 
 def has_good_chars(name, extra_chars=''):
     '''Check if contains only good characters.
@@ -51,7 +51,7 @@ def check_url(url):
     is_good_server = url.startswith('https://gitlab.cern.ch') or \
                      url.startswith('https://github.com') or \
                      url.startswith('https://raw.githubusercontent.com') or \
-                     url.startswith('https://root.cern.ch')
+                     url.startswith('https://root.cern.ch') or \
                      url.startswith('file://eos/user')
     if not is_good_server:
         raise_error('The URL of the project is not a github, CERN gitlab nor root.cern.ch URL. It is not a eos path either.')
@@ -67,7 +67,7 @@ def check_url(url):
         raise_error('The project must be a notebook or a git repository.')
 
     # Check it exists
-    if not isFile:
+    if not is_file_on_eos(url):
         request = requests.get(url)
         sc = request.status_code
         if sc != 200:
