@@ -15,6 +15,9 @@ def raise_error(emsg):
 def is_good_proj_name(proj_name):
     return proj_name.endswith('.git') or proj_name.endswith('.ipynb')
 
+def is_file_on_eos(proj_name):
+    return name.startswith('file://eos/user')
+
 def has_good_chars(name, extra_chars=''):
     '''Check if contains only good characters.
     Avoid code injection: paranoia mode'''
@@ -23,8 +26,13 @@ def has_good_chars(name, extra_chars=''):
               string.digits +\
               '/._+-' + extra_chars
 
+    isFile=False
     if name.startswith('https:'):
-        name = name[len('https:'):]
+        name = name[6:]
+
+    if is_file_on_eos(name):
+        isFile = True
+        name = name[5:]
 
     has_allowd_chars = set(name) <= set(allowed)
     if not has_allowd_chars: return False
@@ -44,8 +52,9 @@ def check_url(url):
                      url.startswith('https://github.com') or \
                      url.startswith('https://raw.githubusercontent.com') or \
                      url.startswith('https://root.cern.ch')
+                     url.startswith('file://eos/user')
     if not is_good_server:
-        raise_error('The URL of the project is not a github, CERN gitlab or root.cern.ch URL')
+        raise_error('The URL of the project is not a github, CERN gitlab nor root.cern.ch URL. It is not a eos path either.')
 
     # Check the chars
     has_allowed_chars = has_good_chars(url)
@@ -58,9 +67,10 @@ def check_url(url):
         raise_error('The project must be a notebook or a git repository.')
 
     # Check it exists
-    request = requests.get(url)
-    sc = request.status_code
-    if sc != 200:
-        raise_error('The URL of the project does not exist or is not reachable (status code is %s)' %sc)
+    if not isFile:
+        request = requests.get(url)
+        sc = request.status_code
+        if sc != 200:
+            raise_error('The URL of the project does not exist or is not reachable (status code is %s)' %sc)
 
     return True

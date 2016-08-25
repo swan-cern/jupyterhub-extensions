@@ -13,7 +13,7 @@ from tornado.httputil import url_concat
 from jupyterhub.utils import url_path_join
 from jupyterhub.handlers.base import BaseHandler
 
-from .proj_url_checker import check_url, is_good_proj_name
+from .proj_url_checker import check_url, is_good_proj_name, is_file_on_eos
 
 class SpawnHandler(BaseHandler):
     """Handle spawning of single-user servers via form.
@@ -48,14 +48,20 @@ class SpawnHandler(BaseHandler):
 
         the_user_name = the_user.name
         self.log.info('User %s is running. Fetching project %s.' %(the_user_name,the_projurl))
-        command = ['sudo', '/srv/jupyterhub/fetcher/fetcher.py', the_projurl, the_user_name, 'SWAN_projects']
-        self.log.info('Calling command: %s' %command)
-        subprocess.call(command)
+        isFileOnEos = is_file_on_eos(proj_name)
+        if not isFileOnEos:
+            command = ['sudo', '/srv/jupyterhub/fetcher/fetcher.py', the_projurl, the_user_name, 'SWAN_projects']
+            self.log.info('Calling command: %s' %command)
+            subprocess.call(command)
         proj_name = os.path.basename(the_projurl)
         the_home_url = ''
-        if is_good_proj_name(proj_name):
+        if is_good_proj_name(the_projurl):
             if proj_name.endswith('.ipynb'):
-                the_home_url = os.path.join('SWAN_projects', proj_name)
+                if is_file_on_eos(proj_name):
+                    # We need of file://eos/user/j/joe/A/B/C/d.ipynb only A/B/C/d.ipynb
+                    the_home_url = '/'.join(the_projurl.split('/')[6:])
+                else:
+                    the_home_url = os.path.join('SWAN_projects', proj_name)
             else:
                 # Default case
                 path_to_proj = os.path.splitext(proj_name)[0]
