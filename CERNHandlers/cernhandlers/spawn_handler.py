@@ -55,9 +55,9 @@ class SpawnHandler(BaseHandler):
             subprocess.call(command)
         proj_name = os.path.basename(the_projurl)
         the_home_url = ''
-        if is_good_proj_name(the_projurl):
+        if is_good_proj_name(proj_name):
             if proj_name.endswith('.ipynb'):
-                if is_file_on_eos(proj_name):
+                if is_file_on_eos(the_projurl):
                     # We need of file://eos/user/j/joe/A/B/C/d.ipynb only A/B/C/d.ipynb
                     the_home_url = '/'.join(the_projurl.split('/')[6:])
                 else:
