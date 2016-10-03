@@ -57,9 +57,12 @@ def check_url(url):
         raise_error('The URL of the project is not a github, CERN gitlab nor root.cern.ch URL. It is not a eos path either.')
 
     # Check the chars
+    onEOS = is_file_on_eos(url)
+    if onEOS:
+        extra_chars = " "
     has_allowed_chars = has_good_chars(url)
     if not has_allowed_chars:
-        raise_error('The URL of the project is invalid.')
+        raise_error('The URL of the project is invalid (some characters are not accepted).')
 
     # Limit the kind of project
     is_good_ext = is_good_proj_name(url)
@@ -67,7 +70,7 @@ def check_url(url):
         raise_error('The project must be a notebook or a git repository.')
 
     # Check it exists
-    if not is_file_on_eos(url):
+    if not onEOS:
         request = requests.get(url)
         sc = request.status_code
         if sc != 200:
