@@ -31,7 +31,6 @@ def has_good_chars(name, extra_chars=''):
         name = name[6:]
 
     if is_file_on_eos(name):
-        isFile = True
         name = name[5:]
 
     has_allowd_chars = set(name) <= set(allowed)
@@ -54,15 +53,15 @@ def check_url(url):
                      url.startswith('https://root.cern.ch') or \
                      url.startswith('file://eos/user')
     if not is_good_server:
-        raise_error('The URL of the project is not a github, CERN gitlab nor root.cern.ch URL. It is not a eos path either.')
+        raise_error('The URL of the project is not a github, CERN gitlab nor root.cern.ch URL. It is not a path on EOS either.')
 
     # Check the chars
     onEOS = is_file_on_eos(url)
     if onEOS:
         extra_chars = " "
-    has_allowed_chars = has_good_chars(url)
+    has_allowed_chars = has_good_chars(url, extra_chars)
     if not has_allowed_chars:
-        raise_error('The URL of the project is invalid (some characters are not accepted).')
+        raise_error('The URL of the project is invalid (some of its characters are not accepted).')
 
     # Limit the kind of project
     is_good_ext = is_good_proj_name(url)
