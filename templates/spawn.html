@@ -29,7 +29,7 @@
   <div class="row col-sm-offset-2 col-sm-8">
       {% if error_message %}
         <p class="spawn-error-msg text-danger">
-          Error: {{error_message}}
+          Error: {{error_message | safe}}
         </p>
       {% endif %}
     <form enctype="multipart/form-data" id="spawn_form" action="{{base_url}}spawn" method="post" role="form">
