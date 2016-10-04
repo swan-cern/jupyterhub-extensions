@@ -108,7 +108,7 @@ class CERNSpawner(SystemUserSpawner):
             if 'exited' == container_state['Status']:
                 id = container['Id']
                 self.client.remove_container(id)
-                mag = '<b>We encountered an error while creating your session. Please make sure you own a CERNBox. In case you don\'t have one, it will be created automatically for you upon visiting <a target="_blank" href="https://cernbox.cern.ch">this page</a>.</b>'
+                msg = '<b>We encountered an error while creating your session. Please make sure you own a CERNBox. In case you don\'t have one, it will be created automatically for you upon visiting <a target="_blank" href="https://cernbox.cern.ch">this page</a>.</b>'
                 return (msg)
             return (
                 "ExitCode={ExitCode}, "
