@@ -109,7 +109,10 @@ class CERNSpawner(SystemUserSpawner):
                 id = container['Id']
                 self.client.remove_container(id)
                 msg = '<b>We encountered an error while creating your session. Please make sure you own a CERNBox. In case you don\'t have one, it will be created automatically for you upon visiting <a target="_blank" href="https://cernbox.cern.ch">this page</a>.</b>'
-                return (msg)
+                # This is a workaround to display in the spawner form page a more expressive message,
+                # for example hiding the "Internal server error" string which gets automatically added.
+                raise ValueError(msg)
+                #return (msg)
             return (
                 "ExitCode={ExitCode}, "
                 "Error='{Error}', "
