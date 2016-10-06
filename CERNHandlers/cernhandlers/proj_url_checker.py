@@ -57,6 +57,7 @@ def check_url(url):
 
     # Check the chars
     onEOS = is_file_on_eos(url)
+    extra_chars = ""
     if onEOS:
         extra_chars = " "
     has_allowed_chars = has_good_chars(url, extra_chars)
