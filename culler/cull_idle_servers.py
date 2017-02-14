@@ -49,7 +49,7 @@ def delete_ticket(username):
 
 def container_found(username):
     client = docker.from_env()
-    return len(client.containers(filters={'name': "^/%s$" % username})) > 0
+    return len(client.containers(filters={'name': "^/jupyter-%s$" % username})) > 0
 
 @coroutine
 def cull_idle(url, api_token, timeout):
