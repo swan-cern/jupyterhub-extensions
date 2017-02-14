@@ -27,13 +27,16 @@ from dateutil.parser import parse as parse_date
 
 from tornado.gen import coroutine
 from tornado.log import app_log
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
 from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.options import define, options, parse_command_line
 
 from subprocess import call
 
+import sqlite3
+
 ticketpath = '/tmp/eos_'
+dbfile = '/srv/jupyterhub/jupyterhub.sqlite'
 
 def check_ticket(username):
     app_log.info("Checking ticket for user %s", username)
@@ -73,7 +76,15 @@ def cull_idle(url, api_token, timeout):
             check_ticket(username)
 
     for (name, f) in futures:
-        yield f
+        try:
+            yield f
+        except HTTPError:
+            app_log.error("Culling request for %s failed with code %s, removing user from the db", name, str(f.exception().code))
+            conn = sqlite3.connect(dbfile)
+            c = conn.cursor()
+            c.execute("delete from users where name = '%s'" % name)
+            conn.commit()
+            conn.close()
         app_log.debug("Finished culling %s", name)
         delete_ticket(name)
 
