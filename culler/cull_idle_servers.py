@@ -34,6 +34,7 @@ from tornado.options import define, options, parse_command_line
 from subprocess import call
 
 import sqlite3
+import docker
 
 ticketpath = '/tmp/eos_'
 dbfile = '/srv/jupyterhub/jupyterhub.sqlite'
@@ -45,6 +46,10 @@ def check_ticket(username):
 def delete_ticket(username):
     app_log.info("Deleting ticket for user %s", username)
     call(['sudo', "%s/delete_ticket.sh" % options.culler_dir, username, ticketpath])
+
+def container_found(username):
+    client = docker.from_env()
+    return len(client.containers(filters={'name': "^/%s$" % username})) > 0
 
 @coroutine
 def cull_idle(url, api_token, timeout):
@@ -64,7 +69,10 @@ def cull_idle(url, api_token, timeout):
     for user in users:
         username = user['name']
         last_activity = parse_date(user['last_activity'])
-        if user['server'] and last_activity < cull_limit:
+        # Situations when we need to cull
+        # 1. The user container has reached the limit of inactivity time
+        # 2. JH thinks the user container still exists, but docker confirms it does not: prevent user lockout
+        if user['server'] and (last_activity < cull_limit or (not user['admin'] and not container_found(username))):
             app_log.info("Culling %s (inactive since %s)", username, last_activity)
             req = HTTPRequest(url=url + '/api/users/%s/server' % username,
                 method='DELETE',
