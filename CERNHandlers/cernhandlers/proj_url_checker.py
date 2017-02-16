@@ -10,7 +10,8 @@ from urllib import parse
 
 from tornado import web
 
-CERNBoxPrefix = 'https://cbox07.cern.ch/index.php/s'
+CERNBoxPrefix = 'https://cernbox.cern.ch/index.php/s'
+CERNBoxPrefixTesting = 'https://cbox07.cern.ch/index.php/s'
 EOSUserPrefix = 'file://eos/user'
 
 def raise_error(emsg):
@@ -23,7 +24,7 @@ def get_name_from_shared_from_link(r):
     return finalFilename
 
 def is_cernbox_shared_link(proj_name):
-    return proj_name.startswith(CERNBoxPrefix) and proj_name.endswith('download')
+    return (proj_name.startswith(CERNBoxPrefix) or proj_name.startswith(CERNBoxPrefixTesting))and proj_name.endswith('download')
 
 def is_good_proj_name(proj_name):
     if proj_name.endswith('.git') or proj_name.endswith('.ipynb'):
@@ -69,6 +70,7 @@ def check_url(url):
                      url.startswith('https://raw.githubusercontent.com') or \
                      url.startswith('https://root.cern.ch') or \
                      url.startswith(CERNBoxPrefix) or \
+                     url.startswith(CERNBoxPrefixTesting) or \
                      url.startswith(EOSUserPrefix)
     if not is_good_server:
         raise_error('The URL of the project is not a github, CERN gitlab, CERNBox shared link nor root.cern.ch URL. It is not a path on EOS either.')
