@@ -56,7 +56,7 @@ class SpawnHandler(BaseHandler):
             subprocess.call(command)
         proj_name = os.path.basename(the_projurl)
         if isFileOnCERNBoxShare:
-            r = requests.get(the_projurl, verify=False)
+            r = requests.get(the_projurl, verify=not isFileOnCERNBoxShare)
             proj_name = get_name_from_shared_from_link(r)
         the_home_url = ''
         if is_good_proj_name(proj_name):

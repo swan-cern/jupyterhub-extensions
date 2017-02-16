@@ -91,7 +91,7 @@ def check_url(url):
 
     # Check it exists
     if not onEOS:
-        request = requests.get(url, verify=False)
+        request = requests.get(url, verify=not is_cernbox_shared_link(url))
         sc = request.status_code
         if sc != 200:
             raise_error('The URL of the project does not exist or is not reachable (status code is %s)' %sc)
