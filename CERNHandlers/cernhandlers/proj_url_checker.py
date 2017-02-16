@@ -15,7 +15,13 @@ EOSUserPrefix = 'file://eos/user'
 def raise_error(emsg):
     raise web.HTTPError(500, reason = emsg)
 
-def is_cernbox_shared_link(proj_name)
+def get_name_from_shared_from_link(r):
+    hdr = r.raw.getheader('Content-Disposition')
+    encodedName = re.search('filename="(.*)"$',hdr).group(1)
+    finalFilename = parse.unquote_plus(encodedName)
+    return finalFilename
+
+def is_cernbox_shared_link(proj_name):
     return proj_name.startswith(CERNBoxPrefix) and proj_name.endswith('download')
 
 def is_good_proj_name(proj_name):

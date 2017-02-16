@@ -13,7 +13,7 @@ from tornado.httputil import url_concat
 from jupyterhub.utils import url_path_join
 from jupyterhub.handlers.base import BaseHandler
 
-from .proj_url_checker import check_url, is_good_proj_name, is_file_on_eos
+from .proj_url_checker import check_url, is_good_proj_name, is_file_on_eos, is_cernbox_shared_link, get_name_from_shared_from_link
 
 class SpawnHandler(BaseHandler):
     """Handle spawning of single-user servers via form.
@@ -49,11 +49,15 @@ class SpawnHandler(BaseHandler):
         the_user_name = the_user.name
         self.log.info('User %s is running. Fetching project %s.' %(the_user_name,the_projurl))
         isFileOnEos = is_file_on_eos(the_projurl)
+        isFileOnCERNBoxShare = is_cernbox_shared_link(the_projurl)
         if not isFileOnEos:
             command = ['sudo', '/srv/jupyterhub/fetcher/fetcher.py', the_projurl, the_user_name, 'SWAN_projects']
             self.log.info('Calling command: %s' %command)
             subprocess.call(command)
         proj_name = os.path.basename(the_projurl)
+        if isFileOnCERNBoxShare:
+            r = requests.get(the_projurl)
+            proj_name = get_name_from_shared_from_link(r)
         the_home_url = ''
         if is_good_proj_name(proj_name):
             if proj_name.endswith('.ipynb'):
