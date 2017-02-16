@@ -14,10 +14,13 @@ CERNBoxPrefix = 'https://cernbox.cern.ch'
 def raise_error(emsg):
     raise web.HTTPError(500, reason = emsg)
 
+def is_cernbox_shared_link(proj_name)
+    return proj_name.startswith(CERNBoxPrefix) and proj_name.endswith('download')
+
 def is_good_proj_name(proj_name):
     if proj_name.endswith('.git') or proj_name.endswith('.ipynb'):
         return True
-    if proj_name.startswith(CERNBoxPrefix) and proj_name.endswith('download'):
+    if is_cernbox_shared_link(proj_name):
         return True
     return False
 
