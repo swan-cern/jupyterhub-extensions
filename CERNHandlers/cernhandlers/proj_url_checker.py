@@ -91,7 +91,7 @@ def check_url(url):
 
     # Check it exists
     if not onEOS:
-        request = requests.get(url)
+        request = requests.get(url, verify=False)
         sc = request.status_code
         if sc != 200:
             raise_error('The URL of the project does not exist or is not reachable (status code is %s)' %sc)
