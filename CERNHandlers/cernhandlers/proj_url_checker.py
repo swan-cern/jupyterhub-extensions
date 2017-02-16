@@ -3,13 +3,14 @@
 
 """Check the project url"""
 
+import re
 import requests
 import string
 from urllib import parse
 
 from tornado import web
 
-CERNBoxPrefix = 'https://cernbox.cern.ch'
+CERNBoxPrefix = 'https://cbox07.cern.ch/index.php/s'
 EOSUserPrefix = 'file://eos/user'
 
 def raise_error(emsg):
@@ -70,7 +71,7 @@ def check_url(url):
                      url.startswith(CERNBoxPrefix) or \
                      url.startswith(EOSUserPrefix)
     if not is_good_server:
-        raise_error('The URL of the project is not a github, CERN gitlab nor root.cern.ch URL. It is not a path on EOS either.')
+        raise_error('The URL of the project is not a github, CERN gitlab, CERNBox shared link nor root.cern.ch URL. It is not a path on EOS either.')
 
     # Check the chars
     onEOS = is_file_on_eos(url)
