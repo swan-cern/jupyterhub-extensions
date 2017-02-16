@@ -10,6 +10,7 @@ from urllib import parse
 from tornado import web
 
 CERNBoxPrefix = 'https://cernbox.cern.ch'
+EOSUserPrefix = 'file://eos/user'
 
 def raise_error(emsg):
     raise web.HTTPError(500, reason = emsg)
@@ -25,7 +26,7 @@ def is_good_proj_name(proj_name):
     return False
 
 def is_file_on_eos(proj_name):
-    return proj_name.startswith('file://eos/user')
+    return proj_name.startswith(EOSUserPrefix)
 
 def has_good_chars(name, extra_chars=''):
     '''Check if contains only good characters.
@@ -61,7 +62,7 @@ def check_url(url):
                      url.startswith('https://raw.githubusercontent.com') or \
                      url.startswith('https://root.cern.ch') or \
                      url.startswith(CERNBoxPrefix) or \
-                     url.startswith('file://eos/user')
+                     url.startswith(EOSUserPrefix)
     if not is_good_server:
         raise_error('The URL of the project is not a github, CERN gitlab nor root.cern.ch URL. It is not a path on EOS either.')
 
