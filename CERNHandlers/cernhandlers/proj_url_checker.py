@@ -11,7 +11,7 @@ from urllib import parse
 from tornado import web
 
 CERNBoxPrefix = 'https://cernbox.cern.ch/index.php/s'
-CERNBoxPrefixTesting = 'https://cernboxpreview.cern.ch/index.php/s'
+CERNBoxPrefixTesting = 'https://cernboxwebpreview.cern.ch/index.php/s'
 EOSUserPrefix = 'file://eos/user'
 
 def raise_error(emsg):
