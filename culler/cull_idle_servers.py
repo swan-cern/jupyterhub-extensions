@@ -52,7 +52,7 @@ def container_found(username):
     return len(client.containers(filters={'name': "^/jupyter-%s$" % username})) > 0
 
 @coroutine
-def cull_idle(url, api_token, timeout):
+def cull_idle(url, api_token, timeout, local_home):
     """cull idle single-user servers"""
     auth_header = {
         'Authorization': 'token %s' % api_token
@@ -81,7 +81,7 @@ def cull_idle(url, api_token, timeout):
             futures.append((username, client.fetch(req)))
         elif user['server'] and last_activity > cull_limit:
             app_log.debug("Not culling %s (active since %s)", username, last_activity)
-            check_ticket(username)
+            if not local_home: check_ticket(username)
 
     for (name, f) in futures:
         try:
@@ -94,7 +94,7 @@ def cull_idle(url, api_token, timeout):
             conn.commit()
             conn.close()
         app_log.debug("Finished culling %s", name)
-        delete_ticket(name)
+        if not local_home: delete_ticket(name)
 
 if __name__ == '__main__':
     from jupyter_client.localinterfaces import public_ips
@@ -103,6 +103,7 @@ if __name__ == '__main__':
     define('timeout', default=600, help="The idle timeout (in seconds)")
     define('cull_every', default=0, help="The interval (in seconds) for checking for idle servers to cull")
     define('culler_dir', default="/srv/jupyterhub/culler", help="Path to the directory for the culler")
+    define('local_home', default=False, help="The user's home is a temporary scratch directory")
 
     parse_command_line()
     if not options.cull_every:
@@ -110,7 +111,7 @@ if __name__ == '__main__':
 
     api_token = os.environ['JPY_API_TOKEN']
 
-    app_log.info("Culling every %s seconds, timeout for containers is %s seconds", options.cull_every, options.timeout)
+    app_log.info("Culling every %s seconds, timeout for containers is %s seconds", options.cull_every, options.timeout, options.local_home)
 
     loop = IOLoop.current()
     cull = lambda : cull_idle(options.url, api_token, options.timeout)
