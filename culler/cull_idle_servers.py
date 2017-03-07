@@ -111,10 +111,10 @@ if __name__ == '__main__':
 
     api_token = os.environ['JPY_API_TOKEN']
 
-    app_log.info("Culling every %s seconds, timeout for containers is %s seconds", options.cull_every, options.timeout, options.local_home)
+    app_log.info("Culling every %s seconds, timeout for containers is %s seconds, using local home (%s)", options.cull_every, options.timeout, options.local_home)
 
     loop = IOLoop.current()
-    cull = lambda : cull_idle(options.url, api_token, options.timeout)
+    cull = lambda : cull_idle(options.url, api_token, options.timeout, options.local_home)
     # run once before scheduling periodic call
     loop.run_sync(cull)
     # schedule periodic cull
