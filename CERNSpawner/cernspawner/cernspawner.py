@@ -3,18 +3,33 @@
 
 """CERN Specific Spawner class"""
 
-import subprocess
 import os
+import subprocess
 from pprint import pformat
 from dockerspawner import SystemUserSpawner
 from tornado import gen
 from traitlets import (
     Unicode,
     Bool,
+    Int
 )
+import threading
 from cernhandlers.proj_url_checker import has_good_chars
 
+def build_range():
+    from ast import literal_eval
+    rg_str = os.environ.get('SPARK_PORT_RANGE')
+    if rg_str:
+        return [literal_eval(rg_str)]
+    else:
+        return []
+
 class CERNSpawner(SystemUserSpawner):
+
+    # Spark port management
+    lock = threading.Lock()
+    user_to_range = {}
+    spark_port_ranges = build_range()
 
     lcg_view_path = Unicode(
         default_value='/cvmfs/sft.cern.ch/lcg/views',
@@ -46,7 +61,8 @@ class CERNSpawner(SystemUserSpawner):
     local_home = Bool(
         default_value=False,
         config=True,
-        help="If True, a physical directory on the host will be the home and not eos.")
+        help="If True, a physical directory on the host will be the home and not eos."
+    )
 
     eos_path_prefix = Unicode(
         default_value='/eos/user',
@@ -54,12 +70,37 @@ class CERNSpawner(SystemUserSpawner):
         help='Path in eos preceeding the /t/theuser directory (e.g. /eos/user, /eos/scratch/user).'
     )
 
+    spark_config_script = Unicode(
+        default_value='/cvmfs/sft.cern.ch/lcg/etc/hadoop-confext/hadoop-setconf.sh',
+        config=True,
+        help='Path in CVMFS of the script to configure a Spark cluster.'
+    )
+
+    spark_cluster_field = Unicode(
+        default_value='spark-cluster',
+        help='Spark cluster name field of the Spawner form.'
+    )
+
+    session_num_ports = Int(
+        default_value=3,
+        config=True,
+        help='Number of ports opened per user session (container).'
+    )
+
+
+    def __init__(self, **kwargs):
+        super(CERNSpawner, self).__init__(**kwargs)
+        self.offload = False
 
     def options_from_form(self, formdata):
         options = {}
         options[self.lcg_rel_field]         = formdata[self.lcg_rel_field][0]
         options[self.platform_field]        = formdata[self.platform_field][0]
         options[self.user_script_env_field] = formdata[self.user_script_env_field][0]
+        options[self.spark_cluster_field]   = formdata[self.spark_cluster_field][0]
+        
+        self.offload = options[self.spark_cluster_field] != 'none'
+
         return options
 
     def _env_default(self):
@@ -71,8 +112,9 @@ class CERNSpawner(SystemUserSpawner):
 
         env = super(CERNSpawner, self)._env_default()
         env.update(dict(
-            ROOT_LCG_VIEW_PATH     = self.lcg_view_path,
-            HOME                   = homepath
+            ROOT_LCG_VIEW_PATH  = self.lcg_view_path,
+            SPARK_CONFIG_SCRIPT = self.spark_config_script,    
+            HOME                = homepath
         ))
 
         return env
@@ -85,8 +127,17 @@ class CERNSpawner(SystemUserSpawner):
             USER_ENV_SCRIPT        = self.user_options[self.user_script_env_field],
         ))
 
+        if self.offload:
+            env['SPARK_CLUSTER_NAME'] = self.user_options[self.spark_cluster_field]
+            env['SERVER_HOSTNAME']    = os.uname().nodename
+
         return env
 
+    def free_port_range(self):
+        with CERNSpawner.lock:
+            range = CERNSpawner.user_to_range.pop(self.user.name, None)
+            if range:
+                CERNSpawner.spark_port_ranges.append(range)
 
     @gen.coroutine
     def poll(self):
@@ -94,6 +145,7 @@ class CERNSpawner(SystemUserSpawner):
         container = yield self.get_container()
         if not container:
             self.log.warn("container not found")
+            if self.offload: self.free_port_range()
             return ""
         container_state = container['State']
         self.log.debug(
@@ -108,6 +160,7 @@ class CERNSpawner(SystemUserSpawner):
             if 'exited' == container_state['Status']:
                 id = container['Id']
                 self.client.remove_container(id)
+                if self.offload: self.free_port_range()
                 msg = '<b>We encountered an error while creating your session. Please make sure you own a CERNBox. In case you don\'t have one, it will be created automatically for you upon visiting <a target="_blank" href="https://cernbox.cern.ch">this page</a>.</b>'
                 # This is a workaround to display in the spawner form page a more expressive message,
                 # for example hiding the "Internal server error" string which gets automatically added.
@@ -118,6 +171,41 @@ class CERNSpawner(SystemUserSpawner):
                 "Error='{Error}', "
                 "FinishedAt={FinishedAt}".format(**container_state)
                 )
+
+    def out_of_ports(self):
+        self.log.warning('No free ports left for Spark offloading')
+        raise Exception('The limit of open Spark sessions has been reached, please try again later or start a SWAN session without Spark')
+
+    def assign_port_range(self):
+        with CERNSpawner.lock:
+            ranges = CERNSpawner.spark_port_ranges
+            if ranges:
+                rg = ranges.pop()
+                start = rg[0]
+                end = start + self.session_num_ports - 1
+                if end < rg[1]:
+                    # There are still ports in the range, reinsert in the list
+                    ranges.append((end + 1, rg[1]))
+                elif end > rg[1]:
+                    self.out_of_ports()
+
+                CERNSpawner.user_to_range[self.user.name] = (start, end)
+                self.log.info("Container for user %s: Spark port range (%s - %s)", self.user.name, start, end)
+
+                port_bindings = {}
+                ports = []
+                for p in range(start, end + 1):
+                   port_bindings[p] = p
+                   ports.append(p)
+                 # Avoid overriding dockerspawner configuration for port Jupyter server port
+                if not self.use_internal_ip:
+                    port_bindings[8888] = (self.container_ip,)
+
+                # Pass configuration to dockerspawner
+                self.extra_host_config['port_bindings'] = port_bindings
+                self.extra_create_kwargs['ports'] = ports
+            else:
+                self.out_of_ports()
 
     @gen.coroutine
     def start(self, image=None):
@@ -133,15 +221,34 @@ class CERNSpawner(SystemUserSpawner):
 
         username = self.user.name
 
-        # Obtain credentials for the user
-        subprocess.call(['sudo', self.auth_script, username])
-        self.log.debug("We are in CERNSpawner. Credentials for %s were requested.", username)
+        if not self.local_home: 
+            # When using CERNBox as home, obtain credentials for the user
+            subprocess.call(['sudo', self.auth_script, username])
+            self.log.debug("We are in CERNSpawner. Credentials for %s were requested.", username)
+
+        if self.offload:
+            self.log.debug("Configuring container for user %s, available port ranges are %s", username, CERNSpawner.spark_port_ranges) 
+            self.assign_port_range()
 
         tornadoFuture = super(CERNSpawner, self).start(
             image=image
         )
 
         yield tornadoFuture
+
+    @gen.coroutine
+    def stop(self, now=False):
+        """Stop the container
+
+        Make sure the corresponding Spark port range is freed, if necessary
+        """
+
+        if self.offload:
+            self.free_port_range()
+
+        yield super(CERNSpawner, self).stop(
+            now=now
+        )
 
     @property
     def volume_mount_points(self):
