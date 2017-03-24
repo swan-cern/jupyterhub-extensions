@@ -130,6 +130,15 @@ class CERNSpawner(SystemUserSpawner):
         if self.offload:
             env['SPARK_CLUSTER_NAME'] = self.user_options[self.spark_cluster_field]
             env['SERVER_HOSTNAME']    = os.uname().nodename
+            
+            # We need to assign the port range for the new container here, since the assigned ports will be passed as env variables.
+            # These variables will be used to create the SparkConf once in the container, in the Python kernel.
+            self.log.debug("Configuring container for user %s, available port ranges are %s", self.user.name, CERNSpawner.spark_port_ranges)
+            self.assign_port_range()
+            i = 1
+            for p in self.extra_create_kwargs['ports']:
+                env["SPARK_PORT_{port}".format(port=i)] = p
+                i += 1
 
         return env
 
@@ -225,10 +234,6 @@ class CERNSpawner(SystemUserSpawner):
             # When using CERNBox as home, obtain credentials for the user
             subprocess.call(['sudo', self.auth_script, username])
             self.log.debug("We are in CERNSpawner. Credentials for %s were requested.", username)
-
-        if self.offload:
-            self.log.debug("Configuring container for user %s, available port ranges are %s", username, CERNSpawner.spark_port_ranges) 
-            self.assign_port_range()
 
         tornadoFuture = super(CERNSpawner, self).start(
             image=image
