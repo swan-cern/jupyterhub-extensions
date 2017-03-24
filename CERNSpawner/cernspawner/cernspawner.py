@@ -206,7 +206,7 @@ class CERNSpawner(SystemUserSpawner):
                 for p in range(start, end + 1):
                    port_bindings[p] = p
                    ports.append(p)
-                 # Avoid overriding dockerspawner configuration for port Jupyter server port
+                # Avoid overriding dockerspawner configuration for port Jupyter server port
                 if not self.use_internal_ip:
                     port_bindings[8888] = (self.container_ip,)
 
