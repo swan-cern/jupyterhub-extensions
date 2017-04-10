@@ -6,6 +6,33 @@
 {% block main %}
 
 {% block login %}
+
+<style media="screen" type="text/css">
+
+#login-main 
+.auth-form-header {
+  padding: 10px 20px;
+  color: #fff;
+  background: #0053A1;
+  border-radius: 3px 3px 0 0;
+}
+
+.btn-jupyter {
+  color: #FFFFFF;
+  background-color: #0053A1;
+  border-color: #0053A1;
+}
+
+.btn-jupyter:hover, 
+.btn-jupyter:focus, 
+.btn-jupyter.active {
+  color: #FFFFFF; 
+  background-color: #0053A1; 
+  border-color: #0053A1; 
+}
+
+</style>
+
 <div id="login-main" class="container">
 {% if custom_html %}
 {{ custom_html }}
