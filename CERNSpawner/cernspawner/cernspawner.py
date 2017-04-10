@@ -97,7 +97,7 @@ class CERNSpawner(SystemUserSpawner):
         options[self.lcg_rel_field]         = formdata[self.lcg_rel_field][0]
         options[self.platform_field]        = formdata[self.platform_field][0]
         options[self.user_script_env_field] = formdata[self.user_script_env_field][0]
-        options[self.spark_cluster_field]   = formdata[self.spark_cluster_field][0]
+        options[self.spark_cluster_field]   = self.spark_cluster_field if self.spark_cluster_field in formdata.keys() else 'none'
         
         self.offload = options[self.spark_cluster_field] != 'none'
 
