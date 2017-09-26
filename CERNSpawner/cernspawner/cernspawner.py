@@ -103,28 +103,29 @@ class CERNSpawner(SystemUserSpawner):
 
         return options
 
-    def _env_default(self):
+    def get_env(self):
+
+        env = super(CERNSpawner, self).get_env()
+
         username = self.user.name
         if self.local_home:
             homepath = "/scratch/%s" %(username)
         else:
             homepath = "%s/%s/%s" %(self.eos_path_prefix, username[0], username)
 
-        env = super(CERNSpawner, self)._env_default()
-        env.update(dict(
-            ROOT_LCG_VIEW_PATH  = self.lcg_view_path,
-            SPARK_CONFIG_SCRIPT = self.spark_config_script,    
-            HOME                = homepath
-        ))
-
-        return env
-
-    def get_env(self):
-        env = super().get_env()
         env.update(dict(
             ROOT_LCG_VIEW_NAME     = self.user_options[self.lcg_rel_field],
             ROOT_LCG_VIEW_PLATFORM = self.user_options[self.platform_field],
             USER_ENV_SCRIPT        = self.user_options[self.user_script_env_field],
+            ROOT_LCG_VIEW_PATH     = self.lcg_view_path,
+            SPARK_CONFIG_SCRIPT    = self.spark_config_script,
+            HOME                   = homepath,
+
+            JPY_USER               = self.user.name,
+            JPY_COOKIE_NAME        = self.user.server.cookie_name,
+            JPY_BASE_URL           = self.user.server.base_url,
+            JPY_HUB_PREFIX         = self.hub.server.base_url,
+            JPY_HUB_API_URL        = self.hub.api_url
         ))
 
         if self.offload:
@@ -155,7 +156,7 @@ class CERNSpawner(SystemUserSpawner):
         if not container:
             self.log.warn("container not found")
             if self.offload: self.free_port_range()
-            return ""
+            return 0
         container_state = container['State']
         self.log.debug(
             "Container %s status: %s",
@@ -216,7 +217,6 @@ class CERNSpawner(SystemUserSpawner):
             else:
                 self.out_of_ports()
 
-    @gen.coroutine
     def start(self, image=None):
         """Start the container and perform the operations necessary for mounting
         EOS.
@@ -235,11 +235,9 @@ class CERNSpawner(SystemUserSpawner):
             subprocess.call(['sudo', self.auth_script, username])
             self.log.debug("We are in CERNSpawner. Credentials for %s were requested.", username)
 
-        tornadoFuture = super(CERNSpawner, self).start(
+        return super(CERNSpawner, self).start(
             image=image
         )
-
-        yield tornadoFuture
 
     @gen.coroutine
     def stop(self, now=False):
