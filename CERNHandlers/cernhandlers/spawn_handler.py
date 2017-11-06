@@ -4,6 +4,7 @@
 """CERN Spawn handler"""
 
 import os
+import io
 import requests
 import subprocess
 
@@ -14,6 +15,7 @@ from jupyterhub.utils import url_path_join
 from jupyterhub.handlers.base import BaseHandler
 
 from .proj_url_checker import check_url, is_good_proj_name, is_file_on_eos, is_cernbox_shared_link, get_name_from_shared_from_link
+from .status_handler import maintenance_file
 
 class SpawnHandler(BaseHandler):
     """Handle spawning of single-user servers via form.
@@ -87,6 +89,7 @@ class SpawnHandler(BaseHandler):
         return the_home_url
 
     @web.authenticated
+    @gen.coroutine
     def get(self):
         """GET renders form for spawning with user-specified options"""
         user = self.get_current_user()
@@ -98,6 +101,11 @@ class SpawnHandler(BaseHandler):
                 url = os.path.join(url, 'tree', redirect_url)
             self.redirect(url)
             return
+
+        if os.path.isfile(maintenance_file):
+            self.finish(self.render_template('maintenance.html'))
+            return
+            
         if user.spawner.options_form:
             self.finish(self._render_form())
         else:
@@ -115,6 +123,11 @@ class SpawnHandler(BaseHandler):
             self.log.debug("User is already running: %s", url)
             self.redirect(url)
             return
+
+        if os.path.isfile(maintenance_file):
+            self.finish(self.render_template('maintenance.html'))
+            return
+
         form_options = {}
         for key, byte_list in self.request.body_arguments.items():
             form_options[key] = [ bs.decode('utf8') for bs in byte_list ]

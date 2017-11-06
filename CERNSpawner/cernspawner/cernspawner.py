@@ -11,7 +11,8 @@ from tornado import gen
 from traitlets import (
     Unicode,
     Bool,
-    Int
+    Int,
+    List
 )
 import threading
 from cernhandlers.proj_url_checker import has_good_chars
@@ -52,6 +53,16 @@ class CERNSpawner(SystemUserSpawner):
         help='User environment script field of the Spawner form.'
     )
 
+    user_n_cores = Unicode(
+        default_value='ncores',
+        help='User number of cores field of the Spawner form.'
+    )
+
+    user_memory = Unicode(
+        default_value='memory',
+        help='User available memory field of the Spawner form.'
+    )
+
     auth_script = Unicode(
         default_value='',
         config=True,
@@ -87,6 +98,24 @@ class CERNSpawner(SystemUserSpawner):
         help='Number of ports opened per user session (container).'
     )
 
+    available_cores = List(
+        default_value=['1'],
+        config=True,
+        help='List of cores options available to the user'
+    )
+
+    available_memory = List(
+        default_value=['8'],
+        config=True,
+        help='List of memory options available to the user'
+    )
+
+    extra_libs = Unicode(
+        default_value='',
+        config=True,
+        help='Script to authenticate.'
+    )
+
 
     def __init__(self, **kwargs):
         super(CERNSpawner, self).__init__(**kwargs)
@@ -98,6 +127,8 @@ class CERNSpawner(SystemUserSpawner):
         options[self.platform_field]        = formdata[self.platform_field][0]
         options[self.user_script_env_field] = formdata[self.user_script_env_field][0]
         options[self.spark_cluster_field]   = formdata[self.spark_cluster_field][0] if self.spark_cluster_field in formdata.keys() else 'none'
+        options[self.user_n_cores]          = int(formdata[self.user_n_cores][0]) if formdata[self.user_n_cores][0] in self.available_cores else int(self.available_cores[0])
+        options[self.user_memory]           = formdata[self.user_memory][0] + 'g' if formdata[self.user_memory][0] in self.available_memory else self.available_memory[0] + 'g'
         
         self.offload = options[self.spark_cluster_field] != 'none'
 
@@ -125,13 +156,14 @@ class CERNSpawner(SystemUserSpawner):
             JPY_COOKIE_NAME        = self.user.server.cookie_name,
             JPY_BASE_URL           = self.user.server.base_url,
             JPY_HUB_PREFIX         = self.hub.server.base_url,
-            JPY_HUB_API_URL        = self.hub.api_url
+            JPY_HUB_API_URL        = self.hub.api_url,
+            EXTRA_LIBS             = self.extra_libs
         ))
 
         if self.offload:
             env['SPARK_CLUSTER_NAME'] = self.user_options[self.spark_cluster_field]
             env['SERVER_HOSTNAME']    = os.uname().nodename
-            
+
             # We need to assign the port range for the new container here, since the assigned ports will be passed as env variables.
             # These variables will be used to create the SparkConf once in the container, in the Python kernel.
             self.log.debug("Configuring container for user %s, available port ranges are %s", self.user.name, CERNSpawner.spark_port_ranges)
@@ -235,8 +267,17 @@ class CERNSpawner(SystemUserSpawner):
             subprocess.call(['sudo', self.auth_script, username])
             self.log.debug("We are in CERNSpawner. Credentials for %s were requested.", username)
 
+        # Due to dockerpy limitations in the current version, we cannot use --cpu to limit cpu.
+        # This is an alternative (and old) way of doing it
+        extra_host_config = {
+            'cpu_period' : 100000,
+            'cpu_quota' : 100000 * self.user_options[self.user_n_cores],
+            'mem_limit' : self.user_options[self.user_memory]
+        }
+
         return super(CERNSpawner, self).start(
-            image=image
+            image=image,
+            extra_host_config=extra_host_config
         )
 
     @gen.coroutine
