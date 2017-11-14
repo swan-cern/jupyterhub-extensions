@@ -93,7 +93,7 @@ class CERNSpawner(SystemUserSpawner):
     )
 
     session_num_ports = Int(
-        default_value=4,
+        default_value=3,
         config=True,
         help='Number of ports opened per user session (container).'
     )
