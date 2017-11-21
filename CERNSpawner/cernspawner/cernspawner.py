@@ -163,6 +163,7 @@ class CERNSpawner(SystemUserSpawner):
         if self.offload:
             env['SPARK_CLUSTER_NAME'] = self.user_options[self.spark_cluster_field]
             env['SERVER_HOSTNAME']    = os.uname().nodename
+            env['MAX_MEMORY']         = self.user_options[self.user_memory]
 
             # We need to assign the port range for the new container here, since the assigned ports will be passed as env variables.
             # These variables will be used to create the SparkConf once in the container, in the Python kernel.
