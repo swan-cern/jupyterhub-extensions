@@ -4,10 +4,20 @@
 
 <div class="container">
   <div class="row">
-    <div class="text-center">
-      <p>Your server is starting up.</p>
-      <p>You will be redirected automatically when it's ready for you.</p>
-      <a id="refresh" class="btn btn-lg btn-primary" href="#">refresh</a>
+    <div class="swan-info">
+      <div id="swan-loader">
+        <div class="loader-circle">
+          <img src="/hub/static/swan/logos/logo_swan_letters.png">
+        </div>
+        <div class="loader-line-mask">
+          <div class="loader-line"></div>
+        </div>
+        <span class="text">Starting your session
+        <p class="extra">You will be redirected automatically when it's ready for you.<br>
+        If this is taking too long, <a id="refresh" href="#">click here to refresh</a>.</p>
+        </span>
+      </div>
+
     </div>
   </div>
 </div>

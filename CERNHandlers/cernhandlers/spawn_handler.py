@@ -17,6 +17,8 @@ from jupyterhub.handlers.base import BaseHandler
 from .proj_url_checker import check_url, is_good_proj_name, is_file_on_eos, is_cernbox_shared_link, get_name_from_shared_from_link
 from .status_handler import maintenance_file
 
+swanrc = '/srv/jupyterhub/swanrc/swanrc.sh'
+
 class SpawnHandler(BaseHandler):
     """Handle spawning of single-user servers via form.
 
@@ -88,6 +90,36 @@ class SpawnHandler(BaseHandler):
                     the_home_url = os.path.join('SWAN_projects', path_to_proj)
         return the_home_url
 
+    def read_swanrc_options(self, user):
+        """ Read the user's swanrc file stored in CERNBox.
+            This file contains the user's session configuration in order to automatically start the session when accessing SWAN.
+            Swanrc bash scripts runs as the user in order to read his files.
+        """
+        options = {}
+        subprocess.call(['sudo', '/srv/jupyterhub/culler/check_ticket.sh', user])
+        rc = subprocess.Popen(['sudo', swanrc, 'read', user], stdout=subprocess.PIPE)
+        for line in io.TextIOWrapper(rc.stdout, encoding="utf-8"):
+            if line == 0:
+                break
+            line_split = line.split('=')
+            if len(line_split) == 2:
+                options[line_split[0]] = [line_split[1].rstrip('\n')]
+
+        return options
+
+    def write_swanrc_options(self, user, options):
+        """Write the configurations selected in a .swanrc file inside user's CERNBox"""
+        new_list = []
+        for key in options:
+            new_list.append('%s=%s' % (key, options[key][0]))
+
+        subprocess.call(['sudo', swanrc, 'write', user, " ".join(new_list)])
+
+    def remove_swanrc_options(self, user):
+        """Remove the configuration file in order to start a new configuration"""
+        subprocess.call(['sudo', swanrc, 'remove', user])
+
+
     @web.authenticated
     @gen.coroutine
     def get(self):
@@ -98,14 +130,39 @@ class SpawnHandler(BaseHandler):
             self.log.warning("User is running: %s", url)
             redirect_url = self.handle_redirection()
             if redirect_url:
-                url = os.path.join(url, 'tree', redirect_url)
+                url = os.path.join(url, 'cernbox', redirect_url)
+            else:
+                url = os.path.join(url, 'projects')
             self.redirect(url)
             return
 
         if os.path.isfile(maintenance_file):
             self.finish(self.render_template('maintenance.html'))
             return
-            
+
+        if 'changeconfig' in self.request.query_arguments:
+            self.remove_swanrc_options(user.name)
+        else:
+            form_options = self.read_swanrc_options(user.name)
+            if form_options:
+                self.log.info('User has default session configuration: loading saved options')
+                try:
+                    options = user.spawner.options_from_form(form_options)
+                    yield self.spawn_single_user(user, options=options)
+                except Exception as e:
+                    self.log.error("Failed to spawn single-user server with form", exc_info=True)
+                    self.finish(self._render_form(str(e)))
+                    return
+                self.set_login_cookie(user)
+                url = user.url
+                projurl_key = 'projurl'
+                if projurl_key in self.request.body_arguments:
+                    the_projurl = self.request.body_arguments['projurl'][0].decode('utf8')
+                    redirect_url = self.handle_redirection(the_projurl)
+                    url = os.path.join(url, 'cernbox', redirect_url)
+                self.redirect(os.path.join(url))
+                return
+
         if user.spawner.options_form:
             self.finish(self._render_form())
         else:
@@ -119,7 +176,7 @@ class SpawnHandler(BaseHandler):
         """POST spawns with user-specified options"""
         user = self.get_current_user()
         if user.running:
-            url = user.url
+            url = os.path.join(user.url, 'projects')
             self.log.debug("User is already running: %s", url)
             self.redirect(url)
             return
@@ -130,9 +187,15 @@ class SpawnHandler(BaseHandler):
 
         form_options = {}
         for key, byte_list in self.request.body_arguments.items():
+            if key == 'keep-config':
+                continue
             form_options[key] = [ bs.decode('utf8') for bs in byte_list ]
         for key, byte_list in self.request.files.items():
             form_options["%s_file"%key] = byte_list
+
+        if 'keep-config' in self.request.body_arguments:
+            self.write_swanrc_options(user.name, form_options)
+
         try:
             options = user.spawner.options_from_form(form_options)
             yield self.spawn_single_user(user, options=options)
@@ -146,5 +209,7 @@ class SpawnHandler(BaseHandler):
         if projurl_key in self.request.body_arguments:
             the_projurl = self.request.body_arguments['projurl'][0].decode('utf8')
             redirect_url = self.handle_redirection(the_projurl)
-            url = os.path.join(url, 'tree', redirect_url)
+            url = os.path.join(url, 'cernbox', redirect_url)
+        else:
+            url = os.path.join(url, 'projects')
         self.redirect(url)

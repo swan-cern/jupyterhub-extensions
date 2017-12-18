@@ -27,14 +27,17 @@
 <head>
     <meta charset="utf-8">
 
-    <title>{% block title %}Jupyter Hub{% endblock %}</title>
+    <title>{% block title %}Swan{% endblock %}</title>
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+
+    <link rel="shortcut icon" type="image/x-icon" href="/hub/static/swan/logos/favicon.ico">
+
     {% block stylesheet %}
-    <link rel="stylesheet" href="{{ static_url("css/style.min.css") }}" type="text/css"/>
+    <link rel="stylesheet" href="{{ static_url('css/style.min.css') }}" type="text/css"/>
+    <link rel="stylesheet" href="/hub/static/swan/css/style.css" type="text/css"/>
     {% endblock %}
-    <script src="{{static_url("components/requirejs/require.js") }}" type="text/javascript" charset="utf-8"></script>
+    <script src="{{static_url('components/requirejs/require.js') }}" type="text/javascript" charset="utf-8"></script>
     <script>
       require.config({
           {% if version_hash %}
@@ -72,7 +75,6 @@
 </head>
 
 <body>
-
 <noscript>
   <div id='noscript'>
     Jupyter Hub requires JavaScript.<br>
@@ -80,26 +82,39 @@
   </div>
 </noscript>
 
-<div id="header" class="navbar navbar-static-top">
-  <div class="container">
-  <span id="jupyterhub-logo" class="pull-left"><a href="{{base_url}}"><img src='{{base_url}}logo' alt='JupyterHub' class='jpy-logo' title='Home'/></a></span>
 
-  {% block login_widget %}
 
-    <span id="login_widget">
-      {% if user %}
-        <a id="logout" class="navbar-btn btn-sm btn btn-default pull-right" href="{{logout_url}}"> <i class="fa fa-sign-out"></i> Logout</a>
-      {% else %}
-        <a id="login" class="btn-sm btn navbar-btn btn-default pull-right" href="{{login_url}}">Login</a>
-      {% endif %}
-    </span>
+<header>
+    <div id="header-container" class="container">
+        <div class="row">
+            <div class="col-xs-6">
+                <div id="ipython_notebook" class="nav navbar-brand"><a href="{{base_url}}" title='Swan Projects'><img src='/hub/static/swan/logos/logo_swan_cloudhisto.png' alt='SWAN' title='Home'/></a></div>
+            </div>
 
-  {% endblock %}
+            <div class="col-xs-6 control">
 
-  {% block header %}
-  {% endblock %}
-  </div>
-</div>
+
+                {% block header_buttons %}
+
+                <div id="buttons-right-wrapper">
+                    <div id="buttons-right">
+                        <button class="btn btn-default btn-xs" onclick="javascript: window.location = '{{logout_url}}'">
+                            <i class="fa fa-sign-out" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+
+                {% endblock header_buttons %}
+            </div>
+
+        </div>
+    </div>
+    <div class="header-bar"></div>
+
+    {% block header %}
+    {% endblock %}
+</header>
+
 
 {% block main %}
 {% endblock %}
@@ -110,7 +125,28 @@
   </div>
 {% endcall %}
 
+<footer>
+    <div class="container">
+        <div class="row">
+            <div class="col-xs-8 text">
+                <span class="text-muted">SWAN &copy; Copyright CERN 2017. All rights reserved.</span>
+                <ul class="text-muted">
+                    <li><a href="">Home</a></li>
+                    <li><a href="">Contacts</a></li>
+                    <li><a href="">Support</a></li>
+                    <li><a href="">Report a bug</a></li>
+                    <li><a href="">Imprint</a></li>
+                </ul>
+            </div>
+            <div class="col-xs-4 logo">
+                <img src='/hub/static/swan/logos/logo_cern.png' alt='CERN'/>
+            </div>
+        </div>
+    </div>
+</footer>
+
 {% block script %}
+
 {% endblock %}
 
 </body>
