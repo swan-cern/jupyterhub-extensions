@@ -113,7 +113,7 @@ class SpawnHandler(BaseHandler):
         for key in options:
             new_list.append('%s=%s' % (key, options[key][0]))
 
-        subprocess.call(['sudo', swanrc, 'write', user, " ".join(new_list)])
+        subprocess.call(['sudo', swanrc, 'write', user, " ".join(new_list).replace('$', '\$')])
 
     def remove_swanrc_options(self, user):
         """Remove the configuration file in order to start a new configuration"""
