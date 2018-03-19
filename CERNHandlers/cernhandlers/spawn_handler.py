@@ -27,6 +27,7 @@ class SpawnHandler(BaseHandler):
     """
 
     def _render_form(self, message=''):
+        configs = SpawnHandlersConfigs.instance()
         user = self.get_current_user()
         # We inject an extra field if there is a project set
         the_projurl = self.get_argument('projurl','')
@@ -37,6 +38,7 @@ class SpawnHandler(BaseHandler):
             user=user,
             spawner_options_form=the_form,
             error_message=message,
+            local_home=configs.local_home,
         )
 
     def handle_redirection(self, the_projurl = ''):
@@ -97,14 +99,15 @@ class SpawnHandler(BaseHandler):
         """
         options = {}
         configs = SpawnHandlersConfigs.instance()
-        subprocess.call(['sudo', '/srv/jupyterhub/culler/check_ticket.sh', user])
-        rc = subprocess.Popen(['sudo', configs.swanrc_path, 'read', user], stdout=subprocess.PIPE)
-        for line in io.TextIOWrapper(rc.stdout, encoding="utf-8"):
-            if line == 0:
-                break
-            line_split = line.split('=')
-            if len(line_split) == 2:
-                options[line_split[0]] = [line_split[1].rstrip('\n')]
+        if not configs.local_home:
+            subprocess.call(['sudo', '/srv/jupyterhub/culler/check_ticket.sh', user])
+            rc = subprocess.Popen(['sudo', configs.swanrc_path, 'read', user], stdout=subprocess.PIPE)
+            for line in io.TextIOWrapper(rc.stdout, encoding="utf-8"):
+                if line == 0:
+                    break
+                line_split = line.split('=')
+                if len(line_split) == 2:
+                    options[line_split[0]] = [line_split[1].rstrip('\n')]
 
         return options
 
@@ -115,12 +118,14 @@ class SpawnHandler(BaseHandler):
             new_list.append('%s=%s' % (key, options[key][0]))
 
         configs = SpawnHandlersConfigs.instance()
-        subprocess.call(['sudo', configs.swanrc_path, 'write', user, " ".join(new_list).replace('$', '\$')])
+        if not configs.local_home:
+            subprocess.call(['sudo', configs.swanrc_path, 'write', user, " ".join(new_list).replace('$', '\$')])
 
     def remove_swanrc_options(self, user):
         """Remove the configuration file in order to start a new configuration"""
         configs = SpawnHandlersConfigs.instance()
-        subprocess.call(['sudo', configs.swanrc_path, 'remove', user])
+        if not configs.local_home:
+            subprocess.call(['sudo', configs.swanrc_path, 'remove', user])
 
 
     @web.authenticated

@@ -41,9 +41,9 @@
         </div>
       </div>
       <div class="modal-footer">
-        <div class="keep-config">
+        {% if not local_home %}<div class="keep-config">
           <input type="checkbox" id="keep-config" name="keep-config" class="keep-config-checkbox"><label for="keep-config"> Always start with this configuration</label>
-        </div>
+        </div>{% endif %}
         <input type="submit" id="spawn" value="Start my Session" class="btn btn-default btn-primary size-100">
       </div>
     </div>
