@@ -67,9 +67,10 @@ class SpawnHandler(BaseHandler):
             if proj_name.endswith('.ipynb'):
                 if is_file_on_eos(the_projurl):
                     # We need of file://eos/user/j/joe/A/B/C/d.ipynb only A/B/C/d.ipynb
-                    the_home_url = '/'.join(the_projurl.split('/')[6:])
+                    the_home_url = 'notebooks/' + '/'.join(the_projurl.split('/')[6:])
                 else:
-                    the_home_url = os.path.join('SWAN_projects', proj_name)
+                    proj_name_no_ext = os.path.splitext(proj_name)[0]
+                    the_home_url = os.path.join('notebooks', 'SWAN_projects', proj_name_no_ext, proj_name)
             else:
                 # Default case
                 path_to_proj = os.path.splitext(proj_name)[0]
@@ -85,9 +86,9 @@ class SpawnHandler(BaseHandler):
                     index_nb = os.path.join(the_projurl_noext, 'raw', 'master', index_name)
 
                 if '' != index_nb and requests.get(index_nb).status_code == 200:
-                    the_home_url = os.path.join('SWAN_projects', path_to_proj, index_name)
+                    the_home_url = os.path.join('projects', path_to_proj, index_name)
                 else:
-                    the_home_url = os.path.join('SWAN_projects', path_to_proj)
+                    the_home_url = os.path.join('projects', path_to_proj)
         return the_home_url
 
     def read_swanrc_options(self, user):
@@ -130,7 +131,7 @@ class SpawnHandler(BaseHandler):
             self.log.warning("User is running: %s", url)
             redirect_url = self.handle_redirection()
             if redirect_url:
-                url = os.path.join(url, 'cernbox', redirect_url)
+                url = os.path.join(url, redirect_url)
             else:
                 url = os.path.join(url, 'projects')
             self.redirect(url)
@@ -159,7 +160,7 @@ class SpawnHandler(BaseHandler):
                 if projurl_key in self.request.body_arguments:
                     the_projurl = self.request.body_arguments['projurl'][0].decode('utf8')
                     redirect_url = self.handle_redirection(the_projurl)
-                    url = os.path.join(url, 'cernbox', redirect_url)
+                    url = os.path.join(url, redirect_url)
                 self.redirect(os.path.join(url))
                 return
 
@@ -209,7 +210,7 @@ class SpawnHandler(BaseHandler):
         if projurl_key in self.request.body_arguments:
             the_projurl = self.request.body_arguments['projurl'][0].decode('utf8')
             redirect_url = self.handle_redirection(the_projurl)
-            url = os.path.join(url, 'cernbox', redirect_url)
+            url = os.path.join(url, redirect_url)
         else:
             url = os.path.join(url, 'projects')
         self.redirect(url)
