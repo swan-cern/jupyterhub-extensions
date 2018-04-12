@@ -2,114 +2,20 @@
 
 {% block main %}
 
-<style media="screen" type="text/css">
-.btn-gonotebooks {
-  color: #FFFFFF;
-  background-color: #0053A1;
-  border-color: #0053A1;
-}
-
-.btn-gonotebooks:hover,
-.btn-gonotebooks:focus,
-.btn-gonotebooks:active,
-.btn-gonotebooks.active,
-.open .dropdown-toggle.btn-gonotebooks {
-  color: #FFFFFF;
-  background-color: #0053A1;
-  border-color: #0053A1;
-}
-
-.btn-gonotebooks:active,
-.btn-gonotebooks.active,
-.open .dropdown-toggle.btn-gonotebooks {
-  background-image: none;
-}
-
-.btn-gonotebooks.disabled,
-.btn-gonotebooks[disabled],
-fieldset[disabled] .btn-gonotebooks,
-.btn-gonotebooks.disabled:hover,
-.btn-gonotebooks[disabled]:hover,
-fieldset[disabled] .btn-gonotebooks:hover,
-.btn-gonotebooks.disabled:focus,
-.btn-gonotebooks[disabled]:focus,
-fieldset[disabled] .btn-gonotebooks:focus,
-.btn-gonotebooks.disabled:active,
-.btn-gonotebooks[disabled]:active,
-fieldset[disabled] .btn-gonotebooks:active,
-.btn-gonotebooks.disabled.active,
-.btn-gonotebooks[disabled].active,
-fieldset[disabled] .btn-gonotebooks.active {
-  background-color: #0053A1;
-  border-color: #0053A1;
-}
-
-.btn-gonotebooks .badge {
-  color: #0053A1;
-  background-color: #FFFFFF;
-}
-
-.btn-shutdownnotebooks {
-  color: #FFFFFF;
-  background-color: #FF6600;
-  border-color: #FF6600;
-}
-
-.btn-shutdownnotebooks:hover,
-.btn-shutdownnotebooks:focus,
-.btn-shutdownnotebooks:active,
-.btn-shutdownnotebooks.active,
-.open .dropdown-toggle.btn-shutdownnotebooks {
-  color: #FFFFFF;
-  background-color: #FF6600;
-  border-color: #FF6600;
-}
-
-.btn-shutdownnotebooks:active,
-.btn-shutdownnotebooks.active,
-.open .dropdown-toggle.btn-shutdownnotebooks {
-  background-image: none;
-}
-
-.btn-shutdownnotebooks.disabled,
-.btn-shutdownnotebooks[disabled],
-fieldset[disabled] .btn-shutdownnotebooks,
-.btn-shutdownnotebooks.disabled:hover,
-.btn-shutdownnotebooks[disabled]:hover,
-fieldset[disabled] .btn-shutdownnotebooks:hover,
-.btn-shutdownnotebooks.disabled:focus,
-.btn-shutdownnotebooks[disabled]:focus,
-fieldset[disabled] .btn-shutdownnotebooks:focus,
-.btn-shutdownnotebooks.disabled:active,
-.btn-shutdownnotebooks[disabled]:active,
-fieldset[disabled] .btn-shutdownnotebooks:active,
-.btn-shutdownnotebooks.disabled.active,
-.btn-shutdownnotebooks[disabled].active,
-fieldset[disabled] .btn-shutdownnotebooks.active {
-  background-color: #FF6600;
-  border-color: #FF6600;
-}
-
-.btn-shutdownnotebooks .badge {
-  color: #FF6600;
-  background-color: #FFFFFF;
-}
-
-</style> 
 
 <div class="container">
   <div class="row">
-    <div class="text-center">
-      <a href="https://swan.web.cern.ch" target="_blank"><img src="https://cern.ch/swanserver/images/logo_swan_letters.png" width="27%"></a>
-      <br/><br/>
+    <div class="swan-info">
+    {% if user.admin %}
+      <a href="https://swan.web.cern.ch" target="_blank"><img src="/hub/static/swan/logos/logo_swan_letters.png" width="27%"></a>
       {% if user.running %}
-      <a id="stop" class="btn btn-lg btn-shutdownnotebooks">Shutdown my Notebooks</a>
+      <a id="stop" class="btn btn-lg btn-shutdownnotebooks btn-primary">Shutdown my Notebooks</a>
       {% endif %}
-      <a id="start" class="btn btn-lg btn-gonotebooks"
+      <a id="start" class="btn btn-lg btn-gonotebooks btn-primary"
       {% if user.running %}
-        href="{{base_url}}user/{{user.name}}/"
+      href="{{base_url}}user/{{user.name}}/"
       {% else %}
-        href="{{base_url}}spawn"
+      href="{{base_url}}spawn"
       {% endif %}
       >
       {% if user.running %}
@@ -118,9 +24,18 @@ fieldset[disabled] .btn-shutdownnotebooks.active {
       Go to my Notebooks
       {% endif %}
       </a>
-      {% if user.admin %}
       <a id="admin" class="btn btn-lg btn-primary" href="{{base_url}}admin">Admin</a>
-      {% endif %}
+    {% else %}
+      <div id="swan-loader">
+        <div class="loader-circle">
+          <img src="/hub/static/swan/logos/logo_swan_letters.png">
+        </div>
+        <div class="loader-line-mask">
+          <div class="loader-line"></div>
+        </div>
+        <span class="text">Starting SWAN</span>
+      </div>
+    {% endif %}
     </div>
   </div>
 </div>
@@ -129,6 +44,43 @@ fieldset[disabled] .btn-shutdownnotebooks.active {
 
 {% block script %}
 <script type="text/javascript">
+
+{% if not user.admin %}
+require(['jquery', 'jhapi'], function ($, JHAPI) {
+
+    {% if user.running %}
+
+    if(window.location.hash == '#changeconfig') {
+
+        $('#swan-loader .text').text('Shutting down your session');
+
+        var base_url = window.jhdata.base_url;
+        var user = window.jhdata.user;
+        var api = new JHAPI(base_url);
+
+        api.stop_server(user, {
+            success: function () {
+                window.location.replace('{{base_url}}spawn?changeconfig');
+            },
+            error: function () {
+                $('#swan-loader .text').html('<p class="extra">There was an error shutting down your session.<br>Try again later.<br><a href="{{base_url}}">Click here to return to SWAN</a></p>');
+                $('#swan-loader .loader-line-mask').hide();
+            }
+        });
+
+    } else {
+        window.location.replace('{{base_url}}user/{{user.name}}/projects');
+    }
+
+    {% else %}
+    window.location.replace('{{base_url}}spawn');
+    {% endif %}
+
+});
+{% else %}
+
 require(["home"]);
+{% endif %}
+
 </script>
 {% endblock %}
