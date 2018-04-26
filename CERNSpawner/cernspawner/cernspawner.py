@@ -21,8 +21,13 @@ from socket import (
     socket,
     SO_REUSEADDR,
     SOL_SOCKET,
+    AF_INET,
+    SOCK_STREAM,
+    gethostname,
     error as SocketError
 )
+import pickle, struct
+import calendar, datetime
 
 class CERNSpawner(SystemUserSpawner):
 
@@ -110,10 +115,35 @@ class CERNSpawner(SystemUserSpawner):
         help='Script to authenticate.'
     )
 
+    graphite_metric_path = Unicode(
+        default_value='c5.swan',
+        config=True,
+        help='Base path for SWAN in Grafana metrics'
+    )
+
+    graphite_base_path = Unicode(
+        default_value='spawn_form',
+        config=True,
+        help='Base path for the metrics generated in this object'
+    )
+
+    graphite_server = Unicode(
+        default_value='filer-carbon.cern.ch',
+        config=True,
+        help='Server where to post the metrics collected'
+    )
+
+    graphite_server_port_batch = Int(
+        default_value=2004,
+        config=True,
+        help='Port of the server where to post the metrics collected'
+    )
+
 
     def __init__(self, **kwargs):
         super(CERNSpawner, self).__init__(**kwargs)
         self.offload = False
+        self.this_host = gethostname().split('.')[0]
 
     def options_from_form(self, formdata):
         options = {}
@@ -237,10 +267,45 @@ class CERNSpawner(SystemUserSpawner):
             'mem_limit' : self.user_options[self.user_memory]
         }
 
+        self.send_metrics()
+
         return super(CERNSpawner, self).start(
             image=image,
             extra_host_config=extra_host_config
         )
+
+    def send_metrics(self):
+        """
+        Send user chosen options to the metrics server.
+        This will allow us to see what users are choosing from within Grafana.
+        """
+
+        metric_path = ".".join([self.graphite_metric_path, self.this_host, self.graphite_base_path])
+
+        d = datetime.datetime.utcnow()
+        date = calendar.timegm(d.timetuple())
+
+        metrics = []
+        for (key, value) in self.user_options.items():
+            if key == self.user_script_env_field:
+                path = ".".join([metric_path, key])
+                metrics.append((path, (date, 1 if value else 0)))
+            else:
+                path = ".".join([metric_path, key, str(value)])
+                # Metrics values are a number
+                metrics.append((path, (date, 1)))
+
+        # Serialize the message and send everything in on single package
+        payload = pickle.dumps(metrics, protocol=2)
+        header = struct.pack("!L", len(payload))
+        message = header + payload
+
+        # Send the message
+        conn = socket(AF_INET, SOCK_STREAM)
+        conn.settimeout(2)
+        conn.connect((self.graphite_server, self.graphite_server_port_batch))
+        conn.send(message)
+        conn.close()
 
     @property
     def volume_mount_points(self):
