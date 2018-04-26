@@ -19,7 +19,7 @@
   </div>
 </div>
 
-<form enctype="multipart/form-data" id="spawn_form" action="{{base_url}}spawn" method="post" role="form">
+<form enctype="multipart/form-data" id="spawn_form" action="{{url}}" method="post" role="form">
 <div id="configuration-modal" class="modal fade right" role="dialog">
   <div class="modal-dialog">
 
@@ -41,9 +41,9 @@
         </div>
       </div>
       <div class="modal-footer">
-        <div class="keep-config">
+        {% if not local_home %}<div class="keep-config">
           <input type="checkbox" id="keep-config" name="keep-config" class="keep-config-checkbox"><label for="keep-config"> Always start with this configuration</label>
-        </div>
+        </div>{% endif %}
         <input type="submit" id="spawn" value="Start my Session" class="btn btn-default btn-primary size-100">
       </div>
     </div>

@@ -15,9 +15,8 @@ from jupyterhub.utils import url_path_join
 from jupyterhub.handlers.base import BaseHandler
 
 from .proj_url_checker import check_url, is_good_proj_name, is_file_on_eos, is_cernbox_shared_link, get_name_from_shared_from_link
-from .status_handler import maintenance_file
+from .handlers_configs import SpawnHandlersConfigs
 
-swanrc = '/srv/jupyterhub/swanrc/swanrc.sh'
 
 class SpawnHandler(BaseHandler):
     """Handle spawning of single-user servers via form.
@@ -28,6 +27,7 @@ class SpawnHandler(BaseHandler):
     """
 
     def _render_form(self, message=''):
+        configs = SpawnHandlersConfigs.instance()
         user = self.get_current_user()
         # We inject an extra field if there is a project set
         the_projurl = self.get_argument('projurl','')
@@ -38,6 +38,7 @@ class SpawnHandler(BaseHandler):
             user=user,
             spawner_options_form=the_form,
             error_message=message,
+            local_home=configs.local_home,
         )
 
     def handle_redirection(self, the_projurl = ''):
@@ -97,14 +98,16 @@ class SpawnHandler(BaseHandler):
             Swanrc bash scripts runs as the user in order to read his files.
         """
         options = {}
-        subprocess.call(['sudo', '/srv/jupyterhub/culler/check_ticket.sh', user])
-        rc = subprocess.Popen(['sudo', swanrc, 'read', user], stdout=subprocess.PIPE)
-        for line in io.TextIOWrapper(rc.stdout, encoding="utf-8"):
-            if line == 0:
-                break
-            line_split = line.split('=')
-            if len(line_split) == 2:
-                options[line_split[0]] = [line_split[1].rstrip('\n')]
+        configs = SpawnHandlersConfigs.instance()
+        if not configs.local_home:
+            subprocess.call(['sudo', '/srv/jupyterhub/culler/check_ticket.sh', user])
+            rc = subprocess.Popen(['sudo', configs.swanrc_path, 'read', user], stdout=subprocess.PIPE)
+            for line in io.TextIOWrapper(rc.stdout, encoding="utf-8"):
+                if line == 0:
+                    break
+                line_split = line.split('=')
+                if len(line_split) == 2:
+                    options[line_split[0]] = [line_split[1].rstrip('\n')]
 
         return options
 
@@ -114,17 +117,22 @@ class SpawnHandler(BaseHandler):
         for key in options:
             new_list.append('%s=%s' % (key, options[key][0]))
 
-        subprocess.call(['sudo', swanrc, 'write', user, " ".join(new_list).replace('$', '\$')])
+        configs = SpawnHandlersConfigs.instance()
+        if not configs.local_home:
+            subprocess.call(['sudo', configs.swanrc_path, 'write', user, " ".join(new_list).replace('$', '\$')])
 
     def remove_swanrc_options(self, user):
         """Remove the configuration file in order to start a new configuration"""
-        subprocess.call(['sudo', swanrc, 'remove', user])
+        configs = SpawnHandlersConfigs.instance()
+        if not configs.local_home:
+            subprocess.call(['sudo', configs.swanrc_path, 'remove', user])
 
 
     @web.authenticated
     @gen.coroutine
     def get(self):
         """GET renders form for spawning with user-specified options"""
+        configs = SpawnHandlersConfigs.instance()
         user = self.get_current_user()
         if user.running:
             url = user.url
@@ -137,7 +145,7 @@ class SpawnHandler(BaseHandler):
             self.redirect(url)
             return
 
-        if os.path.isfile(maintenance_file):
+        if os.path.isfile(configs.maintenance_file):
             self.finish(self.render_template('maintenance.html'))
             return
 
@@ -175,6 +183,7 @@ class SpawnHandler(BaseHandler):
     @gen.coroutine
     def post(self):
         """POST spawns with user-specified options"""
+        configs = SpawnHandlersConfigs.instance()
         user = self.get_current_user()
         if user.running:
             url = os.path.join(user.url, 'projects')
@@ -182,7 +191,7 @@ class SpawnHandler(BaseHandler):
             self.redirect(url)
             return
 
-        if os.path.isfile(maintenance_file):
+        if os.path.isfile(configs.maintenance_file):
             self.finish(self.render_template('maintenance.html'))
             return
 

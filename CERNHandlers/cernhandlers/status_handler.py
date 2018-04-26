@@ -7,9 +7,8 @@ import os
 import json
 from tornado import web
 from jupyterhub.handlers.base import BaseHandler
+from .handlers_configs import SpawnHandlersConfigs
 
-maintenance_file = '/etc/iss.nologin'
-notifications_file = '/srv/jupyterhub/notifications.json'
 
 class StatusHandler(BaseHandler):
     """
@@ -20,10 +19,11 @@ class StatusHandler(BaseHandler):
     @web.authenticated
     def get(self):
 
+        configs = SpawnHandlersConfigs.instance()
         response = []
 
-        if os.path.isfile(maintenance_file):
-            with open(maintenance_file, 'r') as maintenance:
+        if os.path.isfile(configs.maintenance_file):
+            with open(configs.maintenance_file, 'r') as maintenance:
                 response.append({
                     'id': 'maintenance_notice',
                     'level': 'notice',
@@ -35,8 +35,8 @@ class StatusHandler(BaseHandler):
         user = self.get_current_user().name
 
         notifications = {}
-        if os.path.isfile(notifications_file):
-            with open(notifications_file, 'r') as data_file:
+        if os.path.isfile(configs.notifications_file):
+            with open(configs.notifications_file, 'r') as data_file:
                 notifications = json.load(data_file)
 
         for notification in notifications:

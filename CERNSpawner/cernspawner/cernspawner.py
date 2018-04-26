@@ -178,8 +178,8 @@ class CERNSpawner(SystemUserSpawner):
 
             JPY_USER               = self.user.name,
             JPY_COOKIE_NAME        = self.user.server.cookie_name,
-            JPY_BASE_URL           = self.user.server.base_url,
-            JPY_HUB_PREFIX         = self.hub.server.base_url,
+            JPY_BASE_URL           = self.user.base_url,
+            JPY_HUB_PREFIX         = self.hub.base_url,
             JPY_HUB_API_URL        = self.hub.api_url,
             EXTRA_LIBS             = self.extra_libs
         ))
