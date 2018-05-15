@@ -7,14 +7,11 @@ import os
 import io
 import requests
 import subprocess
-
+from jupyterhub.handlers.base import BaseHandler
+from jupyterhub.utils import url_path_join
 from tornado import web, gen
 from tornado.httputil import url_concat
 
-from jupyterhub.utils import url_path_join
-from jupyterhub.handlers.base import BaseHandler
-
-from .proj_url_checker import check_url, is_good_proj_name, is_file_on_eos, is_cernbox_shared_link, get_name_from_shared_from_link
 from .handlers_configs import SpawnHandlersConfigs
 
 
@@ -47,50 +44,7 @@ class SpawnHandler(BaseHandler):
             the_projurl = self.get_argument('projurl','')
         if not the_projurl: return ''
 
-        check_url(the_projurl)
-
-        the_user = self.get_current_user()
-
-        the_user_name = the_user.name
-        self.log.info('User %s is running. Fetching project %s.' %(the_user_name,the_projurl))
-        isFileOnEos = is_file_on_eos(the_projurl)
-        isFileOnCERNBoxShare = is_cernbox_shared_link(the_projurl)
-        if not isFileOnEos:
-            command = ['sudo', '/srv/jupyterhub/fetcher/fetcher.py', the_projurl, the_user_name, 'SWAN_projects']
-            self.log.info('Calling command: %s' %command)
-            subprocess.call(command)
-        proj_name = os.path.basename(the_projurl)
-        if isFileOnCERNBoxShare:
-            r = requests.get(the_projurl, verify=not isFileOnCERNBoxShare)
-            proj_name = get_name_from_shared_from_link(r)
-        the_home_url = ''
-        if is_good_proj_name(proj_name):
-            if proj_name.endswith('.ipynb'):
-                if is_file_on_eos(the_projurl):
-                    # We need of file://eos/user/j/joe/A/B/C/d.ipynb only A/B/C/d.ipynb
-                    the_home_url = 'notebooks/' + '/'.join(the_projurl.split('/')[6:])
-                else:
-                    proj_name_no_ext = os.path.splitext(proj_name)[0]
-                    the_home_url = os.path.join('notebooks', 'SWAN_projects', proj_name_no_ext, proj_name)
-            else:
-                # Default case
-                path_to_proj = os.path.splitext(proj_name)[0]
-
-                # Check for an index.ipynb in the github and gitlab case
-                the_projurl_noext = os.path.splitext(the_projurl)[0]
-                index_name = 'index.ipynb'
-                index_nb = ''
-                if the_projurl.startswith('https://github.com'):
-                    raw_projurl_noext = the_projurl_noext.replace('https://github.com', 'https://raw.githubusercontent.com')
-                    index_nb = os.path.join(raw_projurl_noext, 'master', index_name)
-                if the_projurl.startswith('https://gitlab.cern.ch'):
-                    index_nb = os.path.join(the_projurl_noext, 'raw', 'master', index_name)
-
-                if '' != index_nb and requests.get(index_nb).status_code == 200:
-                    the_home_url = os.path.join('projects', path_to_proj, index_name)
-                else:
-                    the_home_url = os.path.join('projects', path_to_proj)
-        return the_home_url
+        return 'download?projurl=' + the_projurl
 
     def read_swanrc_options(self, user):
         """ Read the user's swanrc file stored in CERNBox.

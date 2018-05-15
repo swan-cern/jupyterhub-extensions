@@ -14,7 +14,6 @@ from traitlets import (
     Int,
     List
 )
-from cernhandlers.proj_url_checker import has_good_chars
 
 import contextlib
 from socket import (
@@ -245,12 +244,6 @@ class CERNSpawner(SystemUserSpawner):
         """Start the container and perform the operations necessary for mounting
         EOS.
         """
-
-        # Check the environment script
-        script_name = self.user_options[self.user_script_env_field]
-        if not has_good_chars(script_name, extra_chars = '$'):
-            self.log.warning('Customisation script found and it has an issue with its name: %s', script_name)
-            raise Exception('The specified path for the customisation script is not valid.')
 
         username = self.user.name
 
