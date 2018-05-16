@@ -284,7 +284,8 @@ class CERNSpawner(SystemUserSpawner):
                 path = ".".join([metric_path, key])
                 metrics.append((path, (date, 1 if value else 0)))
             else:
-                path = ".".join([metric_path, key, str(value)])
+                value_cleaned = str(value).replace('/', '_')
+                path = ".".join([metric_path, key, value_cleaned])
                 # Metrics values are a number
                 metrics.append((path, (date, 1)))
 
