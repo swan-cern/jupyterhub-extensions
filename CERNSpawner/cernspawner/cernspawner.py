@@ -97,7 +97,13 @@ class CERNSpawner(SystemUserSpawner):
         help='Spark cluster name field of the Spawner form.'
     )
 
-    session_num_ports = Int(
+    spark_max_sessions = Int(
+        default_value=1,
+        config=True,
+        help='Number of parallel Spark sessions per user session (container).'
+    )
+
+    spark_session_num_ports = Int(
         default_value=3,
         config=True,
         help='Number of ports opened per user session (container).'
@@ -207,11 +213,17 @@ class CERNSpawner(SystemUserSpawner):
             # so that Spark can be exposed to the outside
             # Reserves the ports so that other processes don't use them
             # before Docker opens them
-            for i in range(1, self.session_num_ports + 1):
-                reserved_port =  self.get_reserved_port()
-                env["SPARK_PORT_{port_idx}".format(port_idx=i)] = reserved_port
+            spark_ports = []
+            for _ in range(self.spark_session_num_ports * self.spark_max_sessions):
+                try:
+                    reserved_port =  self.get_reserved_port()
+                except Exception as ex:
+                    self.log.error("Error while allocating ports for Spark: %s", ex, exc_info=True)
+                    raise RuntimeError("Error while allocating ports for Spark. Please try again.")
                 self.extra_host_config['port_bindings'][reserved_port] = reserved_port
                 self.extra_create_kwargs['ports'].append(reserved_port)
+                spark_ports.append(str(reserved_port))
+            env["SPARK_PORTS"] = ",".join(spark_ports)
 
         return env
 
@@ -369,31 +381,29 @@ class CERNSpawner(SystemUserSpawner):
         return _convert_list(self.shared_volumes, binds, mode="shared")
 
     @staticmethod
-    def get_reserved_port():
+    def get_reserved_port(n_tries=2):
         """
             Reserve a random available port.
             It puts the door in TIME_WAIT state so that no other process gets it when asking for a random port,
             but allows processes to bind to it, due to the SO_REUSEADDR flag.
             From https://github.com/Yelp/ephemeral-port-reserve
         """
-        with contextlib.closing(socket()) as s:
-            s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        for i in range(n_tries):
             try:
-                s.bind(('127.0.0.1', 0))
-            except SocketError as e:
-                # socket.error: [Errno 98] Address already in use
-                if e.errno == 98 and port != 0:
-                    s.bind((ip, 0))
-                else:
+                with contextlib.closing(socket()) as s:
+                    s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+                    s.bind(('127.0.0.1', 0))
+
+                    # the connect below deadlocks on kernel >= 4.4.0 unless this arg is greater than zero
+                    s.listen(1)
+
+                    sockname = s.getsockname()
+
+                    # these three are necessary just to get the port into a TIME_WAIT state
+                    with contextlib.closing(socket()) as s2:
+                        s2.connect(sockname)
+                        s.accept()
+                        return sockname[1]
+            except:
+                if i == n_tries - 1:
                     raise
-
-            # the connect below deadlocks on kernel >= 4.4.0 unless this arg is greater than zero
-            s.listen(1)
-
-            sockname = s.getsockname()
-
-            # these three are necessary just to get the port into a TIME_WAIT state
-            with contextlib.closing(socket()) as s2:
-                s2.connect(sockname)
-                s.accept()
-                return sockname[1]
