@@ -260,6 +260,11 @@ class CERNSpawner(SystemUserSpawner):
             'mem_limit' : self.user_options[self.user_memory]
         }
 
+        # Temporary fix to have both slc6 and cc7 image available. It should be removed
+        # as soon as we move to cc7 completely.
+        if "centos7" in self.user_options[self.platform_field]:
+            image = "gitlab-registry.cern.ch/swan/docker-images/systemuser:v4.0"
+
         self.send_metrics()
 
         return super(CERNSpawner, self).start(
