@@ -208,7 +208,7 @@ class CERNSpawner(SystemUserSpawner):
             env['SERVER_HOSTNAME']   	 	    = os.uname().nodename
             env['MAX_MEMORY']         	   	    = self.user_options[self.user_memory]
             env['KRB5CCNAME']         		    =  '/tmp/krb5cc_' + self.user.name
-            env['HADOOP_TOKEN_FILE_LOCATION']   =  '/spark/' + self.user.name + '.toks'
+            env['HADOOP_TOKEN_FILE_LOCATION']       =  '/spark/hadoop.toks'
 
             # Asks the OS for random ports to give them to Docker,
             # so that Spark can be exposed to the outside
@@ -273,7 +273,7 @@ class CERNSpawner(SystemUserSpawner):
             
 	    # read the webhdfs token into env variable
             try:
-                with open('/spark/'+username+'_webhdfs.toks', 'r') as myfile:
+                with open('/spark/'+username+'/webhdfs.toks', 'r') as myfile:
                     webhdfs_token=myfile.read()
                 self.env['WEBHDFS_TOKEN'] = webhdfs_token
             except IOError:
