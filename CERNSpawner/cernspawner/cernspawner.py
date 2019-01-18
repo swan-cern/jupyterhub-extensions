@@ -115,12 +115,6 @@ class CERNSpawner(SystemUserSpawner):
         help='List of memory options available to the user'
     )
 
-    extra_libs = Unicode(
-        default_value='',
-        config=True,
-        help='Script to authenticate.'
-    )
-
     graphite_metric_path = Unicode(
         default_value='c5.swan',
         config=True,
@@ -191,8 +185,7 @@ class CERNSpawner(SystemUserSpawner):
             JPY_COOKIE_NAME        = self.user.server.cookie_name,
             JPY_BASE_URL           = self.user.base_url,
             JPY_HUB_PREFIX         = self.hub.base_url,
-            JPY_HUB_API_URL        = self.hub.api_url,
-            EXTRA_LIBS             = self.extra_libs
+            JPY_HUB_API_URL        = self.hub.api_url
         ))
 
         # Clear old state
