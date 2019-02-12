@@ -1,1 +1,2 @@
-jupyterhub
+dockerspawner>=0.10.0
+ 

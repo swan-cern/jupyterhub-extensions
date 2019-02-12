@@ -218,14 +218,14 @@ class CERNSpawner(SystemUserSpawner):
     @gen.coroutine
     def poll(self):
         """Check for my id in `docker ps`"""
-        container = yield self.get_container()
+        container = yield self.get_object()
         if not container:
-            self.log.warn("container not found")
+            self.log.warning("Container not found: %s", self.container_name)
             return 0
-        container_state = container['State']
+        container_state = container["State"]
         self.log.debug(
             "Container %s status: %s",
-            self.container_id[:7],
+            self.object_id[:7],
             pformat(container_state),
         )
 
@@ -235,7 +235,7 @@ class CERNSpawner(SystemUserSpawner):
             if 'exited' == container_state['Status']:
                 id = container['Id']
                 self.client.remove_container(id)
-                msg = '<b>We encountered an error while creating your session. Please make sure you own a CERNBox. In case you don\'t have one, it will be created automatically for you upon visiting <a target="_blank" href="https://cernbox.cern.ch">this page</a>.</b>'
+                msg = 'We encountered an error while creating your session. Please make sure you own a CERNBox. In case you don\'t have one, it will be created automatically for you upon visiting <a target="_blank" href="https://cernbox.cern.ch">this page</a>.'
                 # This is a workaround to display in the spawner form page a more expressive message,
                 # for example hiding the "Internal server error" string which gets automatically added.
                 raise ValueError(msg)
@@ -246,7 +246,7 @@ class CERNSpawner(SystemUserSpawner):
                 "FinishedAt={FinishedAt}".format(**container_state)
                 )
 
-    def start(self, image=None):
+    def start(self):
         """Start the container and perform the operations necessary for mounting
         EOS.
         """
@@ -274,23 +274,20 @@ class CERNSpawner(SystemUserSpawner):
 
         # Due to dockerpy limitations in the current version, we cannot use --cpu to limit cpu.
         # This is an alternative (and old) way of doing it
-        extra_host_config = {
+        self.extra_host_config.update({
             'cpu_period' : 100000,
             'cpu_quota' : 100000 * self.user_options[self.user_n_cores],
             'mem_limit' : self.user_options[self.user_memory]
-        }
+        })
 
         # Temporary fix to have both slc6 and cc7 image available. It should be removed
         # as soon as we move to cc7 completely.
         if "slc6" in self.user_options[self.platform_field]:
-            image = "gitlab-registry.cern.ch/swan/docker-images/systemuser:v3.4.0"
+            self.image = "gitlab-registry.cern.ch/swan/docker-images/systemuser:v3.4.0"
 
         self.send_metrics()
 
-        return super(CERNSpawner, self).start(
-            image=image,
-            extra_host_config=extra_host_config
-        )
+        return super(CERNSpawner, self).start()
 
     def send_metrics(self):
         """
