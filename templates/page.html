@@ -66,6 +66,16 @@
         {% if user %}
         user: "{{user.name}}",
         {% endif %}
+        {% if admin_access %}
+        admin_access: true,
+        {% else %}
+        admin_access: false,
+        {% endif %}
+        {% if not no_spawner_check and user and user.spawner.options_form %}
+        options_form: true,
+        {% else %}
+        options_form: false,
+        {% endif %}
       }
     </script>
 
@@ -115,6 +125,14 @@
     {% endblock %}
 </header>
 
+{% block announcement %}
+{% if announcement %}
+<div class="container text-center announcement">
+  {{ announcement | safe }}
+</div>
+{% endif %}
+{% endblock %}
+
 
 {% block main %}
 {% endblock %}
@@ -131,7 +149,7 @@
             <div class="col-xs-8 text">
                 <span class="text-muted">SWAN &copy; Copyright CERN 2016-2019. All rights reserved.</span>
                 <ul class="text-muted">
-                    <li><a target="_blank" href="http://swan.web.cern.ch/">Home</a></li>
+                    <li><a target="_blank" href="http://cern.ch/swan/">Home</a></li>
                     <li><a href="mailto:swan-talk@cern.ch">Contact</a></li>
                     <li><a target="_blank" href="https://cern.service-now.com/service-portal/function.do?name=swan">Support</a></li>
                     <li><a target="_blank" href="https://its.cern.ch/jira/browse/UCA">Report a bug</a></li>

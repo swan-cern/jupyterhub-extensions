@@ -13,11 +13,9 @@
           <div class="loader-line"></div>
         </div>
         <span class="text">Starting your session
-        <p class="extra">You will be redirected automatically when it's ready for you.<br>
-        If this is taking too long, <a id="refresh" href="#">click here to refresh</a>.</p>
+        <p class="extra">You will be redirected automatically when it's ready for you.</p>
         </span>
       </div>
-
     </div>
   </div>
 </div>
@@ -30,9 +28,18 @@ require(["jquery"], function ($) {
   $("#refresh").click(function () {
     window.location.reload();
   })
-  setTimeout(function () {
-    window.location.reload();
-  }, 5000);
+  // hook up event-stream for progress
+  var evtSource = new EventSource("{{ progress_url }}");
+  evtSource.onmessage = function(e) {
+    var evt = JSON.parse(e.data);
+    console.log(evt);
+    if (evt.ready) {
+      evtSource.close();
+      // reload the current page
+      // which should result in a redirect to the running server
+      window.location.reload();
+    }
+  }
 });
 </script>
 {% endblock %}
