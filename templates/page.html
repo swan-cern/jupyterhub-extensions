@@ -97,26 +97,34 @@
 <header>
     <div id="header-container" class="container">
         <div class="row">
-            <div class="col-xs-6">
-                <div id="ipython_notebook" class="nav navbar-brand"><a href="{{base_url}}" title='Swan Projects'><img src='/hub/static/swan/logos/logo_swan_cloudhisto.png' alt='SWAN' title='Home'/></a></div>
+            <div class="col-md-3 col-xs-6">
+                <div id="ipython_notebook" class="nav navbar-brand"><a href="{{base_url}}" title='Swan Projects'><img src='/hub/logo' alt='SWAN' title='Home'/></a></div>
             </div>
 
-            <div class="col-xs-6 control">
+            <div class="col-md-3 col-md-push-6 col-xs-6 control">
+              {% block header_buttons %}
+              <div id="buttons-right-wrapper">
+                  <div id="buttons-right">
+                      <button class="btn btn-default btn-xs" onclick="javascript: window.location = '{{logout_url}}'">
+                          <i class="fa fa-sign-out" aria-hidden="true"></i>
+                      </button>
+                  </div>
+              </div>
+              {% endblock header_buttons %}
+          </div>
 
 
-                {% block header_buttons %}
-
-                <div id="buttons-right-wrapper">
-                    <div id="buttons-right">
-                        <button class="btn btn-default btn-xs" onclick="javascript: window.location = '{{logout_url}}'">
-                            <i class="fa fa-sign-out" aria-hidden="true"></i>
-                        </button>
-                    </div>
-                </div>
-
-                {% endblock header_buttons %}
-            </div>
-
+          <div class="middle col-md-6 col-md-pull-3 col-xs-12">
+              {% if user and user.admin %}
+              <div id="menu">
+                  <ul class="nav nav-tabs">
+                      <li><a href="{{base_url}}home"><i class="fa fa-home" aria-hidden="true"></i><span class="text">Home</span></a></li>
+                      <li><a href="{{base_url}}token"><i class="fa fa-cog" aria-hidden="true"></i><span class="text">Token</span></a></li>
+                      <li><a href="{{base_url}}admin"><i class="fa fa-handshake-o" aria-hidden="true"></i><span class="text">Admin</span></a></li>
+                  </ul>
+              </div>
+              {% endif %}
+          </div>
         </div>
     </div>
     <div class="header-bar"></div>

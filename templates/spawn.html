@@ -28,6 +28,9 @@
 
     <div class="modal-content">
       <div class="modal-header">
+        {% if user and user.admin %}
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+        {% endif %}
         <h4 class="modal-title">Configure Environment</h4>
       </div>
       <div class="modal-body">

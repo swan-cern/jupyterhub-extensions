@@ -9,26 +9,6 @@
 <div class="container">
   <div class="row">
     <div class="swan-info">
-    {% if user.admin %}
-      <a href="https://swan.web.cern.ch" target="_blank"><img src="/hub/static/swan/logos/logo_swan_letters.png" width="27%"></a>
-      {% if user.running %}
-      <a id="stop" class="btn btn-lg btn-shutdownnotebooks btn-primary">Shutdown my Notebooks</a>
-      {% endif %}
-      <a id="start" class="btn btn-lg btn-gonotebooks btn-primary"
-      {% if user.running %}
-      href="{{base_url}}user/{{user.name}}/"
-      {% else %}
-      href="{{base_url}}spawn"
-      {% endif %}
-      >
-      {% if user.running %}
-      Go to my Notebooks
-      {% else %}
-      Go to my Notebooks
-      {% endif %}
-      </a>
-      <a id="admin" class="btn btn-lg btn-primary" href="{{base_url}}admin">Admin</a>
-    {% else %}
       <div id="swan-loader">
         <div class="loader-circle">
           <img src="/hub/static/swan/logos/logo_swan_letters.png">
@@ -38,7 +18,6 @@
         </div>
         <span class="text">Starting SWAN</span>
       </div>
-    {% endif %}
     </div>
   </div>
 </div>
@@ -49,7 +28,6 @@
 {{ super() }}
 <script type="text/javascript">
 
-{% if not user.admin %}
 require(['jquery', 'jhapi'], function ($, JHAPI) {
 
     {% if user.running %}
@@ -81,10 +59,6 @@ require(['jquery', 'jhapi'], function ($, JHAPI) {
     {% endif %}
 
 });
-{% else %}
-
-require(["home"]);
-{% endif %}
 
 </script>
 {% endblock %}
