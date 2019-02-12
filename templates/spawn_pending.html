@@ -39,6 +39,10 @@ require(["jquery"], function ($) {
       // which should result in a redirect to the running server
       window.location.reload();
     }
+    if (evt.failed) {
+      evtSource.close();
+      window.location.replace('{{base_url}}spawn?failed');
+    }
   }
 });
 </script>
