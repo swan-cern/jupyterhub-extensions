@@ -27,7 +27,7 @@ class SpawnHandlersConfigs(SingletonConfigurable):
     )
 
     maintenance_file = Unicode(
-        default_value='/etc/iss.nologin',
+        default_value='/etc/nologin',
         config=True,
         help='Path of the file that, when present, enables maintenance mode'
     )
