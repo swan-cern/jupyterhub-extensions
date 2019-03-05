@@ -31,11 +31,11 @@
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <link rel="shortcut icon" type="image/x-icon" href="/hub/static/swan/logos/favicon.ico">
+    <link rel="shortcut icon" type="image/x-icon" href="{{ static_url('swan/logos/favicon.ico') }}">
 
     {% block stylesheet %}
     <link rel="stylesheet" href="{{ static_url('css/style.min.css') }}" type="text/css"/>
-    <link rel="stylesheet" href="/hub/static/swan/css/style.css" type="text/css"/>
+    <link rel="stylesheet" href="{{ static_url('swan/css/style.css') }}" type="text/css"/>
     {% endblock %}
     <script src="{{static_url('components/requirejs/require.js') }}" type="text/javascript" charset="utf-8"></script>
     <script>
@@ -98,7 +98,7 @@
     <div id="header-container" class="container">
         <div class="row">
             <div class="col-md-3 col-xs-6">
-                <div id="ipython_notebook" class="nav navbar-brand"><a href="{{base_url}}" title='Swan Projects'><img src='/hub/logo' alt='SWAN' title='Home'/></a></div>
+                <div id="ipython_notebook" class="nav navbar-brand"><a href="{{base_url}}" title='Swan Projects'><img src='{{base_url}}logo' alt='SWAN' title='Home'/></a></div>
             </div>
 
             <div class="col-md-3 col-md-push-6 col-xs-6 control">
@@ -164,7 +164,7 @@
                 </ul>
             </div>
             <div class="col-xs-4 logo">
-                <img src='/hub/static/swan/logos/logo_cern.png' alt='CERN'/>
+                <img src="{{ static_url('swan/logos/logo_cern.png') }}" alt="CERN"/>
             </div>
         </div>
     </div>
