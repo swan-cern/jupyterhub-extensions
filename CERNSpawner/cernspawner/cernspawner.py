@@ -286,9 +286,11 @@ class CERNSpawner(SystemUserSpawner):
         # If the user selects a Spark Cluster we need to generate a token to allow him in
         if self.offload:
             # FIXME: temporaly limit Cloud Container to specific platform and software stack
-            if cluster == 'k8s' and (platform != "x86_64-centos7-gcc7-opt" or "dev" not in lcg_rel):
-                msg = "Configuration unsupported: only <b>Software stack: Development Bleeding Edge</b> with <b>Platform: 86_64-centos7-gcc7-opt</b> is supported for Cloud Containers"
-                raise ValueError(msg)
+            if cluster == 'k8s' and "dev" not in lcg_rel:
+                raise ValueError(
+                    "Configuration unsupported: "
+                    "only <b>Software stack: Bleeding Edge</b> is supported for Cloud Containers"
+                )
 
             # If the user selects a Spark Cluster we need to generate some tokens
             # FIXME: Dont hardcode hadoop path, use hadoop_host_path and hadoop_container_path
@@ -310,7 +312,15 @@ class CERNSpawner(SystemUserSpawner):
                 ])
 
                 # set location of user kubeconfig for Spark
-                self.env['KUBECONFIG'] = hadoop_container_path + '/k8s-user.config'
+                if os.path.exists(hadoop_container_path + '/k8s-user.config'):
+                    self.env['KUBECONFIG'] = hadoop_container_path + '/k8s-user.config'
+                else:
+                    raise ValueError(
+                        """
+                        Access to the selected K8s cluster is not granted. 
+                        Please <a href="https://cern.service-now.com/service-portal/function.do?name=swan" target="_blank">request access</a>
+                        """
+                    )
 
                 # Set default EOS krb5 cache location to hadoop container path for k8s
                 self.env['KRB5CCNAME'] = hadoop_container_path + '/krb5cc'
@@ -327,10 +337,24 @@ class CERNSpawner(SystemUserSpawner):
                 if os.path.exists(hadoop_host_path + '/webhdfs.toks'):
                     with open(hadoop_host_path + '/webhdfs.toks', 'r') as webhdfs_token_file:
                         self.env['WEBHDFS_TOKEN'] = webhdfs_token_file.read()
+                else:
+                    raise ValueError(
+                        """
+                        Access to the selected YARN cluster is not granted. 
+                        Please <a href="https://cern.service-now.com/service-portal/report-ticket.do?name=request&se=Hadoop-Service" target="_blank">request access</a>
+                        """
+                    )
 
                 # set location of hadoop token file for Spark
                 if os.path.exists(hadoop_host_path + '/hadoop.toks'):
                     self.env['HADOOP_TOKEN_FILE_LOCATION'] = hadoop_container_path + '/hadoop.toks'
+                else:
+                    raise ValueError(
+                        """
+                        Access to the selected YARN cluster is not granted. 
+                        Please <a href="https://cern.service-now.com/service-portal/report-ticket.do?name=request&se=Hadoop-Service" target="_blank">request access</a>
+                        """
+                    )
 
                 # Set default location for krb5cc in tmp directory for yarn
                 self.env['KRB5CCNAME'] = '/tmp/krb5cc'
