@@ -155,6 +155,11 @@ class CERNSpawner(SystemUserSpawner):
         help='Volumes to be mounted with a "shared" tag. This allows mount propagation.',
     )
 
+    extra_env = Dict(
+        config=True,
+        help='Extra environment variables to pass to the container',
+    )
+
 
     def __init__(self, **kwargs):
         super(CERNSpawner, self).__init__(**kwargs)
@@ -199,6 +204,9 @@ class CERNSpawner(SystemUserSpawner):
             JPY_HUB_PREFIX         = self.hub.base_url,
             JPY_HUB_API_URL        = self.hub.api_url
         ))
+
+        if self.extra_env:
+            env.update(self.extra_env)
 
         # Clear old state
         self.extra_host_config['port_bindings'] = {}
