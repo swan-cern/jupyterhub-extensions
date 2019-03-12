@@ -312,7 +312,7 @@ class CERNSpawner(SystemUserSpawner):
                 ])
 
                 # set location of user kubeconfig for Spark
-                if os.path.exists(hadoop_container_path + '/k8s-user.config'):
+                if os.path.exists(hadoop_host_path + '/k8s-user.config'):
                     self.env['KUBECONFIG'] = hadoop_container_path + '/k8s-user.config'
                 else:
                     raise ValueError(
