@@ -378,7 +378,7 @@ class CERNSpawner(SystemUserSpawner):
         # Temporary fix to have both slc6 and cc7 image available. It should be removed
         # as soon as we move to cc7 completely.
         if "slc6" in self.user_options[self.platform_field]:
-            self.image = "gitlab-registry.cern.ch/swan/docker-images/systemuser:v3.4.0"
+            self.image = "gitlab-registry.cern.ch/swan/docker-images/systemuser:v3.5.0"
 
         self.send_metrics()
 
