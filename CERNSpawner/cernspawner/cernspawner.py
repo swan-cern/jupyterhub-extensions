@@ -380,7 +380,10 @@ class CERNSpawner(SystemUserSpawner):
         if "slc6" in self.user_options[self.platform_field]:
             self.image = "gitlab-registry.cern.ch/swan/docker-images/systemuser:v3.5.0"
 
-        self.send_metrics()
+        try:
+            self.send_metrics()
+        except Exception as ex:
+            self.log.error("Failed to send metrics: %s", ex, exc_info=True)
 
         return super(CERNSpawner, self).start()
 
