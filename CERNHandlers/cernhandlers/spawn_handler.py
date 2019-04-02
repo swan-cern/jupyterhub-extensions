@@ -29,19 +29,20 @@ class SpawnHandler(BaseHandler):
     Only enabled when Spawner.options_form is defined.
     """
 
-    def _render_form(self, message=''):
+    async def _render_form(self, message=''):
         configs = SpawnHandlersConfigs.instance()
         user = self.get_current_user()
         # We inject an extra field if there is a project set
         the_projurl = self.get_argument('projurl','')
         the_form = open(user.spawner.options_form).read()
         if the_projurl:
-            the_form +='<input type="hidden" name="projurl" value="%s">' %the_projurl
+            the_form +='<input type="hidden" name="projurl" value="%s">' % the_projurl
         return self.render_template('spawn.html',
             user=user,
             spawner_options_form=the_form,
             error_message=message,
             local_home=configs.local_home,
+            url=self.request.uri
         )
 
     def handle_redirection(self, the_projurl = ''):
@@ -89,11 +90,11 @@ class SpawnHandler(BaseHandler):
 
 
     @web.authenticated
-    @gen.coroutine
-    def get(self):
+    async def get(self):
         """GET renders form for spawning with user-specified options"""
         configs = SpawnHandlersConfigs.instance()
         user = self.get_current_user()
+
         if user.running:
             url = user.url
             self.log.warning("User is running: %s", url)
@@ -110,7 +111,8 @@ class SpawnHandler(BaseHandler):
             return
 
         if 'failed' in self.request.query_arguments:
-            self.finish(self._render_form(error_message))
+            form = await self._render_form(message=error_message)
+            self.finish(form)
             return
 
         if 'changeconfig' in self.request.query_arguments:
@@ -121,10 +123,11 @@ class SpawnHandler(BaseHandler):
                 self.log.info('User has default session configuration: loading saved options')
                 try:
                     options = user.spawner.options_from_form(form_options)
-                    yield self.spawn_single_user(user, options=options)
+                    await self.spawn_single_user(user, options=options)
                 except Exception as e:
                     self.log.error("Failed to spawn single-user server with form", exc_info=True)
-                    self.finish(self._render_form(str(e)))
+                    form = await self._render_form(message=str(e))
+                    self.finish(form)
                     return
                 self.set_login_cookie(user)
                 url = user.url
@@ -137,15 +140,15 @@ class SpawnHandler(BaseHandler):
                 return
 
         if user.spawner.options_form:
-            self.finish(self._render_form())
+            form = await self._render_form()
+            self.finish(form)
         else:
             # not running, no form. Trigger spawn.
             url = url_path_join(self.base_url, 'user', user.name)
             self.redirect(url)
 
     @web.authenticated
-    @gen.coroutine
-    def post(self):
+    async def post(self):
         """POST spawns with user-specified options"""
         configs = SpawnHandlersConfigs.instance()
         user = self.get_current_user()
@@ -154,6 +157,11 @@ class SpawnHandler(BaseHandler):
             self.log.debug("User is already running: %s", url)
             self.redirect(url)
             return
+
+        if user.spawner.pending:
+            raise web.HTTPError(
+                400, "%s is pending %s" % (user.spawner._log_name, user.spawner.pending)
+            )
 
         if os.path.isfile(configs.maintenance_file):
             self.finish(self.render_template('maintenance.html'))
@@ -172,10 +180,11 @@ class SpawnHandler(BaseHandler):
 
         try:
             options = user.spawner.options_from_form(form_options)
-            yield self.spawn_single_user(user, options=options)
+            await self.spawn_single_user(user, options=options)
         except Exception as e:
             self.log.error("Failed to spawn single-user server with form", exc_info=True)
-            self.finish(self._render_form(str(e)))
+            form = await self._render_form(message=str(e))
+            self.finish(form)
             return
         self.set_login_cookie(user)
         url = user.url
