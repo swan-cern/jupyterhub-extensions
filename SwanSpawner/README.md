@@ -1,4 +1,4 @@
-# CERN Spawner
+# SWAN Spawner
 
 Obtains credentials for the user and spawns a container for her.
 
@@ -6,14 +6,16 @@ Obtains credentials for the user and spawns a container for her.
 
 First, install dependencies:
 
-    pip3 install -r requirements.txt
-
-Then, install the package:
-
-    python3 setup.py install
+    pip3 install .
 
 ## Usage
 
 Add to your JupyterHub config file
 
-    c.JupyterHub.spawner_class = 'cernspawner.CERNSpawner'
+    c.JupyterHub.spawner_class = 'swanspawner.SwanDockerSpawner'
+
+If you deploy with Docker, or
+
+    c.JupyterHub.spawner_class = 'swanspawner.SwanKukeSpawner'
+
+If you deploy with Kubernetes.

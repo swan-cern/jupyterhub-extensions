@@ -1,1 +1,2 @@
-from .cernspawner import *
+from .swandockerspawner import *
+from .swankubespawner import *
