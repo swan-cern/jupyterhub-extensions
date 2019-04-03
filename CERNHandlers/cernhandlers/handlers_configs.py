@@ -38,6 +38,12 @@ class SpawnHandlersConfigs(SingletonConfigurable):
         help='Path of json file where the notifications to the users are written'
     )
 
+    spawn_error_message = Unicode(
+        default_value='Error spawning your session',
+        config=True,
+        help='Message to display when Spawn fails'
+    )
+
     @default('config')
     def _config_default(self):
         # load application config by default

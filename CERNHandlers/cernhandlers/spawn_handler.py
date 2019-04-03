@@ -14,13 +14,6 @@ from tornado.httputil import url_concat
 
 from .handlers_configs import SpawnHandlersConfigs
 
-error_message = """SWAN could not start a session for your user, please try again. If the problem persists, please check:
-<ul>
-    <li>Do you have a CERNBox account? If not, click <a href="https://cernbox.cern.ch" target="_blank">here</a>.</li>
-    <li>Is there a problem with the service? Find information <a href="https://cern.service-now.com/service-portal/ssb.do" target="_blank">here</a>.</li>
-    <li>If none of the options apply, please open a <a href="https://cern.service-now.com/service-portal/function.do?name=swan" target="_blank">Support Ticket</a>.</li>
-</ul>"""
-
 class SpawnHandler(BaseHandler):
     """Handle spawning of single-user servers via form.
 
@@ -111,7 +104,7 @@ class SpawnHandler(BaseHandler):
             return
 
         if 'failed' in self.request.query_arguments:
-            form = await self._render_form(message=error_message)
+            form = await self._render_form(message=configs.spawn_error_message)
             self.finish(form)
             return
 
