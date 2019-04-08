@@ -163,6 +163,11 @@ def define_SwanSpawner_from(base_class):
             help='Extra environment variables to pass to the container',
         )
 
+        image_slc6 = Unicode(
+            config=True,
+            help='TEMPORARY: SLC6 image to spawn a session'
+        )
+
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
@@ -354,7 +359,7 @@ def define_SwanSpawner_from(base_class):
             # Temporary fix to have both slc6 and cc7 image available. It should be removed
             # as soon as we move to cc7 completely.
             if "slc6" in self.user_options[self.platform_field]:
-                self.image = "gitlab-registry.cern.ch/swan/docker-images/systemuser:v3.5.0"
+                self.image = self.image_slc6
 
             try:
                 self.send_metrics()
