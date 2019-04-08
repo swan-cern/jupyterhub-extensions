@@ -44,6 +44,12 @@ class SpawnHandlersConfigs(SingletonConfigurable):
         help='Message to display when Spawn fails'
     )
 
+    start_page = Unicode(
+        default_value='projects',
+        config=True,
+        help='Page of Jupyter to redirect to'
+    )
+
     @default('config')
     def _config_default(self):
         # load application config by default

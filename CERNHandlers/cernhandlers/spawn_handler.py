@@ -95,7 +95,7 @@ class SpawnHandler(BaseHandler):
             if redirect_url:
                 url = os.path.join(url, redirect_url)
             else:
-                url = os.path.join(url, 'projects')
+                url = os.path.join(url, configs.start_page)
             self.redirect(url)
             return
 
@@ -139,7 +139,7 @@ class SpawnHandler(BaseHandler):
         configs = SpawnHandlersConfigs.instance()
         user = self.get_current_user()
         if user.running:
-            url = os.path.join(user.url, 'projects')
+            url = os.path.join(user.url, configs.start_page)
             self.log.debug("User is already running: %s", url)
             self.redirect(url)
             return
@@ -174,7 +174,7 @@ class SpawnHandler(BaseHandler):
             redirect_url = self.handle_redirection(the_projurl)
             url = os.path.join(url, redirect_url)
         else:
-            url = os.path.join(url, 'projects')
+            url = os.path.join(url, configs.start_page)
         self.redirect(url)
 
     # Spawn the session and return the status (0 ok, 1 error)
