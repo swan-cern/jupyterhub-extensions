@@ -273,7 +273,7 @@ def define_SwanSpawner_from(base_class):
             cpu_quota = self.user_options[self.user_n_cores]
             mem_limit = self.user_options[self.user_memory]
 
-            if not self.local_home:
+            if not self.local_home and self.auth_script:
                 # When using CERNBox as home, obtain credentials for the user
                 subprocess.call(['sudo', self.auth_script, username])
                 self.log.debug("We are in SwanSpawner. Credentials for %s were requested.", username)
