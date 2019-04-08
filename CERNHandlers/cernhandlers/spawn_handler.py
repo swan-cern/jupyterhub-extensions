@@ -114,15 +114,8 @@ class SpawnHandler(BaseHandler):
             form_options = self.read_swanrc_options(user.name)
             if form_options:
                 self.log.info('User has default session configuration: loading saved options')
-                try:
-                    options = user.spawner.options_from_form(form_options)
-                    await self.spawn_single_user(user, options=options)
-                except Exception as e:
-                    self.log.error("Failed to spawn single-user server with form", exc_info=True)
-                    form = await self._render_form(message=str(e))
-                    self.finish(form)
+                if await self._start_spawn(user, form_options):
                     return
-                self.set_login_cookie(user)
                 url = user.url
                 projurl_key = 'projurl'
                 if projurl_key in self.request.body_arguments:
@@ -171,15 +164,9 @@ class SpawnHandler(BaseHandler):
         if 'keep-config' in self.request.body_arguments:
             self.write_swanrc_options(user.name, form_options)
 
-        try:
-            options = user.spawner.options_from_form(form_options)
-            await self.spawn_single_user(user, options=options)
-        except Exception as e:
-            self.log.error("Failed to spawn single-user server with form", exc_info=True)
-            form = await self._render_form(message=str(e))
-            self.finish(form)
+        if await self._start_spawn(user, form_options, configs):
             return
-        self.set_login_cookie(user)
+
         url = user.url
         projurl_key = 'projurl'
         if projurl_key in self.request.body_arguments:
@@ -189,3 +176,18 @@ class SpawnHandler(BaseHandler):
         else:
             url = os.path.join(url, 'projects')
         self.redirect(url)
+
+    # Spawn the session and return the status (0 ok, 1 error)
+    async def _start_spawn(self, user, form_options, configs):
+        try:
+            options = user.spawner.options_from_form(form_options)
+            await self.spawn_single_user(user, options=options)
+            self.set_login_cookie(user)
+            return 0
+        except web.HTTPError: #Handle failed startups with our message
+            form = await self._render_form(message=configs.spawn_error_message)
+        except Exception as e: #Show other errors to the user
+            form = await self._render_form(message=str(e))
+        self.log.error("Failed to spawn single-user server with form", exc_info=True)
+        self.finish(form)
+        return 1
