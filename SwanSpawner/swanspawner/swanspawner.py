@@ -187,7 +187,7 @@ def define_SwanSpawner_from(base_class):
             options[self.user_script_env_field] = formdata[self.user_script_env_field][0]
             options[self.spark_cluster_field]   = formdata[self.spark_cluster_field][0] if self.spark_cluster_field in formdata.keys() else 'none'
             options[self.user_n_cores]          = int(formdata[self.user_n_cores][0]) if formdata[self.user_n_cores][0] in self.available_cores else int(self.available_cores[0])
-            options[self.user_memory]           = formdata[self.user_memory][0] + 'g' if formdata[self.user_memory][0] in self.available_memory else self.available_memory[0] + 'g'
+            options[self.user_memory]           = formdata[self.user_memory][0] + 'G' if formdata[self.user_memory][0] in self.available_memory else self.available_memory[0] + 'G'
 
             self.offload = options[self.spark_cluster_field] != 'none'
 
@@ -362,13 +362,18 @@ def define_SwanSpawner_from(base_class):
                     # Set default location for krb5cc in tmp directory for yarn
                     self.env['KRB5CCNAME'] = '/tmp/krb5cc'
 
-            # Due to dockerpy limitations in the current version, we cannot use --cpu to limit cpu.
-            # This is an alternative (and old) way of doing it
-            self.extra_host_config.update({
-                'cpu_period' : 100000,
-                'cpu_quota' : 100000 * cpu_quota,
-                'mem_limit' : mem_limit
-            })
+
+            # The bahaviour changes if this if dockerspawner or kubespawner
+            if hasattr(self, 'extra_host_config'):
+                # Due to dockerpy limitations in the current version, we cannot use --cpu to limit cpu.
+                # This is an alternative (and old) way of doing it
+                self.extra_host_config.update({
+                    'cpu_period' : 100000,
+                    'cpu_quota' : 100000 * cpu_quota
+                })
+            else:
+                self.cpu_limit = cpu_quota
+            self.mem_limit = mem_limit
 
             # Temporary fix to have both slc6 and cc7 image available. It should be removed
             # as soon as we move to cc7 completely.
