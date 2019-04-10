@@ -225,38 +225,41 @@ def define_SwanSpawner_from(base_class):
             if self.extra_env:
                 env.update(self.extra_env)
 
-            # Clear old state
-            self.extra_host_config['port_bindings'] = {}
-            self.extra_create_kwargs['ports'] = []
+            # Only dockerspawner has these vars, and for now is the only one that needs this
+            # code since we still don't have spark ready to work with a kubernetes deployment
+            if hasattr(self, 'extra_host_config') and hasattr(self, 'extra_create_kwargs'):
+                # Clear old state
+                self.extra_host_config['port_bindings'] = {}
+                self.extra_create_kwargs['ports'] = []
 
-            # Avoid overriding the default container output port, defined by the Spawner
-            if not self.use_internal_ip:
-                self.extra_host_config['port_bindings'][self.port] = (self.host_ip,)
+                # Avoid overriding the default container output port, defined by the Spawner
+                if not self.use_internal_ip:
+                    self.extra_host_config['port_bindings'][self.port] = (self.host_ip,)
 
-            if self.offload:
-                cluster = self.user_options[self.spark_cluster_field]
-                env['SPARK_CLUSTER_NAME'] 		    = cluster
-                env['SPARK_USER'] 		            = username
-                env['SERVER_HOSTNAME']   	 	    = os.uname().nodename
-                env['MAX_MEMORY']         	   	    = self.user_options[self.user_memory]
+                if self.offload:
+                    cluster = self.user_options[self.spark_cluster_field]
+                    env['SPARK_CLUSTER_NAME'] 		    = cluster
+                    env['SPARK_USER'] 		            = username
+                    env['SERVER_HOSTNAME']   	 	    = os.uname().nodename
+                    env['MAX_MEMORY']         	   	    = self.user_options[self.user_memory]
 
-                env['SPARK_CONFIG_SCRIPT'] = self.spark_config_script
+                    env['SPARK_CONFIG_SCRIPT'] = self.spark_config_script
 
-                # Asks the OS for random ports to give them to Docker,
-                # so that Spark can be exposed to the outside
-                # Reserves the ports so that other processes don't use them
-                # before Docker opens them
-                spark_ports = []
-                for _ in range(self.spark_session_num_ports * self.spark_max_sessions):
-                    try:
-                        reserved_port =  self.get_reserved_port()
-                    except Exception as ex:
-                        self.log.error("Error while allocating ports for Spark: %s", ex, exc_info=True)
-                        raise RuntimeError("Error while allocating ports for Spark. Please try again.")
-                    self.extra_host_config['port_bindings'][reserved_port] = reserved_port
-                    self.extra_create_kwargs['ports'].append(reserved_port)
-                    spark_ports.append(str(reserved_port))
-                env["SPARK_PORTS"] = ",".join(spark_ports)
+                    # Asks the OS for random ports to give them to Docker,
+                    # so that Spark can be exposed to the outside
+                    # Reserves the ports so that other processes don't use them
+                    # before Docker opens them
+                    spark_ports = []
+                    for _ in range(self.spark_session_num_ports * self.spark_max_sessions):
+                        try:
+                            reserved_port =  self.get_reserved_port()
+                        except Exception as ex:
+                            self.log.error("Error while allocating ports for Spark: %s", ex, exc_info=True)
+                            raise RuntimeError("Error while allocating ports for Spark. Please try again.")
+                        self.extra_host_config['port_bindings'][reserved_port] = reserved_port
+                        self.extra_create_kwargs['ports'].append(reserved_port)
+                        spark_ports.append(str(reserved_port))
+                    env["SPARK_PORTS"] = ",".join(spark_ports)
 
             return env
 
