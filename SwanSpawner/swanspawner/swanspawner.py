@@ -344,12 +344,20 @@ def define_SwanSpawner_from(base_class):
                     if os.path.exists(hadoop_host_path + '/hadoop.toks'):
                         self.env['HADOOP_TOKEN_FILE_LOCATION'] = hadoop_container_path + '/hadoop.toks'
                     else:
-                        raise ValueError(
-                            """
-                            Access to the selected YARN cluster is not granted. 
-                            Please <a href="https://cern.service-now.com/service-portal/report-ticket.do?name=request&se=Hadoop-Service" target="_blank">request access</a>
-                            """
-                        )
+                        if cluster == 'nxcals':
+                            raise ValueError(
+                                """
+                                Access to the NXCALS cluster is not granted. 
+                                Please <a href="https://wikis.cern.ch/display/NXCALS/Data+Access+User+Guide#DataAccessUserGuide-nxcals_access" target="_blank">request access</a>
+                                """
+                            )
+                        else:
+                            raise ValueError(
+                                """
+                                Access to the selected YARN cluster is not granted. 
+                                Please <a href="https://cern.service-now.com/service-portal/report-ticket.do?name=request&se=Hadoop-Service" target="_blank">request access</a>
+                                """
+                            )
 
                     # Set default location for krb5cc in tmp directory for yarn
                     self.env['KRB5CCNAME'] = '/tmp/krb5cc'
