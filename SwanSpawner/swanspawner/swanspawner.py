@@ -168,7 +168,7 @@ def define_SwanSpawner_from(base_class):
             help='TEMPORARY: SLC6 image to spawn a session'
         )
 
-        send_metrics = Bool(
+        metrics_on = Bool(
             default_value=True,
             config=True,
             help="If True, it will send the metrics to CERN grafana (temporary, we will separate the metrics from the spwaner)."
@@ -376,7 +376,7 @@ def define_SwanSpawner_from(base_class):
                 self.image = self.image_slc6
 
             try:
-                if self.send_metrics:
+                if self.metrics_on:
                     self.send_metrics()
             except Exception as ex:
                 self.log.error("Failed to send metrics: %s", ex, exc_info=True)
