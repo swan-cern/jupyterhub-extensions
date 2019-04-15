@@ -4,12 +4,13 @@ import jupyterhub.handlers.pages as pages
 import jupyterhub.handlers.base as base
 from jupyterhub.utils import url_path_join
 from jupyterhub import app
-from cernhandlers import SpawnHandler, HomeHandler, StatusHandler
+from cernhandlers import SpawnHandler, HomeHandler, StatusHandler, ProxyErrorHandler
 import sys
 
 handlers_map = {
     pages.SpawnHandler: SpawnHandler,
-    pages.HomeHandler: HomeHandler
+    pages.HomeHandler: HomeHandler,
+    pages.ProxyErrorHandler: ProxyErrorHandler
 }
 
 

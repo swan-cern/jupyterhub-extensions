@@ -1,0 +1,31 @@
+{% extends "page.html" %}
+{% if announcement_home %}
+  {% set announcement = announcement_home %}
+{% endif %}
+
+{% block main %}
+
+
+<div class="container">
+  <div class="row">
+    <div class="swan-info">
+      <div id="swan-loader">
+        <div class="loader-circle">
+          <img src="{{ static_url('swan/logos/logo_swan_letters.png') }}">
+        </div>
+        <div class="loader-line-mask">
+          <div class="loader-line"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+{{ super() }}
+<script type="text/javascript">
+window.location.replace('{{base_url}}home#changeconfig');
+</script>
+{% endblock %}
