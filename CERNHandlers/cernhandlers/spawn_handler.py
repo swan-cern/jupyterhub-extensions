@@ -114,7 +114,7 @@ class SpawnHandler(BaseHandler):
             form_options = self.read_swanrc_options(user.name)
             if form_options:
                 self.log.info('User has default session configuration: loading saved options')
-                if await self._start_spawn(user, form_options):
+                if await self._start_spawn(user, form_options, configs):
                     return
                 url = user.url
                 projurl_key = 'projurl'
