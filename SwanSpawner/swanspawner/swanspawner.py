@@ -16,6 +16,8 @@ from traitlets import (
 )
 
 import contextlib
+import random
+import psutil
 from socket import (
     socket,
     SO_REUSEADDR,
@@ -115,6 +117,18 @@ def define_SwanSpawner_from(base_class):
             default_value=3,
             config=True,
             help='Number of ports opened per user session (container).'
+        )
+
+        spark_session_port_range_start = Int(
+            default_value=5001,
+            config=True,
+            help='Start of the port range that is used by the user session (container).'
+        )
+
+        spark_session_port_range_end = Int(
+            default_value=5300,
+            config=True,
+            help='End of the port range that is used by the user session (container).'
         )
 
         available_cores = List(
@@ -252,7 +266,7 @@ def define_SwanSpawner_from(base_class):
                     spark_ports = []
                     for _ in range(self.spark_session_num_ports * self.spark_max_sessions):
                         try:
-                            reserved_port =  self.get_reserved_port()
+                            reserved_port =  self.get_reserved_port(self.spark_session_port_range_start, self.spark_session_port_range_end)
                         except Exception as ex:
                             self.log.error("Error while allocating ports for Spark: %s", ex, exc_info=True)
                             raise RuntimeError("Error while allocating ports for Spark. Please try again.")
@@ -438,7 +452,7 @@ def define_SwanSpawner_from(base_class):
             return _convert_list(self.shared_volumes, binds, mode="shared")
 
         @staticmethod
-        def get_reserved_port(n_tries=2):
+        def get_reserved_port(start, end, n_tries=10):
             """
                 Reserve a random available port.
                 It puts the door in TIME_WAIT state so that no other process gets it when asking for a random port,
@@ -448,8 +462,13 @@ def define_SwanSpawner_from(base_class):
             for i in range(n_tries):
                 try:
                     with contextlib.closing(socket()) as s:
+                        port = random.randint(start, end)
+                        net_connections = psutil.net_connections()
+                        # look through the list of active connections to check if the port is being used or not and return FREE if port is unused
+                        if next((conn.laddr[1] for conn in net_connections if conn.laddr[1] == port),'FREE') != 'FREE':
+                            raise Exception('Port {} is in use'.format(port))
                         s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-                        s.bind(('127.0.0.1', 0))
+                        s.bind(('127.0.0.1', port))
 
                         # the connect below deadlocks on kernel >= 4.4.0 unless this arg is greater than zero
                         s.listen(1)
