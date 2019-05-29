@@ -11,6 +11,7 @@ from jupyterhub.handlers.base import BaseHandler
 from jupyterhub.utils import url_path_join
 from tornado import web, gen
 from tornado.httputil import url_concat
+from urllib.parse import parse_qs, unquote, urlparse
 
 from .handlers_configs import SpawnHandlersConfigs
 
@@ -26,7 +27,7 @@ class SpawnHandler(BaseHandler):
         configs = SpawnHandlersConfigs.instance()
         user = self.get_current_user()
         # We inject an extra field if there is a project set
-        the_projurl = self.get_argument('projurl','')
+        the_projurl = self.get_projurl()
         the_form = open(user.spawner.options_form).read()
         if the_projurl:
             the_form +='<input type="hidden" name="projurl" value="%s">' % the_projurl
@@ -41,7 +42,7 @@ class SpawnHandler(BaseHandler):
     def handle_redirection(self, the_projurl = ''):
         ''' Return redirection url'''
         if not the_projurl:
-            the_projurl = self.get_argument('projurl','')
+            the_projurl = self.get_projurl()
         if not the_projurl: return ''
 
         return 'download?projurl=' + the_projurl
@@ -80,6 +81,17 @@ class SpawnHandler(BaseHandler):
         configs = SpawnHandlersConfigs.instance()
         if not configs.local_home:
             subprocess.call(['sudo', configs.swanrc_path, 'remove', user])
+
+    def get_projurl(self):
+        projurl = self.get_argument('projurl','')
+        if not projurl:
+            next_url = self.get_argument('next','')
+            if next_url:
+                unquoted_next = unquote(unquote(next_url))
+                parsed_qs = parse_qs(urlparse(unquoted_next).query)
+                if 'projurl' in parsed_qs:
+                    projurl = parsed_qs['projurl'][0]
+        return projurl
 
 
     @web.authenticated
