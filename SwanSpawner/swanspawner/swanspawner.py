@@ -95,11 +95,17 @@ def define_SwanSpawner_from(base_class):
             config=True,
             help='Path in eos preceeding the /t/theuser directory (e.g. /eos/user, /eos/scratch/user).'
         )
-
-        spark_config_script = Unicode(
+        
+        yarn_config_script = Unicode(
             default_value='/cvmfs/sft.cern.ch/lcg/etc/hadoop-confext/hadoop-setconf.sh',
             config=True,
-            help='Path in CVMFS of the script to configure a Spark cluster.'
+            help='Path in CVMFS of the script to configure a YARN cluster.'
+        )
+
+        k8s_config_script = Unicode(
+            default_value='/cvmfs/sft.cern.ch/lcg/etc/hadoop-confext/k8s-setconf.sh',
+            config=True,
+            help='Path in CVMFS of the script to configure a K8s cluster.'
         )
 
         spark_cluster_field = Unicode(
@@ -257,7 +263,10 @@ def define_SwanSpawner_from(base_class):
                     env['SERVER_HOSTNAME']   	 	    = os.uname().nodename
                     env['MAX_MEMORY']         	   	    = self.user_options[self.user_memory]
 
-                    env['SPARK_CONFIG_SCRIPT'] = self.spark_config_script
+                    if cluster == 'k8s':
+                        env['SPARK_CONFIG_SCRIPT'] = self.k8s_config_script
+                    else:
+                        env['SPARK_CONFIG_SCRIPT'] = self.yarn_config_script
 
                     # Asks the OS for random ports to give them to Docker,
                     # so that Spark can be exposed to the outside
