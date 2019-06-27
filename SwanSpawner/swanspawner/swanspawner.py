@@ -351,57 +351,57 @@ def define_SwanSpawner_from(base_class):
                     if os.path.exists(hadoop_host_path + '/k8s-user.config'):
                         self.env['KUBECONFIG'] = hadoop_container_path + '/k8s-user.config'
                     else:
-                        raise ValueError(
+                        raise RuntimeError(
                             """
-                            Access to the selected K8s cluster is not granted. 
-                            Please <a href="https://cern.service-now.com/service-portal/function.do?name=swan" target="_blank">request access</a>
+                            Problem connecting to Cloud Containers cluster. 
+                            Please <a href="https://cern.service-now.com/service-portal/function.do?name=swan" target="_blank">report an issue</a>
                             """
                         )
+
+                    subprocess.call([
+                        'sudo',
+                        self.hadoop_auth_script,
+                        'analytix',
+                        username
+                    ])
 
                     # Set default EOS krb5 cache location to hadoop container path for k8s
                     self.env['KRB5CCNAME'] = hadoop_container_path + '/krb5cc'
                 else:
                     subprocess.call([
                         'sudo',
-                        self.hadoop_auth_script ,
+                        self.hadoop_auth_script,
                         cluster,
                         username
                     ])
 
-                    # read the generated webhdfs token from host into env variable used by Spark
-                    if os.path.exists(hadoop_host_path + '/webhdfs.toks'):
-                        with open(hadoop_host_path + '/webhdfs.toks', 'r') as webhdfs_token_file:
-                            self.env['WEBHDFS_TOKEN'] = webhdfs_token_file.read()
+                    # Set default location for krb5cc in tmp directory for yarn
+                    self.env['KRB5CCNAME'] = '/tmp/krb5cc'
+
+                # set location of hadoop token file and webhdfs token for Spark
+                if os.path.exists(hadoop_host_path + '/hadoop.toks') and os.path.exists(hadoop_host_path + '/webhdfs.toks'):
+                    self.env['HADOOP_TOKEN_FILE_LOCATION'] = hadoop_container_path + '/hadoop.toks'
+                    with open(hadoop_host_path + '/webhdfs.toks', 'r') as webhdfs_token_file:
+                        self.env['WEBHDFS_TOKEN'] = webhdfs_token_file.read()
+                else:
+                    if cluster == 'nxcals':
+                        raise ValueError(
+                            """
+                            Access to the NXCALS cluster is not granted. 
+                            Please <a href="https://wikis.cern.ch/display/NXCALS/Data+Access+User+Guide#DataAccessUserGuide-nxcals_access" target="_blank">request access</a>
+                            """
+                        )
+                    elif cluster == 'k8s':
+                        # if there is no HADOOP_TOKEN_FILE or WEBHDFS_TOKEN with K8s we ignore (no HDFS access granted)
+                        pass
                     else:
+                        # yarn clusters require HADOOP_TOKEN_FILE and WEBHDFS_TOKEN containing YARN and HDFS tokens
                         raise ValueError(
                             """
                             Access to the selected YARN cluster is not granted. 
                             Please <a href="https://cern.service-now.com/service-portal/report-ticket.do?name=request&se=Hadoop-Service" target="_blank">request access</a>
                             """
                         )
-
-                    # set location of hadoop token file for Spark
-                    if os.path.exists(hadoop_host_path + '/hadoop.toks'):
-                        self.env['HADOOP_TOKEN_FILE_LOCATION'] = hadoop_container_path + '/hadoop.toks'
-                    else:
-                        if cluster == 'nxcals':
-                            raise ValueError(
-                                """
-                                Access to the NXCALS cluster is not granted. 
-                                Please <a href="https://wikis.cern.ch/display/NXCALS/Data+Access+User+Guide#DataAccessUserGuide-nxcals_access" target="_blank">request access</a>
-                                """
-                            )
-                        else:
-                            raise ValueError(
-                                """
-                                Access to the selected YARN cluster is not granted. 
-                                Please <a href="https://cern.service-now.com/service-portal/report-ticket.do?name=request&se=Hadoop-Service" target="_blank">request access</a>
-                                """
-                            )
-
-                    # Set default location for krb5cc in tmp directory for yarn
-                    self.env['KRB5CCNAME'] = '/tmp/krb5cc'
-
 
             # The bahaviour changes if this if dockerspawner or kubespawner
             if hasattr(self, 'extra_host_config'):
