@@ -364,7 +364,6 @@ def define_SwanSpawner_from(base_class):
                     subprocess.call([
                         'sudo',
                         self.hadoop_auth_script ,
-                        self.lcg_view_path + '/' + lcg_rel + '/' + platform,
                         cluster,
                         username
                     ])
