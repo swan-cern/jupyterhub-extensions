@@ -344,8 +344,7 @@ def define_SwanSpawner_from(base_class):
                     subprocess.call([
                         'sudo',
                         self.init_k8s_user,
-                        username,
-                        hadoop_host_path + '/k8s-user.config'
+                        username
                     ])
 
                     # set location of user kubeconfig for Spark
