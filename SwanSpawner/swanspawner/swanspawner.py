@@ -3,9 +3,9 @@
 
 """CERN Specific Spawner class"""
 
-import os
-import pwd
-import subprocess
+import pickle, struct, re
+import calendar, datetime
+import os, pwd, subprocess
 from tornado import gen
 from traitlets import (
     Unicode,
@@ -21,8 +21,10 @@ import psutil
 from socket import (
     socket,
     SO_REUSEADDR,
+    AF_INET,
+    SOCK_STREAM,
     SOL_SOCKET,
-    gethostname
+    gethostname,
 )
 
 
@@ -153,12 +155,6 @@ def define_SwanSpawner_from(base_class):
             default_value='c5.swan',
             config=True,
             help='Base path for SWAN in Grafana metrics'
-        )
-
-        graphite_base_path = Unicode(
-            default_value='spawn_form',
-            config=True,
-            help='Base path for the metrics generated in this object'
         )
 
         graphite_server = Unicode(
@@ -293,6 +289,35 @@ def define_SwanSpawner_from(base_class):
             return env
 
         @gen.coroutine
+        def stop(self, now=False):
+            """ Overwrite default spawner to report stop of the container """
+
+            if self._spawn_future and not self._spawn_future.done():
+                # Return 124 (timeout) exit code as container got stopped by jupyterhub before successful spawn
+                container_exit_code = "124"
+            else:
+                # Return 0 exit code as container got stopped after spawning correctly
+                container_exit_code = "0"
+
+            stop_result = yield super().stop(now)
+
+            self._send_exit_metric(container_exit_code)
+
+            return stop_result
+
+        @gen.coroutine
+        def poll(self):
+            """ Overwrite default poll to get status of container """
+            container_exit_code = yield super().poll()
+
+            # None if single - user process is running.
+            # Integer exit code status, if it is not running and not stopped by JupyterHub.
+            if container_exit_code is not None:
+                self._send_exit_metric(container_exit_code)
+
+            return container_exit_code
+
+        @gen.coroutine
         def start(self):
             """Start the container and perform the operations necessary for mounting
             EOS, authenticating HDFS and authenticating K8S.
@@ -305,136 +330,140 @@ def define_SwanSpawner_from(base_class):
             cpu_quota = self.user_options[self.user_n_cores]
             mem_limit = self.user_options[self.user_memory]
 
-            if not self.local_home and self.auth_script:
-                # When using CERNBox as home, obtain credentials for the user
-                subprocess.call(['sudo', self.auth_script, username], timeout=60)
-                self.log.debug("We are in SwanSpawner. Credentials for %s were requested.", username)
+            try:
+                if not self.local_home and self.auth_script:
+                    # When using CERNBox as home, obtain credentials for the user
+                    subprocess.call(['sudo', self.auth_script, username], timeout=60)
+                    self.log.debug("We are in SwanSpawner. Credentials for %s were requested.", username)
 
-            if self.check_cvmfs_status:
-                if not os.path.exists(self.lcg_view_path):
+                if self.check_cvmfs_status and not os.path.exists(self.lcg_view_path):
                     raise ValueError(
                         """
                         Could not initialize software stack, please <a href="https://cern.ch/ssb" target="_blank">check service status</a> or <a href="https://cern.service-now.com/service-portal/function.do?name=swan" target="_blank">report an issue</a>
                         """
                     )
 
-                if not os.path.exists(self.lcg_view_path + '/' + lcg_rel + '/' + platform):
+                if self.check_cvmfs_status and not os.path.exists(self.lcg_view_path + '/' + lcg_rel + '/' + platform):
                     raise ValueError(
                         """
                         Configuration not available: please select other <b>Software stack</b> and <b>Platform</b>.
                         """
                     )
 
-            # If the user selects a Spark Cluster we need to generate a token to allow him in
-            if self.offload:
-                # FIXME: temporaly limit Cloud Container to specific platform and software stack
-                if cluster == 'k8s' and "dev" not in lcg_rel:
-                    raise ValueError(
-                        """
-                        Configuration unsupported: 
-                        only <b>Software stack: Bleeding Edge Python2/Python3</b> is supported for Cloud Containers
-                        """
-                    )
-
-                # If the user selects a Spark Cluster we need to generate some tokens
-                # FIXME: Dont hardcode hadoop path, use hadoop_host_path and hadoop_container_path
-                hadoop_host_path = '/spark/' + username
-                hadoop_container_path = '/spark'
-
-                # Ensure that env variables are properly cleared
-                self.env.pop('WEBHDFS_TOKEN', None)
-                self.env.pop('HADOOP_TOKEN_FILE_LOCATION', None)
-                self.env.pop('KUBECONFIG', None)
-
-                # Set authentication and authorization for the user
-                if cluster == 'k8s':
-                    subprocess.call([
-                        'sudo',
-                        self.init_k8s_user,
-                        username
-                    ], timeout=60)
-
-                    # set location of user kubeconfig for Spark
-                    if os.path.exists(hadoop_host_path + '/k8s-user.config'):
-                        self.env['KUBECONFIG'] = hadoop_container_path + '/k8s-user.config'
-                    else:
-                        raise RuntimeError(
-                            """
-                            Problem connecting to Cloud Containers cluster. 
-                            Please <a href="https://cern.service-now.com/service-portal/function.do?name=swan" target="_blank">report an issue</a>
-                            """
-                        )
-
-                    subprocess.call([
-                        'sudo',
-                        self.hadoop_auth_script,
-                        'analytix',
-                        username
-                    ], timeout=60)
-
-                    # Set default EOS krb5 cache location to hadoop container path for k8s
-                    self.env['KRB5CCNAME'] = hadoop_container_path + '/krb5cc'
-                else:
-                    subprocess.call([
-                        'sudo',
-                        self.hadoop_auth_script,
-                        cluster,
-                        username
-                    ], timeout=60)
-
-                    # Set default location for krb5cc in tmp directory for yarn
-                    self.env['KRB5CCNAME'] = '/tmp/krb5cc'
-
-                # set location of hadoop token file and webhdfs token for Spark
-                if os.path.exists(hadoop_host_path + '/hadoop.toks') and os.path.exists(hadoop_host_path + '/webhdfs.toks'):
-                    self.env['HADOOP_TOKEN_FILE_LOCATION'] = hadoop_container_path + '/hadoop.toks'
-                    with open(hadoop_host_path + '/webhdfs.toks', 'r') as webhdfs_token_file:
-                        self.env['WEBHDFS_TOKEN'] = webhdfs_token_file.read()
-                else:
-                    if cluster == 'nxcals':
+                # If the user selects a Spark Cluster we need to generate a token to allow him in
+                if self.offload:
+                    # FIXME: temporaly limit Cloud Container to specific platform and software stack
+                    if cluster == 'k8s' and "dev" not in lcg_rel:
                         raise ValueError(
                             """
-                            Access to the NXCALS cluster is not granted. 
-                            Please <a href="https://wikis.cern.ch/display/NXCALS/Data+Access+User+Guide#DataAccessUserGuide-nxcals_access" target="_blank">request access</a>
+                            Configuration unsupported: 
+                            only <b>Software stack: Bleeding Edge Python2/Python3</b> is supported for Cloud Containers
                             """
                         )
-                    elif cluster == 'k8s':
-                        # if there is no HADOOP_TOKEN_FILE or WEBHDFS_TOKEN with K8s we ignore (no HDFS access granted)
-                        pass
+
+                    # If the user selects a Spark Cluster we need to generate some tokens
+                    # FIXME: Dont hardcode hadoop path, use hadoop_host_path and hadoop_container_path
+                    hadoop_host_path = '/spark/' + username
+                    hadoop_container_path = '/spark'
+
+                    # Ensure that env variables are properly cleared
+                    self.env.pop('WEBHDFS_TOKEN', None)
+                    self.env.pop('HADOOP_TOKEN_FILE_LOCATION', None)
+                    self.env.pop('KUBECONFIG', None)
+
+                    # Set authentication and authorization for the user
+                    if cluster == 'k8s':
+                        subprocess.call([
+                            'sudo',
+                            self.init_k8s_user,
+                            username
+                        ], timeout=60)
+
+                        # set location of user kubeconfig for Spark
+                        if os.path.exists(hadoop_host_path + '/k8s-user.config'):
+                            self.env['KUBECONFIG'] = hadoop_container_path + '/k8s-user.config'
+                        else:
+                            raise RuntimeError(
+                                """
+                                Problem connecting to Cloud Containers cluster. 
+                                Please <a href="https://cern.service-now.com/service-portal/function.do?name=swan" target="_blank">report an issue</a>
+                                """
+                            )
+
+                        subprocess.call([
+                            'sudo',
+                            self.hadoop_auth_script,
+                            'analytix',
+                            username
+                        ], timeout=60)
+
+                        # Set default EOS krb5 cache location to hadoop container path for k8s
+                        self.env['KRB5CCNAME'] = hadoop_container_path + '/krb5cc'
                     else:
-                        # yarn clusters require HADOOP_TOKEN_FILE and WEBHDFS_TOKEN containing YARN and HDFS tokens
-                        raise ValueError(
-                            """
-                            Access to the selected YARN cluster is not granted. 
-                            Please <a href="https://cern.service-now.com/service-portal/report-ticket.do?name=request&se=Hadoop-Service" target="_blank">request access</a>
-                            """
-                        )
+                        subprocess.call([
+                            'sudo',
+                            self.hadoop_auth_script,
+                            cluster,
+                            username
+                        ], timeout=60)
 
-            # The bahaviour changes if this if dockerspawner or kubespawner
-            if hasattr(self, 'extra_host_config'):
-                # Due to dockerpy limitations in the current version, we cannot use --cpu to limit cpu.
-                # This is an alternative (and old) way of doing it
-                self.extra_host_config.update({
-                    'cpu_period' : 100000,
-                    'cpu_quota' : 100000 * cpu_quota
-                })
-            else:
-                self.cpu_limit = cpu_quota
-            self.mem_limit = mem_limit
+                        # Set default location for krb5cc in tmp directory for yarn
+                        self.env['KRB5CCNAME'] = '/tmp/krb5cc'
 
-            # Temporary fix to have both slc6 and cc7 image available. It should be removed
-            # as soon as we move to cc7 completely.
-            if "slc6" in self.user_options[self.platform_field]:
-                self.image = self.image_slc6
+                    # set location of hadoop token file and webhdfs token for Spark
+                    if os.path.exists(hadoop_host_path + '/hadoop.toks') and os.path.exists(hadoop_host_path + '/webhdfs.toks'):
+                        self.env['HADOOP_TOKEN_FILE_LOCATION'] = hadoop_container_path + '/hadoop.toks'
+                        with open(hadoop_host_path + '/webhdfs.toks', 'r') as webhdfs_token_file:
+                            self.env['WEBHDFS_TOKEN'] = webhdfs_token_file.read()
+                    else:
+                        if cluster == 'nxcals':
+                            raise ValueError(
+                                """
+                                Access to the NXCALS cluster is not granted. 
+                                Please <a href="https://wikis.cern.ch/display/NXCALS/Data+Access+User+Guide#DataAccessUserGuide-nxcals_access" target="_blank">request access</a>
+                                """
+                            )
+                        elif cluster == 'k8s':
+                            # if there is no HADOOP_TOKEN_FILE or WEBHDFS_TOKEN with K8s we ignore (no HDFS access granted)
+                            pass
+                        else:
+                            # yarn clusters require HADOOP_TOKEN_FILE and WEBHDFS_TOKEN containing YARN and HDFS tokens
+                            raise ValueError(
+                                """
+                                Access to the NXCALS cluster is not granted. 
+                                Please <a href="https://wikis.cern.ch/display/NXCALS/Data+Access+User+Guide#DataAccessUserGuide-nxcals_access" target="_blank">request access</a>
+                                """
+                            )
 
-            try:
-                if self.metrics_on:
-                    self.send_metrics()
-            except Exception as ex:
-                self.log.error("Failed to send metrics: %s", ex, exc_info=True)
+                # The bahaviour changes if this if dockerspawner or kubespawner
+                if hasattr(self, 'extra_host_config'):
+                    # Due to dockerpy limitations in the current version, we cannot use --cpu to limit cpu.
+                    # This is an alternative (and old) way of doing it
+                    self.extra_host_config.update({
+                        'cpu_period' : 100000,
+                        'cpu_quota' : 100000 * cpu_quota
+                    })
+                else:
+                    self.cpu_limit = cpu_quota
+                self.mem_limit = mem_limit
 
-            startup = yield super().start()
-            return startup
+                # Temporary fix to have both slc6 and cc7 image available. It should be removed
+                # as soon as we move to cc7 completely.
+                if "slc6" in self.user_options[self.platform_field]:
+                    self.image = self.image_slc6
+
+                # start configured container
+                startup = yield super().start()
+
+                # update start success metrics
+                self._send_user_metrics()
+                self._send_start_exception_metric(None)
+
+                return startup
+            except BaseException as e:
+                # update start failure metric
+                self._send_start_exception_metric(e)
+                raise e
 
         @property
         def volume_mount_points(self):
@@ -513,5 +542,109 @@ def define_SwanSpawner_from(base_class):
                 except:
                     if i == n_tries - 1:
                         raise
+
+        def _send_user_metrics(self):
+            """
+            Send user chosen options to the metrics server.
+            This will allow us to see what users are choosing from within Grafana.
+            """
+
+            try:
+                if self.metrics_on:
+                    base_path = self._get_base_metric_path()
+                    base_key = 'spawn_form'
+                    date = self._get_date_seconds()
+
+                    metrics = []
+                    for (key, value) in self.user_options.items():
+                        if key == self.user_script_env_field:
+                            path = ".".join([base_path, base_key, key])
+                            metrics.append((path, (date, 1 if value else 0)))
+                        else:
+                            value_cleaned = str(value).replace('/', '_')
+                            path = ".".join([base_path, base_key, key, value_cleaned])
+                            # Metrics values are a number
+                            metrics.append((path, (date, 1)))
+
+                    self._send_graphite_metrics(metrics)
+            except Exception as ex:
+                self.log.error("Failed to send metrics: %s", ex, exc_info=True)
+
+
+        def _send_start_exception_metric(self, start_exception):
+            """
+            Send start status of the container.
+            Status should be None in case of successful start, or BaseException exception
+            """
+
+            try:
+                if self.metrics_on:
+                    date = self._get_date_seconds()
+
+                    metric_path = self._get_base_metric_path()
+                    key = "spawn_exception"
+                    value_cleaned = start_exception.__class__.__name__ if start_exception is not None else "None"
+
+                    metrics = [
+                        (".".join([metric_path, key, value_cleaned]), (date, 1))
+                    ]
+
+                    self._send_graphite_metrics(metrics)
+            except Exception as ex:
+                self.log.error("Failed to send metrics: %s", ex, exc_info=True)
+
+        def _send_exit_metric(self, exit_return_code):
+            """
+            Send exit status of the container.
+            Status should be 0 in case of successful exit, or return code as integer
+            """
+
+            try:
+                if self.metrics_on:
+                    date = self._get_date_seconds()
+
+                    metric_path = self._get_base_metric_path()
+                    key = "container_exit_code"
+
+                    exit_return_code = str(exit_return_code)
+                    if exit_return_code.isdigit():
+                        value_cleaned = exit_return_code
+                    else:
+                        result = re.search('ExitCode=(\d+)', exit_return_code)
+                        if not result:
+                            raise Exception("unknown exit code format for this Spawner")
+
+                        value_cleaned = result.group(1)
+
+                    metrics = [
+                        (".".join([metric_path, key, value_cleaned]), (date, 1) )
+                    ]
+
+                    self._send_graphite_metrics(metrics)
+            except Exception as ex:
+                self.log.error("Failed to send metrics: %s", ex, exc_info=True)
+
+        def _get_date_seconds(self):
+            d = datetime.datetime.utcnow()
+            return calendar.timegm(d.timetuple())
+
+        def _get_base_metric_path(self):
+            return ".".join([self.graphite_metric_path, self.this_host])
+
+        def _send_graphite_metrics(self, metrics):
+            for metric in metrics:
+                self.log.info("user %s, metric: %s, date: %s" % (self.user.name, metric[0], metric[1]))
+
+            # Serialize the message and send everything in on single package
+            payload = pickle.dumps(metrics, protocol=2)
+            header = struct.pack("!L", len(payload))
+            message = header + payload
+
+            # Send the message
+            conn = socket(AF_INET, SOCK_STREAM)
+            conn.settimeout(2)
+            conn.connect((self.graphite_server, self.graphite_server_port_batch))
+            conn.send(message)
+            conn.close()
 
     return SwanSpawner
