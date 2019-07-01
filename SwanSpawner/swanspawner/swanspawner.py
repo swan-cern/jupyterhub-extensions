@@ -307,7 +307,7 @@ def define_SwanSpawner_from(base_class):
 
             if not self.local_home and self.auth_script:
                 # When using CERNBox as home, obtain credentials for the user
-                subprocess.call(['sudo', self.auth_script, username])
+                subprocess.call(['sudo', self.auth_script, username], timeout=60)
                 self.log.debug("We are in SwanSpawner. Credentials for %s were requested.", username)
 
             if self.check_cvmfs_status:
@@ -352,7 +352,7 @@ def define_SwanSpawner_from(base_class):
                         'sudo',
                         self.init_k8s_user,
                         username
-                    ])
+                    ], timeout=60)
 
                     # set location of user kubeconfig for Spark
                     if os.path.exists(hadoop_host_path + '/k8s-user.config'):
@@ -370,7 +370,7 @@ def define_SwanSpawner_from(base_class):
                         self.hadoop_auth_script,
                         'analytix',
                         username
-                    ])
+                    ], timeout=60)
 
                     # Set default EOS krb5 cache location to hadoop container path for k8s
                     self.env['KRB5CCNAME'] = hadoop_container_path + '/krb5cc'
@@ -380,7 +380,7 @@ def define_SwanSpawner_from(base_class):
                         self.hadoop_auth_script,
                         cluster,
                         username
-                    ])
+                    ], timeout=60)
 
                     # Set default location for krb5cc in tmp directory for yarn
                     self.env['KRB5CCNAME'] = '/tmp/krb5cc'
