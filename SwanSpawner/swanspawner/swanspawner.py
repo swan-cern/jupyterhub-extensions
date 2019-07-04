@@ -194,6 +194,12 @@ def define_SwanSpawner_from(base_class):
             help="If True, it will send the metrics to CERN grafana (temporary, we will separate the metrics from the spwaner)."
         )
 
+        check_cvmfs_status = Bool(
+            default_value=True,
+            config=True,
+            help="Check if CVMFS is accessible. It only works if CVMFS is mounted in the host (not the case in ScienceBox)."
+        )
+
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
@@ -304,19 +310,20 @@ def define_SwanSpawner_from(base_class):
                 subprocess.call(['sudo', self.auth_script, username])
                 self.log.debug("We are in SwanSpawner. Credentials for %s were requested.", username)
 
-            if not os.path.exists(self.lcg_view_path):
-                raise ValueError(
-                    """
-                    Could not initialize software stack, please <a href="https://cern.ch/ssb" target="_blank">check service status</a> or <a href="https://cern.service-now.com/service-portal/function.do?name=swan" target="_blank">report an issue</a>
-                    """
-                )
+            if self.check_cvmfs_status:
+                if not os.path.exists(self.lcg_view_path):
+                    raise ValueError(
+                        """
+                        Could not initialize software stack, please <a href="https://cern.ch/ssb" target="_blank">check service status</a> or <a href="https://cern.service-now.com/service-portal/function.do?name=swan" target="_blank">report an issue</a>
+                        """
+                    )
 
-            if not os.path.exists(self.lcg_view_path + '/' + lcg_rel + '/' + platform):
-                raise ValueError(
-                    """
-                    Configuration not available: please select other <b>Software stack</b> and <b>Platform</b>.
-                    """
-                )
+                if not os.path.exists(self.lcg_view_path + '/' + lcg_rel + '/' + platform):
+                    raise ValueError(
+                        """
+                        Configuration not available: please select other <b>Software stack</b> and <b>Platform</b>.
+                        """
+                    )
 
             # If the user selects a Spark Cluster we need to generate a token to allow him in
             if self.offload:
