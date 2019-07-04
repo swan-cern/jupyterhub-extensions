@@ -13,6 +13,7 @@ setup(name='swanspawner',
         'jupyterhub',
         'psutil',
         'dockerspawner==0.11.0',
-        'jupyterhub-kubespawner==0.10.1'
+        'jupyterhub-kubespawner==0.10.1',
+        'kubernetes==9.0.0' #kubespawnwer failing with version 10
       ],
   )
