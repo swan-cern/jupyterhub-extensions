@@ -9,6 +9,10 @@ c.JupyterHub.authenticator_class = 'ssoauthenticator.SSOAuthenticator'
 c.SSOAuthenticator.admin_users = {'dpiparo', 'etejedor'}
 #c.SSOAuthenticator.accepted_egroup = 'dmaas-test-users'
 
+# Slow spawn warning timeout (redirect to pending page)
+c.JupyterHub.tornado_settings = {
+    'slow_spawn_timeout': 10
+}
 
 # Spawner
 c.JupyterHub.spawner_class = 'cernspawner.CERNSpawner'
@@ -18,6 +22,11 @@ c.CERNSpawner.volumes = { '/eos' : '/eos'}
 c.CERNSpawner.auth_script  = '/root/eos-fuse.sh'
 c.CERNSpawner.eos_path_prefix  = '/eos/scratch/user'
 
+# Spawner.http_timeout - https://jupyterhub.readthedocs.io/en/stable/api/spawner.html#jupyterhub.spawner.Spawner.http_timeout
+c.SwanSpawner.http_timeout = 30
+
+# Spawner.start_timeout - https://jupyterhub.readthedocs.io/en/stable/api/spawner.html#jupyterhub.spawner.Spawner.start_timeout
+c.SwanSpawner.start_timeout = 60
 
 c.CERNSpawner.options_form = """
 <label for="LCG-rel">LCG release</label>

@@ -3,9 +3,9 @@
 
 """CERN Specific Spawner class"""
 
-import pickle, struct, re
-import calendar, datetime
+import re
 import os, pwd, subprocess
+import time
 from tornado import gen
 from traitlets import (
     Unicode,
@@ -21,8 +21,6 @@ import psutil
 from socket import (
     socket,
     SO_REUSEADDR,
-    AF_INET,
-    SOCK_STREAM,
     SOL_SOCKET,
     gethostname,
 )
@@ -151,24 +149,6 @@ def define_SwanSpawner_from(base_class):
             help='List of memory options available to the user'
         )
 
-        graphite_metric_path = Unicode(
-            default_value='c5.swan',
-            config=True,
-            help='Base path for SWAN in Grafana metrics'
-        )
-
-        graphite_server = Unicode(
-            default_value='filer-carbon.cern.ch',
-            config=True,
-            help='Server where to post the metrics collected'
-        )
-
-        graphite_server_port_batch = Int(
-            default_value=2004,
-            config=True,
-            help='Port of the server where to post the metrics collected'
-        )
-
         shared_volumes = Dict(
             config=True,
             help='Volumes to be mounted with a "shared" tag. This allows mount propagation.',
@@ -182,12 +162,6 @@ def define_SwanSpawner_from(base_class):
         image_slc6 = Unicode(
             config=True,
             help='TEMPORARY: SLC6 image to spawn a session'
-        )
-
-        metrics_on = Bool(
-            default_value=True,
-            config=True,
-            help="If True, it will send the metrics to CERN grafana (temporary, we will separate the metrics from the spwaner)."
         )
 
         check_cvmfs_status = Bool(
@@ -236,6 +210,7 @@ def define_SwanSpawner_from(base_class):
                 USER                   = username,
                 USER_ID                = str(userid),
                 HOME                   = homepath,
+                SERVER_HOSTNAME        = os.uname().nodename,
 
                 JPY_USER               = self.user.name,
                 JPY_COOKIE_NAME        = self.user.server.cookie_name,
@@ -262,7 +237,6 @@ def define_SwanSpawner_from(base_class):
                     cluster = self.user_options[self.spark_cluster_field]
                     env['SPARK_CLUSTER_NAME'] 		    = cluster
                     env['SPARK_USER'] 		            = username
-                    env['SERVER_HOSTNAME']   	 	    = os.uname().nodename
                     env['MAX_MEMORY']         	   	    = self.user_options[self.user_memory]
 
                     if cluster == 'k8s':
@@ -301,7 +275,7 @@ def define_SwanSpawner_from(base_class):
 
             stop_result = yield super().stop(now)
 
-            self._send_exit_metric(container_exit_code)
+            self._log_metric(self.user.name, self.this_host, "exit_container.exit_code", container_exit_code)
 
             return stop_result
 
@@ -313,7 +287,17 @@ def define_SwanSpawner_from(base_class):
             # None if single - user process is running.
             # Integer exit code status, if it is not running and not stopped by JupyterHub.
             if container_exit_code is not None:
-                self._send_exit_metric(container_exit_code)
+                exit_return_code = str(container_exit_code)
+                if exit_return_code.isdigit():
+                    value_cleaned = exit_return_code
+                else:
+                    result = re.search('ExitCode=(\d+)', exit_return_code)
+                    if not result:
+                        raise Exception("unknown exit code format for this Spawner")
+                    value_cleaned = result.group(1)
+
+                self._log_metric(self.user.name, self.this_host, "exit_container.exit_code", value_cleaned)
+                pass
 
             return container_exit_code
 
@@ -331,6 +315,8 @@ def define_SwanSpawner_from(base_class):
             mem_limit = self.user_options[self.user_memory]
 
             try:
+                start_time_configure_user = time.time()
+
                 if not self.local_home and self.auth_script:
                     # When using CERNBox as home, obtain credentials for the user
                     subprocess.call(['sudo', self.auth_script, username], timeout=60)
@@ -350,8 +336,12 @@ def define_SwanSpawner_from(base_class):
                         """
                     )
 
+                self._log_metric(self.user.name, self.this_host, "configure_user.duration_sec", time.time() - start_time_configure_user)
+
                 # If the user selects a Spark Cluster we need to generate a token to allow him in
                 if self.offload:
+                    start_time_configure_spark = time.time()
+
                     # FIXME: temporaly limit Cloud Container to specific platform and software stack
                     if cluster == 'k8s' and ("dev" not in lcg_rel and "LCG_96" not in lcg_rel):
                         raise ValueError(
@@ -435,6 +425,8 @@ def define_SwanSpawner_from(base_class):
                                 """
                             )
 
+                    self._log_metric(self.user.name, self.this_host, "configure_spark.duration_sec", time.time() - start_time_configure_spark)
+
                 # The bahaviour changes if this if dockerspawner or kubespawner
                 if hasattr(self, 'extra_host_config'):
                     # Due to dockerpy limitations in the current version, we cannot use --cpu to limit cpu.
@@ -463,17 +455,19 @@ def define_SwanSpawner_from(base_class):
                     if hasattr(self, 'extra_resource_guarantees'): # for kubernetes but not for docker
                         self.extra_resource_guarantees = {"nvidia.com/gpu": "1"}  
 
+                start_time_start_container = time.time()
+
                 # start configured container
                 startup = yield super().start()
 
-                # update start success metrics
-                self._send_user_metrics()
-                self._send_start_exception_metric(None)
+                # log container start success metrics
+                self._log_metric(self.user.name, self.this_host, "start_container.duration_sec", time.time() - start_time_start_container)
+                self._log_metric(self.user.name, self.this_host, "start_container.exception", "None")
 
                 return startup
             except BaseException as e:
-                # update start failure metric
-                self._send_start_exception_metric(e)
+                # log start failure metric and raise exception further
+                self._log_metric(self.user.name, self.this_host, "start_container.exception", e.__class__.__name__)
                 raise e
 
         @property
@@ -554,108 +548,7 @@ def define_SwanSpawner_from(base_class):
                     if i == n_tries - 1:
                         raise
 
-        def _send_user_metrics(self):
-            """
-            Send user chosen options to the metrics server.
-            This will allow us to see what users are choosing from within Grafana.
-            """
-
-            try:
-                if self.metrics_on:
-                    base_path = self._get_base_metric_path()
-                    base_key = 'spawn_form'
-                    date = self._get_date_seconds()
-
-                    metrics = []
-                    for (key, value) in self.user_options.items():
-                        if key == self.user_script_env_field:
-                            path = ".".join([base_path, base_key, key])
-                            metrics.append((path, (date, 1 if value else 0)))
-                        else:
-                            value_cleaned = str(value).replace('/', '_')
-                            path = ".".join([base_path, base_key, key, value_cleaned])
-                            # Metrics values are a number
-                            metrics.append((path, (date, 1)))
-
-                    self._send_graphite_metrics(metrics)
-            except Exception as ex:
-                self.log.error("Failed to send metrics: %s", ex, exc_info=True)
-
-
-        def _send_start_exception_metric(self, start_exception):
-            """
-            Send start status of the container.
-            Status should be None in case of successful start, or BaseException exception
-            """
-
-            try:
-                if self.metrics_on:
-                    date = self._get_date_seconds()
-
-                    metric_path = self._get_base_metric_path()
-                    key = "spawn_exception"
-                    value_cleaned = start_exception.__class__.__name__ if start_exception is not None else "None"
-
-                    metrics = [
-                        (".".join([metric_path, key, value_cleaned]), (date, 1))
-                    ]
-
-                    self._send_graphite_metrics(metrics)
-            except Exception as ex:
-                self.log.error("Failed to send metrics: %s", ex, exc_info=True)
-
-        def _send_exit_metric(self, exit_return_code):
-            """
-            Send exit status of the container.
-            Status should be 0 in case of successful exit, or return code as integer
-            """
-
-            try:
-                if self.metrics_on:
-                    date = self._get_date_seconds()
-
-                    metric_path = self._get_base_metric_path()
-                    key = "container_exit_code"
-
-                    exit_return_code = str(exit_return_code)
-                    if exit_return_code.isdigit():
-                        value_cleaned = exit_return_code
-                    else:
-                        result = re.search('ExitCode=(\d+)', exit_return_code)
-                        if not result:
-                            raise Exception("unknown exit code format for this Spawner")
-
-                        value_cleaned = result.group(1)
-
-                    metrics = [
-                        (".".join([metric_path, key, value_cleaned]), (date, 1) )
-                    ]
-
-                    self._send_graphite_metrics(metrics)
-            except Exception as ex:
-                self.log.error("Failed to send metrics: %s", ex, exc_info=True)
-
-        def _get_date_seconds(self):
-            d = datetime.datetime.utcnow()
-            return calendar.timegm(d.timetuple())
-
-        def _get_base_metric_path(self):
-            return ".".join([self.graphite_metric_path, self.this_host])
-
-        def _send_graphite_metrics(self, metrics):
-            for metric in metrics:
-                self.log.info("user %s, metric: %s, date: %s" % (self.user.name, metric[0], metric[1]))
-
-            # Serialize the message and send everything in on single package
-            payload = pickle.dumps(metrics, protocol=2)
-            header = struct.pack("!L", len(payload))
-            message = header + payload
-
-            # Send the message
-            conn = socket(AF_INET, SOCK_STREAM)
-            conn.settimeout(2)
-            conn.connect((self.graphite_server, self.graphite_server_port_batch))
-            conn.send(message)
-            conn.close()
+        def _log_metric(self, user, host, metric, value):
+            self.log.info("user: %s, host: %s, metric: %s, value: %s" % (user, host, metric, value))
 
     return SwanSpawner

@@ -3,17 +3,25 @@
 
 """CERN Spawn handler"""
 
+import time
 import os
 import io
 import requests
 import subprocess
 from jupyterhub.handlers.base import BaseHandler
 from jupyterhub.utils import url_path_join
-from tornado import web, gen
+from tornado import web
 from tornado.httputil import url_concat
 from urllib.parse import parse_qs, unquote, urlparse
-
 from .handlers_configs import SpawnHandlersConfigs
+import datetime, calendar
+import pickle, struct
+from socket import (
+    socket,
+    AF_INET,
+    SOCK_STREAM,
+    gethostname,
+)
 
 class SpawnHandler(BaseHandler):
     """Handle spawning of single-user servers via form.
@@ -96,7 +104,13 @@ class SpawnHandler(BaseHandler):
 
     @web.authenticated
     async def get(self):
-        """GET renders form for spawning with user-specified options"""
+        """
+        GET renders user-specified options spawn-form or spawns a session if 'always start with this configuration'
+        was selected
+        """
+
+        self.log.info("Handling spawner GET request")
+
         configs = SpawnHandlersConfigs.instance()
         user = self.get_current_user()
 
@@ -148,6 +162,8 @@ class SpawnHandler(BaseHandler):
     @web.authenticated
     async def post(self):
         """POST spawns with user-specified options"""
+        self.log.info("Handling spawner POST request")
+
         configs = SpawnHandlersConfigs.instance()
         user = self.get_current_user()
         if user.running:
@@ -191,15 +207,116 @@ class SpawnHandler(BaseHandler):
 
     # Spawn the session and return the status (0 ok, 1 error)
     async def _start_spawn(self, user, form_options, configs):
+        # log spawn start time
+        start_time_spawn = time.time()
+
+        # get options and log them before spawn
+        options = user.spawner.options_from_form(form_options)
+
         try:
-            options = user.spawner.options_from_form(form_options)
+            # spawn user and await single user server
             await self.spawn_single_user(user, options=options)
+
             self.set_login_cookie(user)
+
+            # if spawn future is already done it is success,
+            # otherwise add done callback to spawn future
+            if user.spawner._spawn_future and not user.spawner._spawn_future.done():
+                def _finish_spawn(f):
+                    """
+                    Future done callback called at the termination of user.spawner._spawn_future,
+                    used to report spawn metrics
+                    """
+                    if f.exception() is None:
+                        # log successful spawn
+                        self._log_spawn_metrics(user, options, time.time() - start_time_spawn)
+                    else:
+                        # log failed spawn
+                        self._log_spawn_metrics(user, options, time.time() - start_time_spawn, f.exception())
+                        self.log.error("Failed to spawn single-user server with form", exc_info=True)
+
+                user.spawner._spawn_future.add_done_callback(_finish_spawn)
+            else:
+                self._log_spawn_metrics(user, options, time.time() - start_time_spawn)
+
             return 0
-        except web.HTTPError: #Handle failed startups with our message
+        except (web.HTTPError, TimeoutError) as e: # Handle failed/timeout startups with our message
             form = await self._render_form(message=configs.spawn_error_message)
-        except Exception as e: #Show other errors to the user
+            self._log_spawn_metrics(user, options, time.time() - start_time_spawn, e)
+        except Exception as e: # Show other errors to the user
             form = await self._render_form(message=str(e))
+            self._log_spawn_metrics(user, options, time.time() - start_time_spawn, e)
+
         self.log.error("Failed to spawn single-user server with form", exc_info=True)
+
         self.finish(form)
+
         return 1
+
+    def _log_spawn_metrics(self, user, options, spawn_duration_sec, spawn_exception=None):
+        """
+        Log and send user chosen options to the metrics server.
+        This will allow us to see what users are choosing from within Grafana.
+        """
+
+        date = calendar.timegm(datetime.datetime.utcnow().timetuple())
+        host = gethostname().split('.')[0]
+        configs = SpawnHandlersConfigs.instance()
+
+        # Add options to the log and send as metrics
+        metrics = []
+        for (key, value) in options.items():
+            if key == configs.user_script_env_field:
+                path = ".".join([configs.graphite_metric_path, host, 'spawn_form', key])
+                metrics.append((path, (date, 1 if value else 0)))
+            else:
+                value_cleaned = str(value).replace('/', '_')
+
+                self._log_metric(user.name, host, ".".join(['spawn_form', key]), value_cleaned)
+
+                metric = ".".join([configs.graphite_metric_path, host, 'spawn_form', key, value_cleaned])
+                metrics.append((metric, (date, 1)))
+
+        if not spawn_exception:
+            # Add spawn success (no exception) and duration to the log and send as metrics
+            self._log_metric(user.name, host, "spawn.exception_class", "None")
+            self._log_metric(user.name, host, "spawn.duration_sec", spawn_duration_sec)
+            metrics.append((".".join([configs.graphite_metric_path, host, "spawn_exception", "None"]), (date, 1)))
+            metrics.append((".".join([configs.graphite_metric_path, host, "spawn_duration_sec", str(spawn_duration_sec)]), (date, 1)))
+        else:
+            # Log spawn exception (send exception as metric)
+            spawn_exc_class = spawn_exception.__class__.__name__
+            self._log_metric(user.name, host, "spawn.exception_class", spawn_exc_class)
+            self._log_metric(user.name, host, "spawn.exception_message", str(spawn_exception))
+            metrics.append((".".join([configs.graphite_metric_path, host, "spawn_exception", spawn_exc_class]), (date, 1)))
+
+        if configs.metrics_on:
+            self._send_graphite_metrics(metrics)
+
+    def _log_metric(self, user, host, metric, value):
+        self.log.info("user: %s, host: %s, metric: %s, value: %s" % (user, host, metric, value))
+
+    def _send_graphite_metrics(self, metrics):
+        """
+        Send metrics to the metrics server for analysis in Grafana.
+        """
+
+        self.log.debug("sending metrics to graphite: %s", metrics)
+
+        try:
+            configs = SpawnHandlersConfigs.instance()
+            # Serialize the message and send everything in on single package
+            payload = pickle.dumps(metrics, protocol=2)
+            header = struct.pack("!L", len(payload))
+            message = header + payload
+
+            # Send the message
+            conn = socket(AF_INET, SOCK_STREAM)
+            conn.settimeout(2)
+            conn.connect((configs.graphite_server, configs.graphite_server_port_batch))
+            conn.send(message)
+            conn.close()
+        except Exception as ex:
+            self.log.error("Failed to send metrics: %s", ex, exc_info=True)
+
+
