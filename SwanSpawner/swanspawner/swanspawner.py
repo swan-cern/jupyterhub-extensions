@@ -353,11 +353,11 @@ def define_SwanSpawner_from(base_class):
                 # If the user selects a Spark Cluster we need to generate a token to allow him in
                 if self.offload:
                     # FIXME: temporaly limit Cloud Container to specific platform and software stack
-                    if cluster == 'k8s' and "dev" not in lcg_rel:
+                    if cluster == 'k8s' and ("dev" not in lcg_rel and "LCG_96" not in lcg_rel):
                         raise ValueError(
                             """
                             Configuration unsupported: 
-                            only <b>Software stack: Bleeding Edge Python2/Python3</b> is supported for Cloud Containers
+                            only <b>Software stack: LCG_96 Python2/Python3 or Bleeding Edge Python2/Python3</b> is supported for Cloud Containers
                             """
                         )
 
