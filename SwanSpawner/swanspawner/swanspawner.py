@@ -357,7 +357,7 @@ def define_SwanSpawner_from(base_class):
                         raise ValueError(
                             """
                             Configuration unsupported: 
-                            only <b>Software stack: LCG_96 Python2/Python3 or Bleeding Edge Python2/Python3</b> is supported for Cloud Containers
+                            only <b>Software stack: Only LCG_96 Python2/Python3 or Bleeding Edge Python2/Python3</b> are supported for Cloud Containers
                             """
                         )
 
