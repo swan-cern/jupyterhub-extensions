@@ -430,8 +430,8 @@ def define_SwanSpawner_from(base_class):
                             # yarn clusters require HADOOP_TOKEN_FILE and WEBHDFS_TOKEN containing YARN and HDFS tokens
                             raise ValueError(
                                 """
-                                Access to the NXCALS cluster is not granted. 
-                                Please <a href="https://wikis.cern.ch/display/NXCALS/Data+Access+User+Guide#DataAccessUserGuide-nxcals_access" target="_blank">request access</a>
+                                Access to the Analytix cluster is not granted. 
+                                Please <a href="https://cern.service-now.com/service-portal/report-ticket.do?name=request&fe=Hadoop-Components" target="_blank">request access</a>
                                 """
                             )
 
