@@ -458,7 +458,8 @@ def define_SwanSpawner_from(base_class):
                     self.env['NVIDIA_VISIBLE_DEVICES']='all'  # We are making visible all the devices, if the host has more that one can be used.
                     self.env['NVIDIA_DRIVER_CAPABILITIES']='compute,utility'
                     self.env['NVIDIA_REQUIRE_CUDA']='cuda>=10.0 driver>=410'
-                    self.extra_host_config.update({'runtime' : 'nvidia'})
+                    if hasattr(self, 'extra_host_config'):
+                        self.extra_host_config.update({'runtime' : 'nvidia'})
 
                 # start configured container
                 startup = yield super().start()
