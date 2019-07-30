@@ -275,7 +275,12 @@ def define_SwanSpawner_from(base_class):
 
             stop_result = yield super().stop(now)
 
-            self._log_metric(self.user.name, self.this_host, "exit_container.exit_code", container_exit_code)
+            self._log_metric(
+                self.user.name,
+                self.this_host,
+                ".".join(["exit_container", "exit_code"]),
+                container_exit_code
+            )
 
             return stop_result
 
@@ -296,8 +301,12 @@ def define_SwanSpawner_from(base_class):
                         raise Exception("unknown exit code format for this Spawner")
                     value_cleaned = result.group(1)
 
-                self._log_metric(self.user.name, self.this_host, "exit_container.exit_code", value_cleaned)
-                pass
+                self._log_metric(
+                    self.user.name,
+                    self.this_host,
+                    ".".join(["exit_container", "exit_code"]),
+                    value_cleaned
+                )
 
             return container_exit_code
 
@@ -336,7 +345,12 @@ def define_SwanSpawner_from(base_class):
                         """
                     )
 
-                self._log_metric(self.user.name, self.this_host, "configure_user.duration_sec", time.time() - start_time_configure_user)
+                self._log_metric(
+                    self.user.name,
+                    self.this_host,
+                    ".".join(["configure_user", lcg_rel, cluster, "duration_sec"]),
+                    time.time() - start_time_configure_user
+                )
 
                 # If the user selects a Spark Cluster we need to generate a token to allow him in
                 if self.offload:
@@ -425,7 +439,12 @@ def define_SwanSpawner_from(base_class):
                                 """
                             )
 
-                    self._log_metric(self.user.name, self.this_host, "configure_spark.duration_sec", time.time() - start_time_configure_spark)
+                    self._log_metric(
+                        self.user.name,
+                        self.this_host,
+                        ".".join(["configure_spark", lcg_rel, cluster, "duration_sec"]),
+                        time.time() - start_time_configure_spark
+                    )
 
                 # The bahaviour changes if this if dockerspawner or kubespawner
                 if hasattr(self, 'extra_host_config'):
@@ -443,7 +462,7 @@ def define_SwanSpawner_from(base_class):
                 # as soon as we move to cc7 completely.
                 if "slc6" in self.user_options[self.platform_field]:
                     self.image = self.image_slc6
-                
+
                 # Enabling GPU for cuda stacks
                 # Options to export nvidia device can be found in https://github.com/NVIDIA/nvidia-container-runtime#nvidia_require_
                 if "cu" in self.user_options[self.lcg_rel_field]:
@@ -461,13 +480,16 @@ def define_SwanSpawner_from(base_class):
                 startup = yield super().start()
 
                 # log container start success metrics
-                self._log_metric(self.user.name, self.this_host, "start_container.duration_sec", time.time() - start_time_start_container)
-                self._log_metric(self.user.name, self.this_host, "start_container.exception", "None")
+                self._log_metric(
+                    self.user.name,
+                    self.this_host,
+                    ".".join(["start_container", lcg_rel, cluster, "duration_sec"]),
+                    time.time() - start_time_start_container
+                )
 
                 return startup
             except BaseException as e:
-                # log start failure metric and raise exception further
-                self._log_metric(self.user.name, self.this_host, "start_container.exception", e.__class__.__name__)
+                self.log.error("Error while spawning the user container: %s", e, exc_info=True)
                 raise e
 
         @property

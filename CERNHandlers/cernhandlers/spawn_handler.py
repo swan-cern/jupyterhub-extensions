@@ -277,17 +277,19 @@ class SpawnHandler(BaseHandler):
                 metric = ".".join([configs.graphite_metric_path, host, 'spawn_form', key, value_cleaned])
                 metrics.append((metric, (date, 1)))
 
+        spawn_context_key = ".".join([options[configs.lcg_rel_field], options[configs.spark_cluster_field]])
         if not spawn_exception:
             # Add spawn success (no exception) and duration to the log and send as metrics
-            self._log_metric(user.name, host, "spawn.exception_class", "None")
-            self._log_metric(user.name, host, "spawn.duration_sec", spawn_duration_sec)
-            metrics.append((".".join([configs.graphite_metric_path, host, "spawn_exception", "None"]), (date, 1)))
+            spawn_exc_class = "None"
+            self._log_metric(user.name, host, ".".join(["spawn", spawn_context_key, "exception_class"]), spawn_exc_class)
+            self._log_metric(user.name, host, ".".join(["spawn", spawn_context_key, "duration_sec"]), spawn_duration_sec)
+            metrics.append((".".join([configs.graphite_metric_path, host, "spawn_exception", spawn_exc_class]), (date, 1)))
             metrics.append((".".join([configs.graphite_metric_path, host, "spawn_duration_sec", str(spawn_duration_sec)]), (date, 1)))
         else:
             # Log spawn exception (send exception as metric)
             spawn_exc_class = spawn_exception.__class__.__name__
-            self._log_metric(user.name, host, "spawn.exception_class", spawn_exc_class)
-            self._log_metric(user.name, host, "spawn.exception_message", str(spawn_exception))
+            self._log_metric(user.name, host, ".".join(["spawn", spawn_context_key, "exception_class"]), spawn_exc_class)
+            self._log_metric(user.name, host, ".".join(["spawn", spawn_context_key, "exception_message"]), str(spawn_exception))
             metrics.append((".".join([configs.graphite_metric_path, host, "spawn_exception", spawn_exc_class]), (date, 1)))
 
         if configs.metrics_on:

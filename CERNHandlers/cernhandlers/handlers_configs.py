@@ -51,6 +51,16 @@ class SpawnHandlersConfigs(SingletonConfigurable):
         help='Page of Jupyter to redirect to'
     )
 
+    lcg_rel_field = Unicode(
+        default_value='LCG-rel',
+        help='LCG release field of the Spawner form.'
+    )
+
+    spark_cluster_field = Unicode(
+        default_value='spark-cluster',
+        help='Spark cluster name field of the Spawner form.'
+    )
+
     user_script_env_field = Unicode(
         default_value='scriptenv',
         help='User environment script field of the Spawner form.'
