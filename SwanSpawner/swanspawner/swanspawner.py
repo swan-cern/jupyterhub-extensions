@@ -458,8 +458,10 @@ def define_SwanSpawner_from(base_class):
                     self.env['NVIDIA_VISIBLE_DEVICES']='all'  # We are making visible all the devices, if the host has more that one can be used.
                     self.env['NVIDIA_DRIVER_CAPABILITIES']='compute,utility'
                     self.env['NVIDIA_REQUIRE_CUDA']='cuda>=10.0 driver>=410'
-                    if hasattr(self, 'extra_host_config'):
+                    if hasattr(self, 'extra_host_config'): # for docker but not for kuberneters
                         self.extra_host_config.update({'runtime' : 'nvidia'})
+                    if hasattr(self, 'extra_resource_guarantees'): # for kubernetes but not for docker
+                        self.extra_resource_guarantees = {"nvidia.com/gpu": "1"}  
 
                 # start configured container
                 startup = yield super().start()
