@@ -472,7 +472,9 @@ def define_SwanSpawner_from(base_class):
                     if hasattr(self, 'extra_host_config'): # for docker but not for kuberneters
                         self.extra_host_config.update({'runtime' : 'nvidia'})
                     if hasattr(self, 'extra_resource_guarantees'): # for kubernetes but not for docker
-                        self.extra_resource_guarantees = {"nvidia.com/gpu": "1"}  
+                        self.extra_resource_guarantees = {"nvidia.com/gpu": "1" }
+                    if hasattr(self, 'extra_resource_limits'): # only 1 gpu per user allowed (for kubernetes)
+                        self.extra_resource_limits = {"nvidia.com/gpu": "1"}
 
                 start_time_start_container = time.time()
 
