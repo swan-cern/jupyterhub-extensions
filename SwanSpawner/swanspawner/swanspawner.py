@@ -332,7 +332,7 @@ def define_SwanSpawner_from(base_class):
                     self.log.debug("We are in SwanSpawner. Credentials for %s were requested.", username)
 
                 if self.check_cvmfs_status and not os.path.exists(self.lcg_view_path):
-                    raise ValueError(
+                    raise RuntimeError(
                         """
                         Could not initialize software stack, please <a href="https://cern.ch/ssb" target="_blank">check service status</a> or <a href="https://cern.service-now.com/service-portal/function.do?name=swan" target="_blank">report an issue</a>
                         """
