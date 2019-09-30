@@ -322,6 +322,10 @@ def define_SwanSpawner_from(base_class):
             cluster = self.user_options[self.spark_cluster_field]
             cpu_quota = self.user_options[self.user_n_cores]
             mem_limit = self.user_options[self.user_memory]
+   
+            # FIXME: temporary until NXCALS moves to LCG96
+            if lcg_rel == 'LCG_95apython3_nxcals':
+                platform = 'x86_64-centos7-gcc7-opt'
 
             try:
                 start_time_configure_user = time.time()
