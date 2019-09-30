@@ -179,7 +179,13 @@ def define_SwanSpawner_from(base_class):
         def options_from_form(self, formdata):
             options = {}
             options[self.lcg_rel_field]         = formdata[self.lcg_rel_field][0]
-            options[self.platform_field]        = formdata[self.platform_field][0]
+
+            # FIXME: temporary until NXCALS moves to LCG96
+            if options[self.lcg_rel_field] == 'LCG_95apython3_nxcals':
+                options[self.platform_field] = 'x86_64-centos7-gcc7-opt'
+            else:
+                options[self.platform_field] = formdata[self.platform_field][0]
+
             options[self.user_script_env_field] = formdata[self.user_script_env_field][0]
             options[self.spark_cluster_field]   = formdata[self.spark_cluster_field][0] if self.spark_cluster_field in formdata.keys() else 'none'
             options[self.user_n_cores]          = int(formdata[self.user_n_cores][0]) if formdata[self.user_n_cores][0] in self.available_cores else int(self.available_cores[0])
@@ -323,10 +329,6 @@ def define_SwanSpawner_from(base_class):
             cpu_quota = self.user_options[self.user_n_cores]
             mem_limit = self.user_options[self.user_memory]
    
-            # FIXME: temporary until NXCALS moves to LCG96
-            if lcg_rel == 'LCG_95apython3_nxcals':
-                platform = 'x86_64-centos7-gcc7-opt'
-
             try:
                 start_time_configure_user = time.time()
 
