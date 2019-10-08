@@ -426,7 +426,7 @@ def define_SwanSpawner_from(base_class):
                         with open(hadoop_host_path + '/webhdfs.toks', 'r') as webhdfs_token_file:
                             self.env['WEBHDFS_TOKEN'] = webhdfs_token_file.read()
                     else:
-                        if cluster == 'nxcals':
+                        if cluster == 'hadoop-nxcals':
                             raise ValueError(
                                 """
                                 Access to the NXCALS cluster is not granted. 
