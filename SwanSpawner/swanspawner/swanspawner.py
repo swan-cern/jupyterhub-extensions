@@ -90,10 +90,10 @@ def define_SwanSpawner_from(base_class):
             help="If True, a physical directory on the host will be the home and not eos."
         )
 
-        eos_path_prefix = Unicode(
-            default_value='/eos/user',
+        eos_path_format = Unicode(
+            default_value='/eos/user/{username[0]}/{username}/',
             config=True,
-            help='Path in eos preceeding the /t/theuser directory (e.g. /eos/user, /eos/scratch/user).'
+            help='Path format of the users home folder in EOS.'
         )
         
         yarn_config_script = Unicode(
@@ -206,7 +206,7 @@ def define_SwanSpawner_from(base_class):
             if self.local_home:
                 homepath = "/scratch/%s" %(username)
             else:
-                homepath = "%s/%s/%s" %(self.eos_path_prefix, username[0], username)
+                homepath = self.eos_path_format.format(username = username)
 
             env.update(dict(
                 ROOT_LCG_VIEW_NAME     = self.user_options[self.lcg_rel_field],
@@ -216,6 +216,7 @@ def define_SwanSpawner_from(base_class):
                 USER                   = username,
                 USER_ID                = str(userid),
                 HOME                   = homepath,
+                EOS_PATH_FORMAT        = self.eos_path_format,
                 SERVER_HOSTNAME        = os.uname().nodename,
 
                 JPY_USER               = self.user.name,
