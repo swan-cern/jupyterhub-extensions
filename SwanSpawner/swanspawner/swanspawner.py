@@ -159,11 +159,6 @@ def define_SwanSpawner_from(base_class):
             help='Extra environment variables to pass to the container',
         )
 
-        image_slc6 = Unicode(
-            config=True,
-            help='TEMPORARY: SLC6 image to spawn a session'
-        )
-
         check_cvmfs_status = Bool(
             default_value=True,
             config=True,
@@ -464,11 +459,6 @@ def define_SwanSpawner_from(base_class):
                 else:
                     self.cpu_limit = cpu_quota
                 self.mem_limit = mem_limit
-
-                # Temporary fix to have both slc6 and cc7 image available. It should be removed
-                # as soon as we move to cc7 completely.
-                if "slc6" in self.user_options[self.platform_field]:
-                    self.image = self.image_slc6
 
                 # Enabling GPU for cuda stacks
                 # Options to export nvidia device can be found in https://github.com/NVIDIA/nvidia-container-runtime#nvidia_require_
