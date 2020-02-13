@@ -34,21 +34,6 @@ class SpawnHandler(JHSpawnHandler):
 
     Only enabled when Spawner.options_form is defined.
     """
-    def get_next_url(self, user=None, default=None):
-        next_url = super().get_next_url(user, default)
-
-        projurl = self._get_projurl()
-        if not projurl:
-            return next_url
-
-        if user and next_url == user.url:
-            return url_path_join(next_url, 'download?projurl=%s' % projurl)
-
-        spawn_url = url_path_join(self.hub.base_url, 'spawn')
-        home_url = url_path_join(self.hub.base_url, 'home')
-
-        if next_url in (spawn_url, home_url):
-            return url_path_join(next_url, '?projurl=%s' % projurl)
 
     @web.authenticated
     async def get(self, for_user=None, server_name=''):
@@ -202,11 +187,6 @@ class SpawnHandler(JHSpawnHandler):
         configs = SpawnHandlersConfigs.instance()
         auth_state = await for_user.get_auth_state()
 
-        # We inject an extra field if there is a project set
-        the_projurl = self._get_projurl()
-        if the_projurl:
-            spawner_options_form += '<input type="hidden" name="projurl" value="%s">' % the_projurl
-
         save_config = not configs.local_home and not self.allow_named_servers
 
         return self.render_template('spawn.html',
@@ -256,26 +236,6 @@ class SpawnHandler(JHSpawnHandler):
         configs = SpawnHandlersConfigs.instance()
         if not configs.local_home:
             subprocess.call(['sudo', configs.swanrc_path, 'remove', user])
-
-    def _get_projurl(self):
-
-        projurl = ''
-
-        if 'projurl' in self.request.body_arguments:
-            projurl = self.request.body_arguments['projurl'][0].decode('utf8')
-
-        if not projurl:
-            projurl = self.get_argument('projurl', '')
-
-        if not projurl:
-            next_url = self.get_argument('next', '')
-            if next_url:
-                unquoted_next = unquote(unquote(next_url))
-                parsed_qs = parse_qs(urlparse(unquoted_next).query)
-                if 'projurl' in parsed_qs:
-                    projurl = parsed_qs['projurl'][0]
-
-        return projurl
 
     def _log_spawn_metrics(self, user, options, spawn_duration_sec, spawn_exception=None):
         """
