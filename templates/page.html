@@ -37,7 +37,11 @@
     <link rel="stylesheet" href="{{ static_url('css/style.min.css') }}" type="text/css"/>
     <link rel="stylesheet" href="{{ static_url('swan/css/style.css') }}" type="text/css"/>
     {% endblock %}
-    <script src="{{static_url('components/requirejs/require.js') }}" type="text/javascript" charset="utf-8"></script>
+    {% block scripts %}
+      <script src="{{static_url('components/requirejs/require.js') }}" type="text/javascript" charset="utf-8"></script>
+      <script src="{{static_url('components/jquery/dist/jquery.min.js') }}" type="text/javascript" charset="utf-8"></script>
+      <script src="{{static_url('components/bootstrap/dist/js/bootstrap.min.js') }}" type="text/javascript" charset="utf-8"></script>
+    {% endblock %}
     <script>
       require.config({
           {% if version_hash %}
@@ -64,7 +68,7 @@
         base_url: "{{base_url}}",
         prefix: "{{prefix}}",
         {% if user %}
-        user: "{{user.name}}",
+        user: "{{user.json_escaped_name}}",
         {% endif %}
         {% if admin_access %}
         admin_access: true,
@@ -98,29 +102,47 @@
     <div id="header-container" class="container">
         <div class="row">
             <div class="col-md-3 col-xs-6">
-                <div id="ipython_notebook" class="nav navbar-brand"><a href="{{base_url}}" title='Swan Projects'><img src='{{base_url}}logo' alt='SWAN' title='Home'/></a></div>
+                <div id="ipython_notebook" class="nav navbar-brand"><a href="{{logo_url or base_url}}" title='SWAN'><img src='{{base_url}}logo' alt='SWAN' title='Home'/></a></div>
             </div>
 
             <div class="col-md-3 col-md-push-6 col-xs-6 control">
-              {% block header_buttons %}
               <div id="buttons-right-wrapper">
                   <div id="buttons-right">
+                      {% block nav_bar_right_items %}
+                      {% block login_widget %}
+                      {% if user %}
+                      <p class="navbar-text">{{user.name}}</p>
                       <button class="btn btn-default btn-xs" onclick="javascript: window.location = '{{logout_url}}'">
                           <i class="fa fa-sign-out" aria-hidden="true"></i>
                       </button>
+                      {% else %}
+                      <a id="login" role="button" class="btn-sm btn navbar-btn btn-default" href="{{login_url}}"><i class="fa fa-sign-in" aria-hidden="true"></i></a>
+                      {% endif %}
+                      {% endblock %}
+                      {% endblock %}
                   </div>
               </div>
-              {% endblock header_buttons %}
           </div>
 
 
           <div class="middle col-md-6 col-md-pull-3 col-xs-12">
-              {% if user and user.admin %}
+              {% if user %}
               <div id="menu">
                   <ul class="nav nav-tabs">
                       <li><a href="{{base_url}}home"><i class="fa fa-home" aria-hidden="true"></i><span class="text">Home</span></a></li>
                       <li><a href="{{base_url}}token"><i class="fa fa-cog" aria-hidden="true"></i><span class="text">Token</span></a></li>
-                      <li><a href="{{base_url}}admin"><i class="fa fa-handshake-o" aria-hidden="true"></i><span class="text">Admin</span></a></li>
+                      {% if user.admin %}<li><a href="{{base_url}}admin"><i class="fa fa-handshake-o" aria-hidden="true"></i><span class="text">Admin</span></a></li>{% endif %}
+                      {% if services %}
+                      <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                          aria-expanded="false">Services<span class="caret"></span></a>
+                        <ul class="dropdown-menu">
+                          {% for service in services %}
+                          <li><a class="dropdown-item" href="{{service.prefix}}">{{service.name}}</a></li>
+                          {% endfor %}
+                        </ul>
+                      </li>
+                      {% endif %}
                   </ul>
               </div>
               {% endif %}
@@ -135,7 +157,7 @@
 
 {% block announcement %}
 {% if announcement %}
-<div class="container text-center announcement">
+<div class="container text-center announcement alert alert-warning">
   {{ announcement | safe }}
 </div>
 {% endif %}
@@ -155,7 +177,7 @@
     <div class="container">
         <div class="row">
             <div class="col-xs-8 text">
-                <span class="text-muted">SWAN &copy; Copyright CERN 2016-2019. All rights reserved.</span>
+                <span class="text-muted">SWAN &copy; Copyright CERN 2016-2020. All rights reserved.</span>
                 <ul class="text-muted">
                     <li><a target="_blank" href="https://cern.ch/swan/">Home</a></li>
                     <li><a target="_blank" href="https://swan-community.web.cern.ch/">Community</a></li>

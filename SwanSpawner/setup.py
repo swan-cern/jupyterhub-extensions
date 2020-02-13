@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 setup(name='swanspawner',
-      version='1.1',
+      version='1.2',
       description='Spawner for SWAN',
       include_package_data=True,
       packages=find_packages(),
@@ -12,8 +12,7 @@ setup(name='swanspawner',
         'setuptools',
         'jupyterhub',
         'psutil',
-        'dockerspawner==0.11.0',
-        'jupyterhub-kubespawner==0.10.1',
-        'kubernetes==9.0.0' #kubespawnwer failing with version 10
+        'dockerspawner==0.11.1',
+        'jupyterhub-kubespawner==0.11.1'
       ],
   )

@@ -5,7 +5,83 @@
 
 {% block main %}
 
+{% if allow_named_servers %}
+<div class="container">
+  <div class="row">
+    <div class="text-center">
+      {% if default_server.active %}
+        <a id="stop" role="button" class="btn btn-lg btn-danger">
+          Stop My Server
+        </a>
+      {% endif %}
+      <a id="start" role="button" class="btn btn-lg btn-primary" href="{{ url }}">
+      {% if not default_server.active %}Start{% endif %}
+      My Server
+      </a>
+    </div>
+  </div>
+  <h2>Named Servers</h2>
+  
+  <p>
+  In addition to your default server,
+  you may have additional {% if named_server_limit_per_user > 0 %}{{ named_server_limit_per_user }} {% endif %}server(s) with names.
+  This allows you to have more than one server running at the same time.
+  </p>
 
+  {% set named_spawners = user.all_spawners(include_default=False)|list %}
+
+  <table class="server-table table table-striped">
+    <thead>
+      <tr>
+        <th>Server name</th>
+        <th>URL</th>
+        <th>Last activity</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="home-server-row add-server-row">
+        <td colspan="4">
+          <input class="new-server-name" placeholder="Name your server">
+          <a role="button" class="new-server-btn" class="add-server btn btn-xs btn-primary">
+            Add New Server
+          </a>
+        </td>
+      </tr>
+      {% for spawner in named_spawners %}
+      <tr class="home-server-row" data-server-name="{{ spawner.name }}">
+        {# name #}
+        <td>{{ spawner.name }}</td>
+        {# url #}
+        <td>
+          <a class="server-link {% if not spawner.ready %}hidden{% endif %}" href="{{ user.server_url(spawner.name) }}">
+            {{ user.server_url(spawner.name) }}
+          </a>
+        </td>
+        {# activity #}
+        <td class='time-col'>
+          {% if spawner.last_activity %}
+          {{ spawner.last_activity.isoformat() + 'Z' }}
+          {% else %}
+          Never
+          {% endif %}
+        </td>
+        {# actions #}
+        <td>
+          <a role="button" class="stop-server btn btn-xs btn-danger{% if not spawner.active %} hidden{% endif %}" id="stop-{{ spawner.name }}">stop</a>
+          <a role="button" class="start-server btn btn-xs btn-primary {% if spawner.active %} hidden{% endif %}" id="start-{{ spawner.name }}"
+          href="{{ base_url }}spawn/{{ user.name }}/{{ spawner.name }}"
+          >
+            start
+          </a>
+          <a role="button" class="delete-server btn btn-xs btn-danger{% if spawner.active %} hidden{% endif %}" id="delete-{{ spawner.name }}">delete</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
 <div class="container">
   <div class="row">
     <div class="swan-info">
@@ -21,44 +97,45 @@
     </div>
   </div>
 </div>
+{% endif %}
 
 {% endblock %}
 
 {% block script %}
 {{ super() }}
+
+{% if allow_named_servers %}
+<script type="text/javascript">
+  require(["home"]);
+</script>
+{% else %}
 <script type="text/javascript">
 
-require(['jquery', 'jhapi'], function ($, JHAPI) {
+  require(['jquery', 'jhapi'], function ($, JHAPI) {
 
-    {% if user.running %}
+    var urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('changeconfig')) {
 
-    if(window.location.hash == '#changeconfig') {
+      $('#swan-loader .text').text('Shutting down your session');
 
-        $('#swan-loader .text').text('Shutting down your session');
+      var base_url = window.jhdata.base_url;
+      var user = window.jhdata.user;
+      var api = new JHAPI(base_url);
 
-        var base_url = window.jhdata.base_url;
-        var user = window.jhdata.user;
-        var api = new JHAPI(base_url);
-
-        api.stop_server(user, {
-            success: function () {
-                window.location.replace('{{base_url}}spawn?changeconfig');
-            },
-            error: function () {
-                $('#swan-loader .text').html('<p class="extra">There was an error shutting down your session.<br>Try again later.<br><a href="{{base_url}}">Click here to return to SWAN</a></p>');
-                $('#swan-loader .loader-line-mask').hide();
-            }
-        });
+      api.stop_server(user, {
+        success: function () {
+          window.location.replace('{{base_url}}spawn?changeconfig');
+        },
+        error: function () {
+          $('#swan-loader .text').html('<p class="extra">There was an error shutting down your session.<br>Try again later.<br><a href="{{base_url}}">Click here to return to SWAN</a></p>');
+          $('#swan-loader .loader-line-mask').hide();
+        }
+      });
 
     } else {
-        window.location.replace('{{base_url}}user/{{user.name}}/projects');
+      window.location.replace('{{ url }}');
     }
-
-    {% else %}
-    window.location.replace('{{base_url}}spawn');
-    {% endif %}
-
-});
-
+  });
 </script>
+{% endif %}
 {% endblock %}

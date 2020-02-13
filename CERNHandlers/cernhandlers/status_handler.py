@@ -32,7 +32,7 @@ class StatusHandler(BaseHandler):
                                ' and visit swan.cern.ch to open a new one.<br>' + maintenance.read().replace('\n', '<br>')
                 })
 
-        user = self.get_current_user().name
+        user = self.current_user.escaped_name
 
         notifications = {}
         if os.path.isfile(configs.notifications_file):

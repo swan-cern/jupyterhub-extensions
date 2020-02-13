@@ -324,7 +324,7 @@ def define_SwanSpawner_from(base_class):
             cluster = self.user_options[self.spark_cluster_field]
             cpu_quota = self.user_options[self.user_n_cores]
             mem_limit = self.user_options[self.user_memory]
-   
+
             try:
                 start_time_configure_user = time.time()
 
