@@ -4,7 +4,7 @@ import jupyterhub.handlers.pages as pages
 import jupyterhub.handlers.base as base
 from jupyterhub.utils import url_path_join
 from jupyterhub import app
-from cernhandlers import SpawnHandler, StatusHandler, ProxyErrorHandler
+from cernhandlers import SpawnHandler, ProxyErrorHandler
 import sys
 
 handlers_map = {
@@ -24,13 +24,6 @@ class SWAN(app.JupyterHub):
                 cur_handler = list(cur_handler)
                 cur_handler[1] = new_handler
                 self.handlers[i] = tuple(cur_handler)
-
-        new_handlers = [(r"/status", StatusHandler)]
-
-        for handler in new_handlers:
-            pattern = url_path_join(self.hub_prefix, handler[0])
-            new_handler = tuple([pattern] + list(handler[1:]))
-            self.handlers.insert(0, new_handler)
 
 if __name__ == "__main__":
     SWAN.launch_instance(sys.argv)
