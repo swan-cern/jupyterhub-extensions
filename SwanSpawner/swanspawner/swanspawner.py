@@ -246,6 +246,11 @@ def define_SwanSpawner_from(base_class):
                     else:
                         env['SPARK_CONFIG_SCRIPT'] = self.yarn_config_script
 
+                    if cluster == 'hadoop-nxcals':
+                        env['SPARK_AUTH_REQUIRED'] = 1
+                    else:
+                        env['SPARK_AUTH_REQUIRED'] = 0
+
                     # Asks the OS for random ports to give them to Docker,
                     # so that Spark can be exposed to the outside
                     # Reserves the ports so that other processes don't use them
