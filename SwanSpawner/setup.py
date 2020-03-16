@@ -7,6 +7,7 @@ setup(name='swanspawner',
       description='Spawner for SWAN',
       include_package_data=True,
       packages=find_packages(),
+      package_data={'swanspawner': ['templates/*']},
       zip_safe=False,
       install_requires=[
         'setuptools',

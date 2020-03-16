@@ -3,7 +3,7 @@
 
 """CERN Specific Spawner class"""
 
-import re
+import re, json
 import os, pwd, subprocess
 import time
 from tornado import gen
@@ -14,6 +14,8 @@ from traitlets import (
     List,
     Dict
 )
+
+from jinja2 import Environment, FileSystemLoader
 
 import contextlib
 import random
@@ -36,6 +38,11 @@ def define_SwanSpawner_from(base_class):
     """
 
     class SwanSpawner(base_class):
+
+        options_form_config = Unicode(
+            config=True,
+            help='Path to configuration file for options_form rendering.'
+        )
 
         lcg_view_path = Unicode(
             default_value='/cvmfs/sft.cern.ch/lcg/views',
@@ -165,7 +172,6 @@ def define_SwanSpawner_from(base_class):
             help="Check if CVMFS is accessible. It only works if CVMFS is mounted in the host (not the case in ScienceBox)."
         )
 
-
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
             self.offload = False
@@ -183,8 +189,8 @@ def define_SwanSpawner_from(base_class):
 
             options[self.user_script_env_field] = formdata[self.user_script_env_field][0]
             options[self.spark_cluster_field]   = formdata[self.spark_cluster_field][0] if self.spark_cluster_field in formdata.keys() else 'none'
-            options[self.user_n_cores]          = int(formdata[self.user_n_cores][0]) if formdata[self.user_n_cores][0] in self.available_cores else int(self.available_cores[0])
-            options[self.user_memory]           = formdata[self.user_memory][0] + 'G' if formdata[self.user_memory][0] in self.available_memory else self.available_memory[0] + 'G'
+            options[self.user_n_cores]          = int(formdata[self.user_n_cores][0])
+            options[self.user_memory]           = formdata[self.user_memory][0] + 'G'
 
             self.offload = options[self.spark_cluster_field] != 'none'
 
@@ -573,6 +579,26 @@ def define_SwanSpawner_from(base_class):
                 except:
                     if i == n_tries - 1:
                         raise
+
+        def _render_templated_options_form(self, spawner):
+            """
+            Render a form from a template based on options_form_config json config file
+            """
+            templates_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
+            env = Environment(loader=FileSystemLoader(templates_dir))
+            template = env.get_template('options_form_template.html')
+
+            try:
+                with open(self.options_form_config) as json_file:
+                    options_form_config = json.load(json_file)
+
+                return template.render(options_form_config=options_form_config)
+            except Exception as ex:
+                self.log.error("Could not initialize form: %s", ex, exc_info=True)
+                raise RuntimeError(
+                    """
+                    Could not initialize form, invalid format
+                    """)
 
         def _log_metric(self, user, host, metric, value):
             self.log.info("user: %s, host: %s, metric: %s, value: %s" % (user, host, metric, value))

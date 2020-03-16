@@ -1,0 +1,206 @@
+<style> .nb{ font-weight:normal } </style>
+<style> .nbs{ font-weight:normal; font-size:small } </style>
+<script type="text/javascript">
+<!--
+
+    var lcgFormConfig = {{ options_form_config }};
+
+    var formInitialized = false;
+
+    /**
+     * Get LCG data dictionary for given lcgValue.
+     */
+    function findLcgData(lcgValue) {
+        var lcgData;
+
+        // Data is taken from from lcgFormConfig global variable
+        var lcgFormOptions = lcgFormConfig['options'];
+        for (key in lcgFormOptions) {
+            lcgData = lcgFormOptions[key];
+            if (lcgData.type === "selection" && lcgData.lcg.value === lcgValue) {
+                return lcgData;
+            }
+        }
+
+        throw "LCG Data not found"
+    }
+
+    /**
+     * Enable display of element if previously disabled, and disable if previously enabled
+     */
+    function toggle_visibility(id) {
+        var e = document.getElementById(id);
+        if(e.style.display == 'block')
+            e.style.display = 'none';
+        else
+            e.style.display = 'block';
+    }
+
+    /**
+     * Renders a form based on config file
+     */
+    function adjust_form() {
+        var selectLCG = document.getElementById('lcgReleaseOptions');
+
+        // if form has not been yet initialized, initialize
+        if (!formInitialized) {
+            formInitialized = true;
+
+            // set proper header for the whole form based on config
+            var optionsHeader = document.getElementById('optionsHeader');
+            var header = lcgFormConfig['header'];
+            if (header) {
+                optionsHeader.innerHTML = header;
+            }
+
+            // set LCG option in the rendered form - first LCG is default
+            var lcgFormOptions = lcgFormConfig['options'];
+            selectLCG.innerHTML = '';
+            var firstLCGSelected = false;
+            for( var i = 0 ; i < lcgFormOptions.length ; i++ ){
+                var lcgFormEntry = lcgFormOptions[i];
+
+                var selectLCGOption = document.createElement("option");
+                if (lcgFormEntry.type === "label") {
+                    selectLCGOption.disabled="disabled";
+                    selectLCGOption.style="border-bottom:1px solid rgba(153,153,153,.3); margin:-10px 0 4px 0";
+                    selectLCGOption.value=lcgFormEntry.label.value;
+                    selectLCGOption.text=lcgFormEntry.label.text;
+                } else {
+                    if (!firstLCGSelected) {
+                        firstLCGSelected = true;
+                        selectLCGOption.selected = true;
+                    }
+                    selectLCGOption.value=lcgFormEntry.lcg.value;
+                    selectLCGOption.text=lcgFormEntry.lcg.text;
+                }
+
+                selectLCG.add(selectLCGOption);
+            }
+        }
+
+        // get currently selected LCG and extract that lcg configuration (lcgData)
+        var lcgValue = selectLCG.value;
+        var lcgData = findLcgData(lcgValue);
+
+        // adjust platforms option for lcg
+        var selectPlatform = document.getElementById('platformOptions');
+        selectPlatform.innerHTML = '';
+
+        for( var i = 0 ; i < lcgData.platforms.length ; i++ ){
+            var lcgPlatform = lcgData.platforms[i];
+
+            var selectPlatformOption = document.createElement("option");
+            selectPlatformOption.value = lcgPlatform.value;
+            selectPlatformOption.text = lcgPlatform.text;
+            if (i === 0) {
+                selectPlatformOption.selected = true;
+            }
+
+            selectPlatform.add(selectPlatformOption);
+        }
+
+        // adjust cores option for lcg
+        var selectCores = document.getElementById('coresOptions');
+        selectCores.innerHTML = '';
+
+        for( var i = 0 ; i < lcgData.cores.length ; i++ ){
+            var lcgCores = lcgData.cores[i];
+
+            var selectCoresOption = document.createElement("option");
+            selectCoresOption.value = lcgCores.value;
+            selectCoresOption.text = lcgCores.text;
+            if (i === 0) {
+                selectCoresOption.selected = true;
+            }
+
+            selectCores.add(selectCoresOption);
+        }
+
+        // adjust memory option for lcg
+        var selectMemory = document.getElementById('memoryOptions');
+        selectMemory.innerHTML = '';
+
+        for( var i = 0 ; i < lcgData.memory.length ; i++ ){
+            var lcgMemory = lcgData.memory[i];
+
+            var selectMemoryOption = document.createElement("option");
+            selectMemoryOption.value = lcgMemory.value;
+            selectMemoryOption.text = lcgMemory.text;
+            if (i === 0) {
+                selectMemoryOption.selected = true;
+            }
+
+            selectMemory.add(selectMemoryOption);
+        }
+
+        // adjust clusters option for lcg
+        var selectCluster = document.getElementById('clusterOptions');
+        selectCluster.innerHTML = '';
+
+        for( var i = 0 ; i < lcgData.clusters.length ; i++ ){
+            var lcgCluster = lcgData.clusters[i];
+
+            var selectClusterOption = document.createElement("option");
+            selectClusterOption.value = lcgCluster.value;
+            selectClusterOption.text = lcgCluster.text;
+            if (i === 0) {
+                selectClusterOption.selected = true;
+            }
+
+            selectCluster.add(selectClusterOption);
+        }
+    }
+
+    window.onload = adjust_form;
+//-->
+</script>
+<div>
+    <br>
+    <label for="placeholder">
+    <span class='nb' id="optionsHeader">Specify the parameters that will be used to contextualise the container which is created for you.</span>
+    </label>
+    <br><br>
+    <label for="lcgReleaseOptions">Software stack <a href="#" onclick="toggle_visibility('lcgReleaseDetails');"><span class='nbs'>more...</span></a>
+    <div style="display:none;" id="lcgReleaseDetails">
+       <span class='nb'>The software stack to associate to the container. See the <a target="_blank" href="http://lcginfo.cern.ch/">LCG package info</a> page.</span>
+    </div>
+    </label>
+    <select id="lcgReleaseOptions" name="LCG-rel" onchange="adjust_form();">
+    </select>
+    <br>
+    <label for="platformOptions">Platform <a href="#" onclick="toggle_visibility('platformDetails');"><span class='nbs'>more...</span></a>
+    <div style="display:none;" id="platformDetails">
+       <span class='nb'>The combination of compiler version and flags.</span>
+    </div>
+    </label>
+    <select id="platformOptions" name="platform"></select>
+    <br>
+    <label for="scriptenvOption">Environment script <a href="#" onclick="toggle_visibility('scriptenvDetails');"><span class='nbs'>more...</span></a>
+    <div style="display:none;" id="scriptenvDetails">
+       <span class='nb'>User-provided bash script to define custom environment variables. The variable CERNBOX_HOME is resolved to the proper /eos/user/u/username directory.</span>
+    </div>
+    </label>
+    <input type="text" id="scriptenvOption" name="scriptenv" placeholder="e.g. $CERNBOX_HOME/MySWAN/myscript.sh">
+    <br>
+    <label for="coresOptions">Number of cores <a href="#" onclick="toggle_visibility('ncoresDetails');"><span class='nbs'>more...</span></a>
+    <div style="display:none;" id="ncoresDetails">
+       <span class='nb'>Number of cores to associate to the container.</span>
+    </div>
+    </label>
+    <select id="coresOptions" name="ncores"></select>
+    <br>
+    <label for="memoryOptions">Memory <a href="#" onclick="toggle_visibility('memoryDetails');"><span class='nbs'>more...</span></a>
+    <div style="display:none;" id="memoryDetails">
+       <span class='nb'>Amount of Memory allocated to the container.</span>
+    </div>
+    </label>
+    <select id="memoryOptions" name="memory"></select>
+    <br>
+    <label for="clusterOptions">Spark cluster <a href="#" onclick="toggle_visibility('sparkClusterDetails');"><span class='nbs'>more...</span></a>
+    <div style="display:none;" id="sparkClusterDetails">
+        <span class='nb'>Name of the Spark cluster where to offload computations.</span>
+    </div>
+    </label>
+    <select id="clusterOptions" name="spark-cluster"></select>
+</div>

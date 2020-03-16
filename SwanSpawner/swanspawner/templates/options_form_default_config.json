@@ -1,0 +1,103 @@
+{
+  "options": [
+    {
+      "type": "label",
+      "label": {
+        "value": "label1",
+        "text": "Recommended releases (General Purpose)"
+      }
+    },
+    {
+      "type": "selection",
+      "lcg": {
+        "value": "LCG_96python3",
+        "text": "96 Python3"
+      },
+      "platforms": [
+        {
+          "value": "x86_64-centos7-gcc8-opt",
+          "text": "CentOS 7 (gcc8)"
+        },
+        {
+          "value": "x86_64-centos7-gcc7-opt",
+          "text": "CentOS 7 (gcc7)"
+        },
+        {
+          "value": "x86_64-centos7-gcc62-opt",
+          "text": "CentOS 7 (gcc62)"
+        }
+      ],
+      "cores": [
+        {
+          "value": "2",
+          "text": "2"
+        },
+        {
+          "value": "4",
+          "text": "4"
+        }
+      ],
+      "memory": [
+        {
+          "value": "8",
+          "text": "8 GB"
+        },
+        {
+          "value": "10",
+          "text": "10 GB"
+        }
+      ],
+      "clusters": [
+        {
+          "value": "none",
+          "text": "None"
+        }
+      ]
+    },
+    {
+      "type": "label",
+      "label": {
+        "value": "empty1",
+        "text": ""
+      }
+    },
+    {
+      "type": "label",
+      "label": {
+        "value": "label2",
+        "text": "Development releases (might be unstable)"
+      }
+    },
+    {
+      "type": "selection",
+      "lcg": {
+        "value": "dev3python3/latest",
+        "text": "Bleeding Edge Python3"
+      },
+      "platforms": [
+        {
+          "value": "x86_64-centos7-gcc8-opt",
+          "text": "CentOS 7 (gcc8)"
+        }
+      ],
+      "cores": [
+        {
+          "value": "2",
+          "text": "2"
+        }
+      ],
+      "memory": [
+        {
+          "value": "8",
+          "text": "8 GB"
+        }
+      ],
+      "clusters": [
+        {
+          "value": "none",
+          "text": "None"
+        }
+      ]
+    }
+  ]
+}
