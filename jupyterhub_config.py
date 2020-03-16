@@ -28,13 +28,4 @@ c.SwanSpawner.http_timeout = 30
 # Spawner.start_timeout - https://jupyterhub.readthedocs.io/en/stable/api/spawner.html#jupyterhub.spawner.Spawner.start_timeout
 c.SwanSpawner.start_timeout = 60
 
-c.CERNSpawner.options_form = """
-<label for="LCG-rel">LCG release</label>
-<select name="LCG-rel">
-  <option value="82rootaas6" selected>82 ROOTaaS6</option>
-</select>
-<label for="platform">Platform</label>
-<select name="platform">
-  <option value="x86_64-slc6-gcc49-opt" selected>x86_64-slc6-gcc49-opt</option>
-</select>
-"""
+c.SwanSpawner.options_form_config = 'options_form_config.json'

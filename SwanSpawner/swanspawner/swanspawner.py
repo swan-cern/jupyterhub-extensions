@@ -11,7 +11,6 @@ from traitlets import (
     Unicode,
     Bool,
     Int,
-    List,
     Dict
 )
 
@@ -39,6 +38,18 @@ def define_SwanSpawner_from(base_class):
 
     class SwanSpawner(base_class):
 
+        lcg_rel_field = 'LCG-rel'
+
+        platform_field = 'platform'
+
+        user_script_env_field = 'scriptenv'
+
+        user_n_cores = 'ncores'
+
+        user_memory = 'memory'
+
+        spark_cluster_field = 'spark-cluster'
+
         options_form_config = Unicode(
             config=True,
             help='Path to configuration file for options_form rendering.'
@@ -48,31 +59,6 @@ def define_SwanSpawner_from(base_class):
             default_value='/cvmfs/sft.cern.ch/lcg/views',
             config=True,
             help='Path where LCG views are stored in CVMFS.'
-        )
-
-        lcg_rel_field = Unicode(
-            default_value='LCG-rel',
-            help='LCG release field of the Spawner form.'
-        )
-
-        platform_field = Unicode(
-            default_value='platform',
-            help='Platform field of the Spawner form.'
-        )
-
-        user_script_env_field = Unicode(
-            default_value='scriptenv',
-            help='User environment script field of the Spawner form.'
-        )
-
-        user_n_cores = Unicode(
-            default_value='ncores',
-            help='User number of cores field of the Spawner form.'
-        )
-
-        user_memory = Unicode(
-            default_value='memory',
-            help='User available memory field of the Spawner form.'
         )
 
         auth_script = Unicode(
@@ -115,11 +101,6 @@ def define_SwanSpawner_from(base_class):
             help='Path in CVMFS of the script to configure a K8s cluster.'
         )
 
-        spark_cluster_field = Unicode(
-            default_value='spark-cluster',
-            help='Spark cluster name field of the Spawner form.'
-        )
-
         spark_max_sessions = Int(
             default_value=1,
             config=True,
@@ -144,18 +125,6 @@ def define_SwanSpawner_from(base_class):
             help='End of the port range that is used by the user session (container).'
         )
 
-        available_cores = List(
-            default_value=['1'],
-            config=True,
-            help='List of cores options available to the user'
-        )
-
-        available_memory = List(
-            default_value=['8'],
-            config=True,
-            help='List of memory options available to the user'
-        )
-
         shared_volumes = Dict(
             config=True,
             help='Volumes to be mounted with a "shared" tag. This allows mount propagation.',
@@ -176,6 +145,9 @@ def define_SwanSpawner_from(base_class):
             super().__init__(**kwargs)
             self.offload = False
             self.this_host = gethostname().split('.')[0]
+            if not self.options_form and self.options_form_config:
+                # if options_form not provided, use templated options form based on configuration file
+                self.options_form = self._render_templated_options_form
 
         def options_from_form(self, formdata):
             options = {}
