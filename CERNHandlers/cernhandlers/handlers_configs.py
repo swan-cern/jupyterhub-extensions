@@ -15,6 +15,12 @@ class SpawnHandlersConfigs(SingletonConfigurable):
         Singleton class where all the configurations are stored
     """
 
+    lcg_rel_field = 'LCG-rel'
+
+    spark_cluster_field = 'spark-cluster'
+
+    user_script_env_field = 'scriptenv'
+
     swanrc_path = Unicode(
         default_value='/srv/jupyterhub/swanrc/swanrc.sh',
         config=True,
@@ -49,21 +55,6 @@ class SpawnHandlersConfigs(SingletonConfigurable):
         default_value='projects',
         config=True,
         help='Page of Jupyter to redirect to'
-    )
-
-    lcg_rel_field = Unicode(
-        default_value='LCG-rel',
-        help='LCG release field of the Spawner form.'
-    )
-
-    spark_cluster_field = Unicode(
-        default_value='spark-cluster',
-        help='Spark cluster name field of the Spawner form.'
-    )
-
-    user_script_env_field = Unicode(
-        default_value='scriptenv',
-        help='User environment script field of the Spawner form.'
     )
 
     graphite_metric_path = Unicode(
