@@ -9,9 +9,6 @@
           <div class="loader-circle">
             <img src="{{ static_url('swan/logos/logo_swan_letters.png') }}">
           </div>
-          <div class="loader-line-mask">
-            <div class="loader-line"></div>
-          </div>
           <span class="text">{% block heading %}{% if failed %}Spawn failed{% else %}Server not running{% endif %}{% endblock %}
             <p class="extra">
                 {% block message %}
