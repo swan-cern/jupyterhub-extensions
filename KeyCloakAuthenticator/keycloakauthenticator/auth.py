@@ -6,7 +6,7 @@
 from jupyterhub.handlers import LogoutHandler
 from oauthenticator.generic import GenericOAuthenticator
 from tornado import gen, web
-from traitlets import Unicode
+from traitlets import Unicode, Set
 import jwt, os
 
 class KeyCloakLogoutHandler(LogoutHandler):
@@ -26,13 +26,14 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
     """
 
     keycloak_logout_url = Unicode(
-        default_value='https://auth.cern.ch/auth/realms/cern/protocol/openid-connect/logout?redirect_uri=https://swan-keycloak.cern.ch',
+        default_value='',
         config=True,
         help="""URL to invalidate the SSO cookie."""
     )
 
-    accepted_roles = Unicode(
-        default_value='',
+    accepted_roles = Set (
+        Unicode(),
+        default_value=set(),
         config=True,
         help="""The role for which the login will be accepted. Default is all roles."""
     )
@@ -44,7 +45,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
     )
 
     def validate_roles(self, user_roles):
-        return bool(not self.accepted_roles or (set(self.accepted_roles.split(';')) & user_roles))
+        return bool(not self.accepted_roles or (self.accepted_roles & user_roles))
 
     def decode_token(self, token):
         return jwt.decode(token, verify=False, algorithms='RS256')
@@ -64,8 +65,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             self.user_roles = self.get_roles_for_token(user['auth_state']['access_token'])
             if not self.validate_roles(self.user_roles):
                 return None
-            is_admin = bool(self.admin_role and (self.admin_role in self.user_roles))
-            user['admin'] = is_admin
+            user['admin'] = bool(self.admin_role and (self.admin_role in self.user_roles))
             self.log.info("Authentication Successful for user: %s, roles: %s, admin: %s" % (user['name'],self.user_roles,user['admin']))
             return user
         else:
