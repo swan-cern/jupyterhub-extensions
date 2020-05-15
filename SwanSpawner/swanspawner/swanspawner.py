@@ -175,29 +175,41 @@ def define_SwanSpawner_from(base_class):
             env = super().get_env()
 
             username = self.user.name
-            userid = pwd.getpwnam(username).pw_uid
             if self.local_home:
                 homepath = "/scratch/%s" %(username)
             else:
                 homepath = self.eos_path_format.format(username = username)
 
-            env.update(dict(
-                ROOT_LCG_VIEW_NAME     = self.user_options[self.lcg_rel_field],
-                ROOT_LCG_VIEW_PLATFORM = self.user_options[self.platform_field],
-                USER_ENV_SCRIPT        = self.user_options[self.user_script_env_field],
-                ROOT_LCG_VIEW_PATH     = self.lcg_view_path,
-                USER                   = username,
-                USER_ID                = str(userid),
-                HOME                   = homepath,
-                EOS_PATH_FORMAT        = self.eos_path_format,
-                SERVER_HOSTNAME        = os.uname().nodename,
+            if self.lcg_rel_field in self.user_options:
+                # session spawned via the form
+                userid = pwd.getpwnam(username).pw_uid
+                env.update(dict(
+                    ROOT_LCG_VIEW_NAME     = self.user_options[self.lcg_rel_field],
+                    ROOT_LCG_VIEW_PLATFORM = self.user_options[self.platform_field],
+                    USER_ENV_SCRIPT        = self.user_options[self.user_script_env_field],
+                    ROOT_LCG_VIEW_PATH     = self.lcg_view_path,
+                    USER                   = username,
+                    USER_ID                = str(userid),
+                    HOME                   = homepath,
+                    EOS_PATH_FORMAT        = self.eos_path_format,
+                    SERVER_HOSTNAME        = os.uname().nodename,
 
-                JPY_USER               = self.user.name,
-                JPY_COOKIE_NAME        = self.user.server.cookie_name,
-                JPY_BASE_URL           = self.user.base_url,
-                JPY_HUB_PREFIX         = self.hub.base_url,
-                JPY_HUB_API_URL        = self.hub.api_url
-            ))
+                    JPY_USER               = self.user.name,
+                    JPY_COOKIE_NAME        = self.user.server.cookie_name,
+                    JPY_BASE_URL           = self.user.base_url,
+                    JPY_HUB_PREFIX         = self.hub.base_url,
+                    JPY_HUB_API_URL        = self.hub.api_url
+                ))
+            else:
+                # session spawned via the API
+                env.update(dict(
+                    USER                   = "jovyan",
+                    HOME                   = "/home/jovyan",
+                    NB_USER                = 'jovyan',
+                    USER_ID                = 1000,
+                    NB_UID                 = 1000,
+                    SERVER_HOSTNAME        = os.uname().nodename,
+                ))
 
             if self.extra_env:
                 env.update(self.extra_env)
@@ -208,6 +220,12 @@ def define_SwanSpawner_from(base_class):
                 # Clear old state
                 self.extra_host_config['port_bindings'] = {}
                 self.extra_create_kwargs['ports'] = []
+                
+                if self.lcg_rel_field not in self.user_options:
+                    # session spawned via the API, in binder start notebook with jovyan user
+                    self.extra_create_kwargs['working_dir'] = "/home/jovyan"
+                    self.extra_create_kwargs['user'] = 'jovyan'
+                    self.extra_create_kwargs['command'] = ["jupyterhub-singleuser","--ip=0.0.0.0","--NotebookApp.default_url=/lab"]
 
                 # Avoid overriding the default container output port, defined by the Spawner
                 if not self.use_internal_ip:
@@ -302,11 +320,12 @@ def define_SwanSpawner_from(base_class):
             """
 
             username = self.user.name
-            platform = self.user_options[self.platform_field]
-            lcg_rel = self.user_options[self.lcg_rel_field]
-            cluster = self.user_options[self.spark_cluster_field]
-            cpu_quota = self.user_options[self.user_n_cores]
-            mem_limit = self.user_options[self.user_memory]
+            # default values when spawned via API (e.g binder)
+            platform = self.user_options.get(self.platform_field,'x86_64-centos7-gcc8-opt')
+            lcg_rel = self.user_options.get(self.lcg_rel_field,'LCG_97python3')
+            cluster = self.user_options.get(self.spark_cluster_field,'analytix')
+            cpu_quota = self.user_options.get(self.user_n_cores,1)
+            mem_limit = self.user_options.get(self.user_memory,'8G')
 
             try:
                 start_time_configure_user = time.time()
@@ -445,7 +464,7 @@ def define_SwanSpawner_from(base_class):
 
                 # Enabling GPU for cuda stacks
                 # Options to export nvidia device can be found in https://github.com/NVIDIA/nvidia-container-runtime#nvidia_require_
-                if "cu" in self.user_options[self.lcg_rel_field]:
+                if "cu" in lcg_rel:
                     self.env['NVIDIA_VISIBLE_DEVICES']='all'  # We are making visible all the devices, if the host has more that one can be used.
                     self.env['NVIDIA_DRIVER_CAPABILITIES']='compute,utility'
                     self.env['NVIDIA_REQUIRE_CUDA']='cuda>=10.0 driver>=410'
