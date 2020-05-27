@@ -69,6 +69,10 @@ def define_SwanSpawner_from(base_class):
             help='Extra environment variables to pass to the container',
         )
 
+        default_timeout = 60
+
+        extended_timeout = 120
+
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
             self.this_host = gethostname().split('.')[0]
@@ -178,6 +182,12 @@ def define_SwanSpawner_from(base_class):
             """
 
             start_time_start_container = time.time()
+            
+            #if the user script exists, we allow extended timeout
+            if self.user_options[self.user_script_env_field].strip()=='':
+                self.start_timeout = self.extended_timeout
+            else:
+                self.start_timeout = self.default_timeout
 
             # start configured container
             startup = yield super().start()

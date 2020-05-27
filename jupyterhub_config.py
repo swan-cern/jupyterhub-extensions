@@ -26,6 +26,6 @@ c.CERNSpawner.eos_path_prefix  = '/eos/scratch/user'
 c.SwanSpawner.http_timeout = 30
 
 # Spawner.start_timeout - https://jupyterhub.readthedocs.io/en/stable/api/spawner.html#jupyterhub.spawner.Spawner.start_timeout
-c.SwanSpawner.start_timeout = 60
+#c.SwanSpawner.start_timeout = 60
 
 c.SwanSpawner.options_form_config = 'options_form_config.json'
