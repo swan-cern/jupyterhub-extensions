@@ -11,7 +11,8 @@ from socket import gethostname
 from traitlets import (
     Unicode,
     Bool,
-    Dict
+    Dict,
+    Int
 )
 
 from tornado import gen
@@ -69,9 +70,11 @@ def define_SwanSpawner_from(base_class):
             help='Extra environment variables to pass to the container',
         )
 
-        default_timeout = 60
-
-        extended_timeout = 120
+        extended_timeout = Int(
+            default_value=120,
+            config=True,
+            help="Extended timeout for users using environment script"
+        )
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
@@ -186,8 +189,6 @@ def define_SwanSpawner_from(base_class):
             #if the user script exists, we allow extended timeout
             if self.user_options[self.user_script_env_field].strip()=='':
                 self.start_timeout = self.extended_timeout
-            else:
-                self.start_timeout = self.default_timeout
 
             # start configured container
             startup = yield super().start()
