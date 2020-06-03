@@ -187,7 +187,7 @@ def define_SwanSpawner_from(base_class):
             start_time_start_container = time.time()
             
             #if the user script exists, we allow extended timeout
-            if self.user_options[self.user_script_env_field].strip()=='':
+            if self.user_options[self.user_script_env_field].strip()!='':
                 self.start_timeout = self.extended_timeout
 
             # start configured container
