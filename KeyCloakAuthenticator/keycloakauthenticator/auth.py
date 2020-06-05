@@ -72,7 +72,8 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             return None
 
     async def pre_spawn_start(self, user, spawner):
-        spawner.user_roles = self.user_roles
+        if hasattr(self, 'user_roles'):
+            spawner.user_roles = self.user_roles
 
     def get_handlers(self, app):
         return super().get_handlers(app) + [(r'/logout', KeyCloakLogoutHandler)]
