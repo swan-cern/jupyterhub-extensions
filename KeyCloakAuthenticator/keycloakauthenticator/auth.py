@@ -58,7 +58,8 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                get(os.environ.get('OAUTH_CLIENT_ID'), {'roles_list': ''}).\
                get('roles', 'no_roles')
         )
-    
+    # FIXME:
+    # sso provides uid, this can be passed to the spawner instead of creating local user on JH
     def _add_user_to_pwd(self, username, uid):
         try:
             pwd.getpwnam(username)
