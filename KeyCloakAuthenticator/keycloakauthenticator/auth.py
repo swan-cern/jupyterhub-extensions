@@ -7,7 +7,7 @@ from jupyterhub.handlers import LogoutHandler
 from oauthenticator.generic import GenericOAuthenticator
 from tornado import gen, web
 from traitlets import Unicode, Set
-import jwt, os
+import jwt, os, pwd
 
 class KeyCloakLogoutHandler(LogoutHandler):
     """Log a user out by clearing both their JupyterHub login cookie and SSO cookie."""
@@ -58,11 +58,22 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                get(os.environ.get('OAUTH_CLIENT_ID'), {'roles_list': ''}).\
                get('roles', 'no_roles')
         )
+    
+    def _add_user_to_pwd(self, username, uid):
+        try:
+            pwd.getpwnam(username)
+        except KeyError:
+            self.log.info("Adding user %s(%s) to pwd" % (uid, username))
+            os.system("groupadd %s -g %s" % (username, uid))
+            os.system("useradd %s -u %s -g %s" % (username, uid, uid))
+
 
     async def authenticate(self, handler, data=None):
         user = await super().authenticate(handler, data=None)
         if user:
+            self._add_user_to_pwd(user['name'], user['auth_state']['oauth_user']['cern_uid'])
             self.user_roles = self.get_roles_for_token(user['auth_state']['access_token'])
+            self.access_token = user['auth_state']['access_token']
             if not self.validate_roles(self.user_roles):
                 return None
             user['admin'] = bool(self.admin_role and (self.admin_role in self.user_roles))
@@ -74,6 +85,8 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
     async def pre_spawn_start(self, user, spawner):
         if hasattr(self, 'user_roles'):
             spawner.user_roles = self.user_roles
+        if hasattr(self, 'access_token'):
+            spawner.access_token = self.access_token
 
     def get_handlers(self, app):
         return super().get_handlers(app) + [(r'/logout', KeyCloakLogoutHandler)]
