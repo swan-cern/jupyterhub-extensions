@@ -106,6 +106,9 @@ class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
             self.extra_host_config['port_bindings'] = {}
             self.extra_create_kwargs['ports'] = []
 
+            #disabling swap memory usage
+            self.extra_host_config['mem_swappiness'] = 0
+
             if self.lcg_rel_field not in self.user_options:
                 # session spawned via the API, in binder start notebook with jovyan user
                 self.extra_create_kwargs['working_dir'] = "/home/jovyan"
