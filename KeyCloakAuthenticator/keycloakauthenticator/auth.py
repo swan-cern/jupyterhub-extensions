@@ -1,93 +1,129 @@
-# Author: Prasanth Kothuri 2020
+# Author: Prasanth Kothuri, Diogo Castro 2020
 # Copyright CERN
 
 """KeyCloakAuthenticator"""
 
 from jupyterhub.handlers import LogoutHandler
+from jupyterhub.utils import maybe_future
 from oauthenticator.generic import GenericOAuthenticator
 from tornado import gen, web
-from traitlets import Unicode, Set
-import jwt, os, pwd
+from traitlets import Unicode, Set, Bool, Any
+import jwt, os, pwd, time, json
+from urllib import request, parse
 
 class KeyCloakLogoutHandler(LogoutHandler):
     """Log a user out by clearing both their JupyterHub login cookie and SSO cookie."""
 
     async def get(self):
-        if self.authenticator.keycloak_logout_url:
+        if self.authenticator.enable_logout:
             await self.default_handle_logout()
             await self.handle_logout()
-            self.redirect(self.authenticator.keycloak_logout_url)
+
+            redirect_url = self.authenticator.end_session_url
+            if self.authenticator.logout_redirect_uri:
+                redirect_url += '?redirect_uri=%s' % self.authenticator.logout_redirect_uri
+
+            self.redirect(redirect_url)
         else:
             await super().get()
 
 class KeyCloakAuthenticator(GenericOAuthenticator):
-    """
-    KeyCloakAuthenticator based on upstream jupyterhub/oauthenticator
-    """
+    """KeyCloakAuthenticator based on upstream jupyterhub/oauthenticator"""
 
-    keycloak_logout_url = Unicode(
+    oidc_issuer = Unicode(
         default_value='',
         config=True,
-        help="""URL to invalidate the SSO cookie."""
+        help="OIDC issuer URL for automatic discovery of configuration"
+    )
+
+    enable_logout = Bool(
+        default_value=True,
+        config=True,
+        help="If True, it will logout in SSO."
+    )
+
+    logout_redirect_uri = Unicode(
+        default_value='',
+        config=True,
+        help="URL to invalidate the SSO cookie."
     )
 
     accepted_roles = Set (
         Unicode(),
         default_value=set(),
         config=True,
-        help="""The role for which the login will be accepted. Default is all roles."""
+        help="The role for which the login will be accepted. Default is all roles."
     )
 
     admin_role = Unicode(
         default_value='swan-admins',
         config=True,
-        help="""Users with this role login as jupyterhub administrators"""
+        help="Users with this role login as jupyterhub administrators"
     )
+        
+    get_uid_hook = Any(
+        allow_none=False,
+        help="""
+        Mandatory function to retrieve the user uid from its auth state and pass it to spawner.
+        Example::
+            def get_uid_hook(spawner, auth_state):
+                spawner.user_uid = auth_state['oauth_user']['cern_uid']
+            c.KeyCloakAuthenticator.get_uid_hook = get_uid_hook
+        """
+    ).tag(config=True)
 
-    def validate_roles(self, user_roles):
-        return bool(not self.accepted_roles or (self.accepted_roles & user_roles))
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-    def decode_token(self, token):
+        if not self.oidc_issuer:
+            raise Exception('No OIDC issuer url provided')
+
+        self.log.info('Configuring OIDC from %s' % self.oidc_issuer)
+
+        with request.urlopen('%s/.well-known/openid-configuration' % self.oidc_issuer) as response:
+            data = json.loads(response.read())
+            
+            if not set(['authorization_endpoint', 'token_endpoint', 'userinfo_endpoint', 'end_session_endpoint']).issubset(data.keys()):
+                raise Exception('Unable to retrieve OIDC necessary values')
+
+            self.authorize_url = data['authorization_endpoint']
+            self.token_url = data['token_endpoint']
+            self.userdata_url = data['userinfo_endpoint']
+            self.end_session_url = data['end_session_endpoint']
+
+    def _validate_roles(self, user_roles):
+        return not self.accepted_roles or (self.accepted_roles & user_roles)
+
+    def _decode_token(self, token):
         return jwt.decode(token, verify=False, algorithms='RS256')
 
-    def get_roles_for_token(self, token):
-        decoded_token = self.decode_token(token)
+    def _get_roles_for_token(self, token):
+        decoded_token = self._decode_token(token)
         return set(
             decoded_token.\
                get('resource_access', {'app': ''}).\
-               get(os.environ.get('OAUTH_CLIENT_ID'), {'roles_list': ''}).\
+               get(self.client_id, {'roles_list': ''}).\
                get('roles', 'no_roles')
         )
-    # FIXME:
-    # sso provides uid, this can be passed to the spawner instead of creating local user on JH
-    def _add_user_to_pwd(self, username, uid):
-        try:
-            pwd.getpwnam(username)
-        except KeyError:
-            self.log.info("Adding user %s(%s) to pwd" % (uid, username))
-            os.system("groupadd %s -g %s" % (username, uid))
-            os.system("useradd %s -u %s -g %s" % (username, uid, uid))
-
 
     async def authenticate(self, handler, data=None):
-        user = await super().authenticate(handler, data=None)
+        user = await super().authenticate(handler, data=data)
         if user:
-            self._add_user_to_pwd(user['name'], user['auth_state']['oauth_user']['cern_uid'])
-            self.user_roles = self.get_roles_for_token(user['auth_state']['access_token'])
-            self.access_token = user['auth_state']['access_token']
-            if not self.validate_roles(self.user_roles):
+            user_roles = self._get_roles_for_token(user['auth_state']['access_token'])
+            if not self._validate_roles(user_roles):
                 return None
-            user['admin'] = bool(self.admin_role and (self.admin_role in self.user_roles))
-            self.log.info("Authentication Successful for user: %s, roles: %s, admin: %s" % (user['name'],self.user_roles,user['admin']))
+            user['admin'] = self.admin_role and (self.admin_role in user_roles)
+            self.log.info("Authentication Successful for user: %s, roles: %s, admin: %s" % (user['name'],user_roles,user['admin']))
             return user
         else:
             return None
 
     async def pre_spawn_start(self, user, spawner):
-        if hasattr(self, 'user_roles'):
-            spawner.user_roles = self.user_roles
-        if hasattr(self, 'access_token'):
-            spawner.access_token = self.access_token
+        auth_state = await user.get_auth_state()
+        spawner.access_token = auth_state['access_token']
+        spawner.user_roles = self._get_roles_for_token(auth_state['access_token'])
+        # If function raises Exception, let the this fail
+        await maybe_future(self.get_uid_hook(spawner, auth_state))
 
     def get_handlers(self, app):
         return super().get_handlers(app) + [(r'/logout', KeyCloakLogoutHandler)]

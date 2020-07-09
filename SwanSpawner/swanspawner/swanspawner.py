@@ -4,10 +4,9 @@
 """CERN Specific Spawner class"""
 
 import re, json
-import os, pwd
+import os
 import time
 from socket import gethostname
-
 from traitlets import (
     Unicode,
     Bool,
@@ -106,16 +105,29 @@ def define_SwanSpawner_from(base_class):
             else:
                 homepath = self.eos_path_format.format(username = username)
 
+             # Set the access token to be able to connect to EOS on container startup
+            if hasattr(self, 'access_token'):
+                access_token = self.access_token
+            else:
+                access_token = ''
+                self.log.warning('Access token not passed from Authenticator')
+
+            if not hasattr(self, 'user_uid'):
+                raise Exception('Authenticator needs to set user uid (in pre_spawn_start)')
+
+            #FIXME remove userrid and username and just use jovyan 
+            #FIXME clean JPY env variables
             if self.lcg_rel_field in self.user_options:
                 # session spawned via the form
-                userid = pwd.getpwnam(username).pw_uid
                 env.update(dict(
                     ROOT_LCG_VIEW_NAME     = self.user_options[self.lcg_rel_field],
                     ROOT_LCG_VIEW_PLATFORM = self.user_options[self.platform_field],
                     USER_ENV_SCRIPT        = self.user_options[self.user_script_env_field],
                     ROOT_LCG_VIEW_PATH     = self.lcg_view_path,
                     USER                   = username,
-                    USER_ID                = str(userid),
+                    USER_ID                = self.user_uid,
+                    NB_UID                 = self.user_uid,
+                    ACCESS_TOKEN           = access_token,
                     HOME                   = homepath,
                     EOS_PATH_FORMAT        = self.eos_path_format,
                     SERVER_HOSTNAME        = os.uname().nodename,
