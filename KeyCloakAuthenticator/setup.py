@@ -9,6 +9,9 @@ from __future__ import print_function
 
 import os
 import sys
+import setuptools
+
+name = 'keycloakauthenticator'
 
 v = sys.version_info
 if v[:2] < (3,3):
@@ -30,22 +33,25 @@ here = os.path.abspath(os.path.dirname(__file__))
 
 # Get the current package version.
 version_ns = {}
-with open(pjoin(here, 'version.py')) as f:
+with open(pjoin(here, name, '_version.py')) as f:
     exec(f.read(), {}, version_ns)
+
+with open(pjoin(here, 'README.md'), 'r') as fh:
+    long_description = fh.read()
 
 
 setup_args = dict(
-    name                = 'keycloakauthenticator',
-    packages            = ['keycloakauthenticator'],
+    name                = name,
+    packages            = setuptools.find_packages(),
     version             = version_ns['__version__'],
-    description         = """KeyCloakAuthenticator: Authenticate JupyterHub users with KeyCloak and OAuth2.""",
-    long_description    = "",
-    author              = "Prasanth Kothuri",
-    author_email        = "prasanth.kothuri@cern.ch",
-    url                 = "cern.ch",
-    license             = "BSD",
+    description         = "KeyCloakAuthenticator: Authenticate JupyterHub users with KeyCloak and OIDC",
+    long_description    = long_description,
+    long_description_content_type = "text/markdown",
+    author              = "SWAN Admins",
+    url                 = "https://github.com/swan-cern/jupyterhub-extensions",
+    license             = "AGPL-3.0",
     platforms           = "Linux, Mac OS X",
-    keywords            = ['Interactive', 'Interpreter', 'Shell', 'Web'],
+    keywords            = ["JupyterHub", "Authenticator", "SWAN", "CERN"],
     classifiers         = [
         'Intended Audience :: Developers',
         'Intended Audience :: System Administrators',
@@ -67,8 +73,6 @@ if 'setuptools' in sys.modules:
             install_requires.append(req)
 
 
-def main():
-    setup(**setup_args)
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    setuptools.setup(**setup_args)
