@@ -125,5 +125,52 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         # If function raises Exception, let the this fail
         await maybe_future(self.get_uid_hook(spawner, auth_state))
 
+
+    async def refresh_user(self, user, handler=None):
+        """
+            Refresh user's oAuth tokens.
+            This is called when user info is requested and
+            has passed more than "auth_refresh_age" seconds.
+        """
+
+        # Retrieve user authentication info, decode, and check if refresh is needed
+        auth_state = await user.get_auth_state()
+        decoded_access_token = self._decode_token(auth_state['access_token'])
+        decoded_refresh_token = self._decode_token(auth_state['refresh_token'])
+
+        diff_access = decoded_access_token['exp'] - time.time()
+        diff_refresh = decoded_refresh_token['exp'] - time.time()
+
+        if diff_access > self.auth_refresh_age:
+            # Access token is still valid and will stay until next refresh
+            return True
+
+        elif diff_refresh < 0:
+            # Refresh token not valid, need to re-authenticate again
+            return False
+
+        else:
+            # We need to refresh access token (which will also refresh the refresh token)
+            values = dict(
+                grant_type = 'refresh_token',
+                client_id = self.client_id,
+                client_secret = self.client_secret,
+                refresh_token = auth_state['refresh_token']
+            )
+            data = parse.urlencode(values).encode('ascii')
+
+            req = request.Request(self.token_url, data)
+            with request.urlopen(req) as response:
+                data = json.loads(response.read())
+
+                auth_state['access_token'] = data.get('access_token', None)
+                auth_state['refresh_token'] = data.get('refresh_token', None)
+                refresh_user_return = {
+                    'auth_state': auth_state
+                }
+
+                self.log.info('User %s oAuth tokens refreshed' % user.name)
+                return refresh_user_return
+
     def get_handlers(self, app):
         return super().get_handlers(app) + [(r'/logout', KeyCloakLogoutHandler)]
