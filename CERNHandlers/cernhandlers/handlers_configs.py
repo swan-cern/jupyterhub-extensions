@@ -39,22 +39,10 @@ class SpawnHandlersConfigs(SingletonConfigurable):
         help='Path of the file that, when present, enables maintenance mode'
     )
 
-    notifications_file = Unicode(
-        default_value='/srv/jupyterhub/notifications.json',
-        config=True,
-        help='Path of json file where the notifications to the users are written'
-    )
-
     spawn_error_message = Unicode(
         default_value='Error spawning your session',
         config=True,
         help='Message to display when Spawn fails'
-    )
-
-    start_page = Unicode(
-        default_value='projects',
-        config=True,
-        help='Page of Jupyter to redirect to'
     )
 
     graphite_metric_path = Unicode(
