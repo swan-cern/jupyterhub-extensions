@@ -14,6 +14,6 @@ setup(name='swanspawner',
         'jupyterhub',
         'psutil',
         'dockerspawner==0.11.1',
-        'jupyterhub-kubespawner==0.11.1'
+        'jupyterhub-kubespawner==0.12.0'
       ],
   )
