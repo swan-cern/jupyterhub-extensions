@@ -105,13 +105,6 @@ def define_SwanSpawner_from(base_class):
             else:
                 homepath = self.eos_path_format.format(username = username)
 
-             # Set the access token to be able to connect to EOS on container startup
-            if hasattr(self, 'access_token'):
-                access_token = self.access_token
-            else:
-                access_token = ''
-                self.log.warning('Access token not passed from Authenticator')
-
             if not hasattr(self, 'user_uid'):
                 raise Exception('Authenticator needs to set user uid (in pre_spawn_start)')
 
@@ -127,7 +120,6 @@ def define_SwanSpawner_from(base_class):
                     USER                   = username,
                     USER_ID                = self.user_uid,
                     NB_UID                 = self.user_uid,
-                    ACCESS_TOKEN           = access_token,
                     HOME                   = homepath,
                     EOS_PATH_FORMAT        = self.eos_path_format,
                     SERVER_HOSTNAME        = os.uname().nodename,
@@ -148,6 +140,15 @@ def define_SwanSpawner_from(base_class):
                     NB_UID                 = 1000,
                     SERVER_HOSTNAME        = os.uname().nodename,
                 ))
+
+             # Set the access token to be able to connect to EOS on container startup
+            if hasattr(self, 'access_token') and hasattr(self, 'inspection_url'):
+                env.update(dict(
+                    ACCESS_TOKEN              = self.access_token,
+                    OAUTH_INSPECTION_ENDPOINT = self.inspection_url
+                ))
+            else:
+                self.log.warning('Access token/inspection url not passed from Authenticator')
 
             if self.extra_env:
                 env.update(self.extra_env)

@@ -122,6 +122,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         auth_state = await user.get_auth_state()
         spawner.access_token = auth_state['access_token']
         spawner.user_roles = self._get_roles_for_token(auth_state['access_token'])
+        spawner.inspection_url = self.userdata_url
         # If function raises Exception, let the this fail
         await maybe_future(self.get_uid_hook(spawner, auth_state))
 
