@@ -2,14 +2,16 @@
 
 import jupyterhub.handlers.pages as pages
 import jupyterhub.handlers.base as base
+import jupyterhub.apihandlers.users as users
 from jupyterhub.utils import url_path_join
 from jupyterhub import app
-from cernhandlers import SpawnHandler, ProxyErrorHandler
+from cernhandlers import SpawnHandler, ProxyErrorHandler, SelfAPIHandler
 import sys
 
 handlers_map = {
     pages.SpawnHandler: SpawnHandler,
-    pages.ProxyErrorHandler: ProxyErrorHandler
+    pages.ProxyErrorHandler: ProxyErrorHandler,
+    users.SelfAPIHandler: SelfAPIHandler
 }
 
 
