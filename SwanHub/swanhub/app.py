@@ -1,12 +1,16 @@
-#!/usr/bin/env python3
 
 import jupyterhub.handlers.pages as pages
 import jupyterhub.handlers.base as base
 import jupyterhub.apihandlers.users as users
 from jupyterhub.utils import url_path_join
 from jupyterhub import app
-from cernhandlers import SpawnHandler, ProxyErrorHandler, SelfAPIHandler
+from .spawn_handler import SpawnHandler
+from .error_handler import ProxyErrorHandler
+from .userapi_handler import SelfAPIHandler
+from . import get_templates
+from traitlets import default
 import sys
+import os
 
 handlers_map = {
     pages.SpawnHandler: SpawnHandler,
@@ -18,6 +22,14 @@ handlers_map = {
 class SWAN(app.JupyterHub):
     name = 'swan'
 
+    def init_tornado_settings(self):
+        # Add our templates to the end of the list to be used as fallback
+        # The upstream templates will be added to the end in the parent init_tornado_settings as well
+        swan_templates = get_templates()
+        if swan_templates not in self.template_paths:
+            self.template_paths.append(swan_templates)
+        super().init_tornado_settings()
+
     def init_handlers(self):
         super().init_handlers()
         for i, cur_handler in enumerate(self.handlers):
@@ -27,5 +39,4 @@ class SWAN(app.JupyterHub):
                 cur_handler[1] = new_handler
                 self.handlers[i] = tuple(cur_handler)
 
-if __name__ == "__main__":
-    SWAN.launch_instance(sys.argv)
+main = SWAN.launch_instance
