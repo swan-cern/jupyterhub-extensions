@@ -1,22 +1,28 @@
 # SWAN Spawner
 
-Obtains credentials for the user and spawns a container for her.
+Spawner for JupyterHub that enables configuring a session with CVMFS/LCG stacks, support for GPU, oAuth tokens, etc. 
+If Binder is used to configure the Docker image used, it reverts to the default upstream configuration.
+Works with both Docker and Kubernetes.
 
 ## Installation
 
-First, install dependencies:
-
-    pip3 install .
+```bash
+pip3 install swanspawner
+```
 
 ## Usage
 
 Add to your JupyterHub config file
 
-    c.JupyterHub.spawner_class = 'swanspawner.SwanDockerSpawner'
+```python
+c.JupyterHub.spawner_class = 'swanspawner.SwanDockerSpawner'
+```
 
 If you deploy with Docker, or
 
-    c.JupyterHub.spawner_class = 'swanspawner.SwanKubeSpawner'
+```python
+c.JupyterHub.spawner_class = 'swanspawner.SwanKubeSpawner'
+```
 
 If you deploy with Kubernetes.
 
@@ -40,18 +46,22 @@ If you deploy with Kubernetes.
 | JPY_BASE_URL  |
 | JPY_HUB_PREFIX  |
 | JPY_HUB_API_URL  |
+| ACCESS_TOKEN  |
+| OAUTH_INSPECTION_ENDPOINT  |
 
 ## Spawn Form configuration
 
 To configure custom form, please set path to config file as below
 
-    c.SwanSpawner.options_form_config = '<path>'
-  
+```python
+c.SwanSpawner.options_form_config = '<path>'
+```
+
 High level objects 
 
-```
+```json
 {
- "header: <options header text>
+ "header": <options header text>,
  "options": <array of options objects>
 ...
 }
@@ -59,7 +69,7 @@ High level objects
 
 Options type label
 
-```
+```json
 {
  "options": [
     {
@@ -77,7 +87,7 @@ Options type label
 
 Options type selection
 
-```
+```json
 {
  "options": [
     {
@@ -120,3 +130,4 @@ Options type selection
 ...
 }
 ```
+An example json file can be seen in [options_form_config.json]()
