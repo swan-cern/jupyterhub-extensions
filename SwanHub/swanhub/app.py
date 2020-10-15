@@ -1,3 +1,5 @@
+# Author: Danilo Piparo, Diogo Castro 2015
+# Copyright CERN
 
 import jupyterhub.handlers.pages as pages
 import jupyterhub.handlers.base as base
