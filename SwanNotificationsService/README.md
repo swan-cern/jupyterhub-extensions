@@ -1,6 +1,6 @@
 # SwanNotificationsService
 
-JupyterHub service that exposes an API with notification for the logged in user.
+JupyterHub service that exposes an API with notifications for the logged in user.
 The notifications are specified in a json file. If a "maintenance file" exists, a notification will be given that the service is under maintenance.
 
 This extension works in conjunction with [SwanNotifications](https://github.com/swan-cern/jupyter-extensions/tree/master/SwanNotifications).
@@ -21,7 +21,7 @@ pip install swannotificationsservice
 
 Call the binary and specify configuration parameters:
 ```bash
-swannotificationsservice --notifications_file (default: /srv/jupyterhub/notifications.json
+swannotificationsservice --notifications_file /srv/jupyterhub/notifications.json
 ```
 
 Configuration parameters:
