@@ -7,7 +7,7 @@ Authenticates users via SSO using OIDC
 
 * Jupyterhub
 * oauthenticator
-* pyjwt
+* PyJWT
 
 ## Installation
 
