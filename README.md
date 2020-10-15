@@ -1,7 +1,9 @@
-# SWAN JupyterHub
+## JupyterHub extensions
 
-- [CERNHandlers documentation](CERNHandlers/README.md)
-- [SwanSpawner documentation](SwanSpawner/README.md)
-- [start_jupyterhub.py bootstraping handlers and spawner](scripts/start_jupyterhub.py)
-- [demo jupyterhub onfiguration](jupyterhub_config.py)
-- [demo form configuration](options_form_config.json)
+Repository that stores all the JupyterHub extensions for SWAN.
+
+* [KeyCloakAuthenticator](KeyCloakAuthenticator) - OIDC authenticator for SWAN, compatible with KeyCloak
+* [SwanCuller](SwanCuller) - JupyterHub service that checks and cleans user sessions
+* [SwanHub](SwanHub) - JupyterHub wrapper that automatically configures the SWAN templates and handlers
+* [SwanNotificationsService](SwanNotificationsService) - JupyterHub service that exposes an API with notifications for the logged in user
+* [SwanSpawner](SwanSpawner) - Spawner for JupyterHub that enables configuring a session with CVMFS/LCG stacks, support for GPU, oAuth tokens, etc
