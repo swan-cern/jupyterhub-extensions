@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """script to monitor and cull idle single-user servers
 
 Adapted to SWAN from https://github.com/jupyterhub/jupyterhub/blob/1.1.0/examples/cull-idle/cull_idle_servers.py
@@ -58,11 +57,11 @@ from subprocess import call
 
 def check_ticket(username):
     app_log.info("Checking ticket for user %s", username)
-    call(['sudo', "%s/check_ticket.sh" % options.culler_dir, username])
+    call(['sudo', "%s/check_ticket.sh" % options.hooks_dir, username])
 
 def delete_ticket(username):
     app_log.info("Deleting ticket for user %s", username)
-    call(['sudo', "%s/delete_ticket.sh" % options.culler_dir, username])
+    call(['sudo', "%s/delete_ticket.sh" % options.hooks_dir, username])
 # End SWAN code
 
 def parse_date(date_string):
@@ -99,7 +98,7 @@ def format_td(td):
 
 @coroutine
 def cull_idle(
-    url, api_token, inactive_limit, cull_users=False, local_home=False, max_age=0, concurrency=10
+    url, api_token, inactive_limit, cull_users=False, disable_hooks=False, max_age=0, concurrency=10
 ):
     """Shutdown idle single-user servers
 
@@ -348,12 +347,12 @@ def cull_idle(
         else:
             if result:
                 app_log.debug("Finished culling %s", name)
-                if not local_home: delete_ticket(name)
+                if not disable_hooks: delete_ticket(name)
             else:
-                if not local_home: check_ticket(name)
+                if not disable_hooks: check_ticket(name)
 
 
-if __name__ == '__main__':
+def main():
     define(
         'url',
         default=os.environ.get('JUPYTERHUB_API_URL'),
@@ -385,8 +384,8 @@ if __name__ == '__main__':
                 so limit the number of API requests we have outstanding at any given time.
                 """,
     )
-    define('culler_dir', default="/srv/jupyterhub/culler", help="Path to the directory for the culler")
-    define('local_home', default=False, help="The user's home is a temporary scratch directory")
+    define('hooks_dir', default="/srv/jupyterhub/culler", help="Path to the directory for the krb tickets scripts (check_ticket.sh and delete_ticket.sh)")
+    define('disable_hooks', default=False, help="The user's home is a temporary scratch directory and we should not check krb tickets")
 
 
     parse_command_line()
@@ -410,7 +409,7 @@ if __name__ == '__main__':
         api_token=api_token,
         inactive_limit=options.timeout,
         cull_users=options.cull_users,
-        local_home=options.local_home,
+        disable_hooks=options.disable_hooks,
         max_age=options.max_age,
         concurrency=options.concurrency,
     )
