@@ -1,0 +1,71 @@
+# This workflows will upload a Python Package using Twine when a release is created
+# Also a package for node is created and uploaded
+# author: Omar.Zapata@cern.ch 2020
+
+name: SWAN CI/CD pipeline
+
+on:
+  push:
+    tags:
+       - '*/v*'
+  
+jobs:
+  build-publish:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set environnment package name  and version
+      run: |
+        PACKAGE_NAME=$(echo  ${GITHUB_REF#refs/*/} | cut -d / -f 1)
+
+        echo ::set-env name=PACKAGE_TAG::${GITHUB_REF#refs/*/}
+        echo ::set-env name=PACKAGE_NAME::$PACKAGE_NAME
+        echo ::set-env name=PACKAGE_VERSION::$(echo  ${GITHUB_REF#refs/*/} | cut -d / -f 2)
+
+    - name: Install Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies 
+      run: |
+        cd $PACKAGE_NAME
+        pip install setuptools wheel twine jupyter_packaging
+
+    - name: Build wheel
+      run: |
+        cd $PACKAGE_NAME
+        python setup.py sdist bdist_wheel
+
+    - name: Publish distribution to PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+      run: |
+        cd $PACKAGE_NAME
+        twine upload --repository pypi dist/*
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: ${{ github.ref }}
+        body: |
+          ${{github.event.head_commit.message}}
+        draft: false
+        prerelease: false
+
+    - name: Invoke workflow in jupyterhub-image
+      uses: benc-uk/workflow-dispatch@v1
+      with:
+        workflow: SWAN CI/CD pipeline
+        ref: master
+        repo: swan-cern/jupyterhub-image
+        token: ${{ secrets.WORKFLOW_ACCESS_TOKEN }}
+        inputs: '{ "package": "${{env.PACKAGE_NAME}}", "version": "${{env.PACKAGE_VERSION}}" }'
