@@ -23,7 +23,7 @@ setup_args = dict(
     packages=setuptools.find_packages(),
     install_requires=[
           'tornado',
-          'dateutil'
+          'python-dateutil'
     ],
     zip_safe=False,
     include_package_data=True,
