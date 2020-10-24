@@ -10,6 +10,7 @@ from tornado import gen, web
 from traitlets import Unicode, Set, Bool, Any
 import jwt, os, pwd, time, json
 from urllib import request, parse
+from urllib.error import HTTPError
 
 class KeyCloakLogoutHandler(LogoutHandler):
     """Log a user out by clearing both their JupyterHub login cookie and SSO cookie."""
@@ -80,16 +81,22 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
 
         self.log.info('Configuring OIDC from %s' % self.oidc_issuer)
 
-        with request.urlopen('%s/.well-known/openid-configuration' % self.oidc_issuer) as response:
-            data = json.loads(response.read())
-            
-            if not set(['authorization_endpoint', 'token_endpoint', 'userinfo_endpoint', 'end_session_endpoint']).issubset(data.keys()):
-                raise Exception('Unable to retrieve OIDC necessary values')
+        try:
+            with request.urlopen('%s/.well-known/openid-configuration' % self.oidc_issuer) as response:
+                data = json.loads(response.read())
+                
+                if not set(['authorization_endpoint', 'token_endpoint', 'userinfo_endpoint', 'end_session_endpoint']).issubset(data.keys()):
+                    raise Exception('Unable to retrieve OIDC necessary values')
 
-            self.authorize_url = data['authorization_endpoint']
-            self.token_url = data['token_endpoint']
-            self.userdata_url = data['userinfo_endpoint']
-            self.end_session_url = data['end_session_endpoint']
+                self.authorize_url = data['authorization_endpoint']
+                self.token_url = data['token_endpoint']
+                self.userdata_url = data['userinfo_endpoint']
+                self.end_session_url = data['end_session_endpoint']
+        
+        except HTTPError:
+            self.log.error("Failure to retrieve the openid configuration")
+            raise
+
 
     def _validate_roles(self, user_roles):
         return not self.accepted_roles or (self.accepted_roles & user_roles)
@@ -134,44 +141,53 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             has passed more than "auth_refresh_age" seconds.
         """
 
-        # Retrieve user authentication info, decode, and check if refresh is needed
-        auth_state = await user.get_auth_state()
-        decoded_access_token = self._decode_token(auth_state['access_token'])
-        decoded_refresh_token = self._decode_token(auth_state['refresh_token'])
+        try:
+            # Retrieve user authentication info, decode, and check if refresh is needed
+            auth_state = await user.get_auth_state()
+            decoded_access_token = self._decode_token(auth_state['access_token'])
+            decoded_refresh_token = self._decode_token(auth_state['refresh_token'])
 
-        diff_access = decoded_access_token['exp'] - time.time()
-        diff_refresh = decoded_refresh_token['exp'] - time.time()
+            diff_access = decoded_access_token['exp'] - time.time()
+            diff_refresh = decoded_refresh_token['exp'] - time.time()
 
-        if diff_access > self.auth_refresh_age:
-            # Access token is still valid and will stay until next refresh
-            return True
+            if diff_access > self.auth_refresh_age:
+                # Access token is still valid and will stay until next refresh
+                return True
 
-        elif diff_refresh < 0:
-            # Refresh token not valid, need to re-authenticate again
-            return False
+            elif diff_refresh < 0:
+                # Refresh token not valid, need to re-authenticate again
+                return False
 
-        else:
-            # We need to refresh access token (which will also refresh the refresh token)
-            values = dict(
-                grant_type = 'refresh_token',
-                client_id = self.client_id,
-                client_secret = self.client_secret,
-                refresh_token = auth_state['refresh_token']
-            )
-            data = parse.urlencode(values).encode('ascii')
+            else:
+                # We need to refresh access token (which will also refresh the refresh token)
+                values = dict(
+                    grant_type = 'refresh_token',
+                    client_id = self.client_id,
+                    client_secret = self.client_secret,
+                    refresh_token = auth_state['refresh_token']
+                )
+                data = parse.urlencode(values).encode('ascii')
 
-            req = request.Request(self.token_url, data)
-            with request.urlopen(req) as response:
-                data = json.loads(response.read())
+                req = request.Request(self.token_url, data)
+                with request.urlopen(req) as response:
+                    data = json.loads(response.read())
 
-                auth_state['access_token'] = data.get('access_token', None)
-                auth_state['refresh_token'] = data.get('refresh_token', None)
-                refresh_user_return = {
-                    'auth_state': auth_state
-                }
+                    auth_state['access_token'] = data.get('access_token', None)
+                    auth_state['refresh_token'] = data.get('refresh_token', None)
+                    refresh_user_return = {
+                        'auth_state': auth_state
+                    }
 
-                self.log.info('User %s oAuth tokens refreshed' % user.name)
-                return refresh_user_return
+                    self.log.info('User %s oAuth tokens refreshed' % user.name)
+                    return refresh_user_return
+
+        except HTTPError as e:
+            self.log.error("Failure calling the renew endpoint: %s (code: %s)" % (e.read(), e.code))
+
+        except:
+            self.log.error("Failed to refresh the oAuth token", exc_info=True)
+
+        return False
 
     def get_handlers(self, app):
         return super().get_handlers(app) + [(r'/logout', KeyCloakLogoutHandler)]
