@@ -28,6 +28,12 @@ class SWAN(app.JupyterHub):
     def _template_paths_default(self):
         return [get_templates(), os.path.join(self.data_files_path, 'templates')]
 
+    @default('logo_file')
+    def _logo_file_default(self):
+        return os.path.join(
+            self.data_files_path, 'static', 'swan', 'logos', 'logo_swan_cloudhisto.png'
+        )
+
     def init_tornado_settings(self):
         # Add our templates to the end of the list to be used as fallback
         # The upstream templates will be added to the end in the parent init_tornado_settings as well
