@@ -24,12 +24,16 @@ handlers_map = {
 class SWAN(app.JupyterHub):
     name = 'swan'
 
+    @default('template_paths')
+    def _template_paths_default(self):
+        return [get_templates(), os.path.join(self.data_files_path, 'templates')]
+
     def init_tornado_settings(self):
         # Add our templates to the end of the list to be used as fallback
         # The upstream templates will be added to the end in the parent init_tornado_settings as well
-        swan_templates = get_templates()
-        if swan_templates not in self.template_paths:
-            self.template_paths.append(swan_templates)
+        for template_path in self._template_paths_default():
+            if template_path not in self.template_paths:
+                self.template_paths.append(template_path)
         super().init_tornado_settings()
 
     def init_handlers(self):
