@@ -30,4 +30,4 @@ Configuration parameters:
 * cull_users: Cull users in addition to servers (default=False)
 * concurrency: Limit the number of concurrent requests made to the Hub (default=10)
 * hooks_dir: Path to the directory for the krb tickets scripts (check_ticket.sh and delete_ticket.sh) (default="/srv/jupyterhub/culler)
-* disable_hooks: wether to  call the krb tickets scripts or not (default=False)
+* disable_hooks: Whether to  call the krb tickets scripts or not (default=False)
