@@ -62,14 +62,13 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         help="Users with this role login as jupyterhub administrators"
     )
         
-    get_uid_hook = Any(
-        allow_none=False,
+    pre_spawn_hook = Any(
         help="""
-        Mandatory function to retrieve the user uid from its auth state and pass it to spawner.
+        Function to execute before spawning a session. Usefull to inject extra variables, like the oauth tokens
         Example::
-            def get_uid_hook(spawner, auth_state):
-                spawner.user_uid = auth_state['oauth_user']['cern_uid']
-            c.KeyCloakAuthenticator.get_uid_hook = get_uid_hook
+            def pre_spawn_hook(authenticator, spawner, auth_state):
+                spawner.environment['ACCESS_TOKEN'] = auth_state['exchanged_tokens']['eos-service']['access_token']
+            c.KeyCloakAuthenticator.pre_spawn_hook = pre_spawn_hook
         """
     ).tag(config=True)
 
@@ -114,7 +113,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
     def _decode_token(self, token):
         return jwt.decode(token, verify=False, algorithms='RS256')
 
-    def _get_roles_for_token(self, token):
+    def get_roles_for_token(self, token):
         decoded_token = self._decode_token(token)
         return set(
             decoded_token.\
@@ -158,7 +157,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         if not user:
             return None
 
-        user_roles = self._get_roles_for_token(user['auth_state']['access_token'])
+        user_roles = self.get_roles_for_token(user['auth_state']['access_token'])
         if not self._validate_roles(user_roles):
             return None
 
@@ -176,12 +175,9 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         return user
 
     async def pre_spawn_start(self, user, spawner):
-        auth_state = await user.get_auth_state()
-        spawner.access_token = auth_state['access_token']
-        spawner.user_roles = self._get_roles_for_token(auth_state['access_token'])
-        spawner.inspection_url = self.userdata_url
-        # If function raises Exception, let the this fail
-        await maybe_future(self.get_uid_hook(spawner, auth_state))
+        if self.pre_spawn_hook:
+            auth_state = await user.get_auth_state()
+            await maybe_future(self.pre_spawn_hook(self, spawner, auth_state))
 
     def _refresh_user_token(self, auth_state):
 

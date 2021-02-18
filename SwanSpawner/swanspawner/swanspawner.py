@@ -141,15 +141,6 @@ def define_SwanSpawner_from(base_class):
                     SERVER_HOSTNAME        = os.uname().nodename,
                 ))
 
-             # Set the access token to be able to connect to EOS on container startup
-            if hasattr(self, 'access_token') and hasattr(self, 'inspection_url'):
-                env.update(dict(
-                    ACCESS_TOKEN              = self.access_token,
-                    OAUTH_INSPECTION_ENDPOINT = self.inspection_url.replace('https://', '')
-                ))
-            else:
-                self.log.warning('Access token/inspection url not passed from Authenticator')
-
             if self.extra_env:
                 env.update(self.extra_env)
 
