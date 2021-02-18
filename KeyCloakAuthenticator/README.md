@@ -40,7 +40,7 @@ c.KeyCloakAuthenticator.exchange_tokens = ['eos-service', 'cernbox-service']
 
 # If your authenticator needs extra configurations, set them in the pre-spawn hook
 def pre_spawn_hook(authenticator, spawner, auth_state):
-    spawner.environment['ACCESS_TOKEN'] = auth_state['exchanged_tokens']['eos-service']['access_token']
+    spawner.environment['ACCESS_TOKEN'] = auth_state['exchanged_tokens']['eos-service']
     spawner.environment['OAUTH_INSPECTION_ENDPOINT'] = authenticator.userdata_url.replace('https://', '')
     spawner.user_roles = authenticator.get_roles_for_token(auth_state['access_token'])
     spawner.user_uid = auth_state['oauth_user']['cern_uid']

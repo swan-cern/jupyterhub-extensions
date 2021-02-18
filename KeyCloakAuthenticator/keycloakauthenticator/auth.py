@@ -67,7 +67,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         Function to execute before spawning a session. Usefull to inject extra variables, like the oauth tokens
         Example::
             def pre_spawn_hook(authenticator, spawner, auth_state):
-                spawner.environment['ACCESS_TOKEN'] = auth_state['exchanged_tokens']['eos-service']['access_token']
+                spawner.environment['ACCESS_TOKEN'] = auth_state['exchanged_tokens']['eos-service']
             c.KeyCloakAuthenticator.pre_spawn_hook = pre_spawn_hook
         """
     ).tag(config=True)
@@ -122,21 +122,28 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                get('roles', 'no_roles')
         )
 
-    def _exchange_token(self, original_token, new_token):
-        values = dict(
-            grant_type = 'urn:ietf:params:oauth:grant-type:token-exchange',
-            client_id = self.client_id,
-            client_secret = self.client_secret,
-            subject_token = original_token,
-            audience = new_token,
-            requested_token_type = 'urn:ietf:params:oauth:token-type:refresh_token'
-        )
-        data = parse.urlencode(values).encode('ascii')
+    def _exchange_tokens(self, token):
 
-        req = request.Request(self.token_url, data)
-        with request.urlopen(req) as response:
-            data = json.loads(response.read())
-            return (data.get('access_token', None), data.get('refresh_token', None))
+        tokens = dict()
+
+        for new_token in self.exchange_tokens:
+
+            values = dict(
+                grant_type = 'urn:ietf:params:oauth:grant-type:token-exchange',
+                client_id = self.client_id,
+                client_secret = self.client_secret,
+                subject_token = token,
+                audience = new_token,
+                requested_token_type = 'urn:ietf:params:oauth:token-type:access_token'
+            )
+            data = parse.urlencode(values).encode('ascii')
+
+            req = request.Request(self.token_url, data)
+            with request.urlopen(req) as response:
+                data = json.loads(response.read())
+                tokens[new_token] = data.get('access_token', None)
+
+        return tokens
 
     def _refresh_token(self, refresh_token):
         values = dict(
@@ -161,13 +168,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         if not self._validate_roles(user_roles):
             return None
 
-        user['auth_state']['exchanged_tokens'] = dict()
-        for new_token in self.exchange_tokens:
-            access_token, refresh_token = self._exchange_token(user['auth_state']['access_token'], new_token)
-            user['auth_state']['exchanged_tokens'][new_token] = {
-                'access_token': access_token,
-                'refresh_token': refresh_token
-            }
+        user['auth_state']['exchanged_tokens'] = self._exchange_tokens(user['auth_state']['access_token'])
 
         user['admin'] = self.admin_role and (self.admin_role in user_roles)
         self.log.info("Authentication Successful for user: %s, roles: %s, admin: %s" % (user['name'], user_roles, user['admin']))
@@ -178,29 +179,6 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         if self.pre_spawn_hook:
             auth_state = await user.get_auth_state()
             await maybe_future(self.pre_spawn_hook(self, spawner, auth_state))
-
-    def _refresh_user_token(self, auth_state):
-
-        decoded_access_token = self._decode_token(auth_state['access_token'])
-        decoded_refresh_token = self._decode_token(auth_state['refresh_token'])
-
-        diff_access = decoded_access_token['exp'] - time.time()
-        diff_refresh = decoded_refresh_token['exp'] - time.time()
-
-        if diff_access > self.auth_refresh_age:
-            # Access token is still valid and will stay until next refresh
-            return True
-
-        elif diff_refresh < 0:
-            # Refresh token not valid, need to re-authenticate again
-            return False
-
-        else:
-            # We need to refresh access token (which will also refresh the refresh token)
-            access_token, refresh_token = self._refresh_token(auth_state['refresh_token'])
-            auth_state['access_token'] = access_token
-            auth_state['refresh_token'] = refresh_token
-            return auth_state
 
 
     async def refresh_user(self, user, handler=None):
@@ -213,27 +191,32 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         try:
             # Retrieve user authentication info, decode, and check if refresh is needed
             auth_state = await user.get_auth_state()
-            refresh = self._refresh_user_token(auth_state)
 
-            if refresh == False:
+            decoded_access_token = self._decode_token(auth_state['access_token'])
+            decoded_refresh_token = self._decode_token(auth_state['refresh_token'])
+
+            diff_access = decoded_access_token['exp'] - time.time()
+            diff_refresh = decoded_refresh_token['exp'] - time.time()
+
+            if diff_access > self.auth_refresh_age:
+                # Access token is still valid and will stay until next refresh
+                return True
+
+            elif diff_refresh < 0:
+                # Refresh token not valid, need to re-authenticate again
                 return False
 
-            if refresh != True:
-                auth_state = refresh
+            else:
+                # We need to refresh access token (which will also refresh the refresh token)
+                access_token, refresh_token = self._refresh_token(auth_state['refresh_token'])
+                auth_state['access_token'] = access_token
+                auth_state['refresh_token'] = refresh_token
+                auth_state['exchanged_tokens'] = self._exchange_tokens(access_token)
 
-            for new_token in self.exchange_tokens:
-                refresh = self._refresh_user_token(auth_state['exchanged_tokens'][new_token])
-
-                if refresh == False:
-                    return False
-                
-                if refresh != True:
-                    auth_state['exchanged_tokens'][new_token] = refresh
-
-            self.log.info('User %s oAuth tokens refreshed' % user.name)
-            return {
-                'auth_state': auth_state
-            }
+                self.log.info('User %s oAuth tokens refreshed' % user.name)
+                return {
+                    'auth_state': auth_state
+                }
 
         except HTTPError as e:
             self.log.error("Failure calling the renew endpoint: %s (code: %s)" % (e.read(), e.code))
