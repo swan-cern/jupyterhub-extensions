@@ -28,11 +28,6 @@ c.KeyCloakAuthenticator.username_key = 'preferred_username'
 c.KeyCloakAuthenticator.logout_redirect_uri = 'https://cern.ch/swan'
 c.KeyCloakAuthenticator.oauth_callback_url = 'https://swan.cern.ch/hub/oauth_callback'
 
-# Retrieve the user uid from the token
-def get_uid_hook(spawner, auth_state):
-    spawner.user_uid = auth_state['oauth_user']['cern_uid']
-c.KeyCloakAuthenticator.get_uid_hook = get_uid_hook
-
 # Specify the issuer url, to get all the endpoints automatically from .well-known/openid-configuration
 c.KeyCloakAuthenticator.oidc_issuer = 'https://auth.cern.ch/auth/realms/cern'
 
@@ -42,6 +37,14 @@ c.KeyCloakAuthenticator.accepted_roles = set()
 c.KeyCloakAuthenticator.admin_role = 'swan-admin'
 # Exchange the token for tokens usable on other services (pass the audience/app id of the other services)
 c.KeyCloakAuthenticator.exchange_tokens = ['eos-service', 'cernbox-service']
+
+# If your authenticator needs extra configurations, set them in the pre-spawn hook
+def pre_spawn_hook(authenticator, spawner, auth_state):
+    spawner.environment['ACCESS_TOKEN'] = auth_state['exchanged_tokens']['eos-service']['access_token']
+    spawner.environment['OAUTH_INSPECTION_ENDPOINT'] = authenticator.userdata_url.replace('https://', '')
+    spawner.user_roles = authenticator.get_roles_for_token(auth_state['access_token'])
+    spawner.user_uid = auth_state['oauth_user']['cern_uid']
+c.KeyCloakAuthenticator.pre_spawn_hook = pre_spawn_hook
 ```
 
 It's also necessary to configure the Client ID and secret. One way of doing this is by setting the following environment variables:
