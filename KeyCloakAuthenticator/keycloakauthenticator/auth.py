@@ -7,7 +7,7 @@ from jupyterhub.handlers import LogoutHandler
 from jupyterhub.utils import maybe_future
 from oauthenticator.generic import GenericOAuthenticator
 from tornado import gen, web
-from traitlets import Unicode, Set, Bool, Any
+from traitlets import Unicode, Set, Bool, Any, List
 import jwt, os, pwd, time, json
 from urllib import request, parse
 from urllib.error import HTTPError
@@ -73,8 +73,18 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         """
     ).tag(config=True)
 
+    exchange_tokens = List (
+        Unicode(),
+        default_value=[],
+        config=True,
+        help="List of audiences to exchange our token to"
+    )
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+        # Force auth state so that we can store the tokens in the user dict
+        self.enable_auth_state = True
 
         if not self.oidc_issuer:
             raise Exception('No OIDC issuer url provided')
@@ -113,17 +123,57 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                get('roles', 'no_roles')
         )
 
+    def _exchange_token(self, original_token, new_token):
+        values = dict(
+            grant_type = 'urn:ietf:params:oauth:grant-type:token-exchange',
+            client_id = self.client_id,
+            client_secret = self.client_secret,
+            subject_token = original_token,
+            audience = new_token,
+            requested_token_type = 'urn:ietf:params:oauth:token-type:refresh_token'
+        )
+        data = parse.urlencode(values).encode('ascii')
+
+        req = request.Request(self.token_url, data)
+        with request.urlopen(req) as response:
+            data = json.loads(response.read())
+            return (data.get('access_token', None), data.get('refresh_token', None))
+
+    def _refresh_token(self, refresh_token):
+        values = dict(
+            grant_type = 'refresh_token',
+            client_id = self.client_id,
+            client_secret = self.client_secret,
+            refresh_token = refresh_token
+        )
+        data = parse.urlencode(values).encode('ascii')
+
+        req = request.Request(self.token_url, data)
+        with request.urlopen(req) as response:
+            data = json.loads(response.read())
+            return (data.get('access_token', None), data.get('refresh_token', None))
+
     async def authenticate(self, handler, data=None):
         user = await super().authenticate(handler, data=data)
-        if user:
-            user_roles = self._get_roles_for_token(user['auth_state']['access_token'])
-            if not self._validate_roles(user_roles):
-                return None
-            user['admin'] = self.admin_role and (self.admin_role in user_roles)
-            self.log.info("Authentication Successful for user: %s, roles: %s, admin: %s" % (user['name'],user_roles,user['admin']))
-            return user
-        else:
+        if not user:
             return None
+
+        user_roles = self._get_roles_for_token(user['auth_state']['access_token'])
+        if not self._validate_roles(user_roles):
+            return None
+
+        user['auth_state']['exchanged_tokens'] = dict()
+        for new_token in self.exchange_tokens:
+            access_token, refresh_token = self._exchange_token(user['auth_state']['access_token'], new_token)
+            user['auth_state']['exchanged_tokens'][new_token] = {
+                'access_token': access_token,
+                'refresh_token': refresh_token
+            }
+
+        user['admin'] = self.admin_role and (self.admin_role in user_roles)
+        self.log.info("Authentication Successful for user: %s, roles: %s, admin: %s" % (user['name'], user_roles, user['admin']))
+
+        return user
 
     async def pre_spawn_start(self, user, spawner):
         auth_state = await user.get_auth_state()
@@ -132,6 +182,29 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         spawner.inspection_url = self.userdata_url
         # If function raises Exception, let the this fail
         await maybe_future(self.get_uid_hook(spawner, auth_state))
+
+    def _refresh_user_token(self, auth_state):
+
+        decoded_access_token = self._decode_token(auth_state['access_token'])
+        decoded_refresh_token = self._decode_token(auth_state['refresh_token'])
+
+        diff_access = decoded_access_token['exp'] - time.time()
+        diff_refresh = decoded_refresh_token['exp'] - time.time()
+
+        if diff_access > self.auth_refresh_age:
+            # Access token is still valid and will stay until next refresh
+            return True
+
+        elif diff_refresh < 0:
+            # Refresh token not valid, need to re-authenticate again
+            return False
+
+        else:
+            # We need to refresh access token (which will also refresh the refresh token)
+            access_token, refresh_token = self._refresh_token(auth_state['refresh_token'])
+            auth_state['access_token'] = access_token
+            auth_state['refresh_token'] = refresh_token
+            return auth_state
 
 
     async def refresh_user(self, user, handler=None):
@@ -144,48 +217,33 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         try:
             # Retrieve user authentication info, decode, and check if refresh is needed
             auth_state = await user.get_auth_state()
-            decoded_access_token = self._decode_token(auth_state['access_token'])
-            decoded_refresh_token = self._decode_token(auth_state['refresh_token'])
+            refresh = self._refresh_user_token(auth_state)
 
-            diff_access = decoded_access_token['exp'] - time.time()
-            diff_refresh = decoded_refresh_token['exp'] - time.time()
-
-            if diff_access > self.auth_refresh_age:
-                # Access token is still valid and will stay until next refresh
-                return True
-
-            elif diff_refresh < 0:
-                # Refresh token not valid, need to re-authenticate again
+            if refresh == False:
                 return False
 
-            else:
-                # We need to refresh access token (which will also refresh the refresh token)
-                values = dict(
-                    grant_type = 'refresh_token',
-                    client_id = self.client_id,
-                    client_secret = self.client_secret,
-                    refresh_token = auth_state['refresh_token']
-                )
-                data = parse.urlencode(values).encode('ascii')
+            if refresh != True:
+                auth_state = refresh
 
-                req = request.Request(self.token_url, data)
-                with request.urlopen(req) as response:
-                    data = json.loads(response.read())
+            for new_token in self.exchange_tokens:
+                refresh = self._refresh_user_token(auth_state['exchanged_tokens'][new_token])
 
-                    auth_state['access_token'] = data.get('access_token', None)
-                    auth_state['refresh_token'] = data.get('refresh_token', None)
-                    refresh_user_return = {
-                        'auth_state': auth_state
-                    }
+                if refresh == False:
+                    return False
+                
+                if refresh != True:
+                    auth_state['exchanged_tokens'][new_token] = refresh
 
-                    self.log.info('User %s oAuth tokens refreshed' % user.name)
-                    return refresh_user_return
+            self.log.info('User %s oAuth tokens refreshed' % user.name)
+            return {
+                'auth_state': auth_state
+            }
 
         except HTTPError as e:
             self.log.error("Failure calling the renew endpoint: %s (code: %s)" % (e.read(), e.code))
 
         except:
-            self.log.error("Failed to refresh the oAuth token", exc_info=True)
+            self.log.error("Failed to refresh the oAuth tokens", exc_info=True)
 
         return False
 

@@ -1,6 +1,8 @@
 # KeyCloakAuthenticator
 
-Authenticates users via SSO using OIDC
+Authenticates users via SSO using OIDC. 
+
+This authenticator implements a refresh mechanism, ensuring that the tokens stored in the user dict are always up-to-date (if the update is not possible, it forces a re-authentication of the user). It also allows exchanging the user token for tokens that can be used to authenticate against other (external) services.
 
 
 ## Requirements
@@ -22,7 +24,6 @@ In your JupyterHub config file, set the authenticator and configure it:
 ```python
 # Enable the authenticator
 c.JupyterHub.authenticator_class = 'keycloakauthenticator.KeyCloakAuthenticator'
-c.KeyCloakAuthenticator.enable_auth_state = True
 c.KeyCloakAuthenticator.username_key = 'preferred_username'
 c.KeyCloakAuthenticator.logout_redirect_uri = 'https://cern.ch/swan'
 c.KeyCloakAuthenticator.oauth_callback_url = 'https://swan.cern.ch/hub/oauth_callback'
@@ -39,6 +40,8 @@ c.KeyCloakAuthenticator.oidc_issuer = 'https://auth.cern.ch/auth/realms/cern'
 c.KeyCloakAuthenticator.accepted_roles = set()
 # Specify the role to set a user as admin
 c.KeyCloakAuthenticator.admin_role = 'swan-admin'
+# Exchange the token for tokens usable on other services (pass the audience/app id of the other services)
+c.KeyCloakAuthenticator.exchange_tokens = ['eos-service', 'cernbox-service']
 ```
 
 It's also necessary to configure the Client ID and secret. One way of doing this is by setting the following environment variables:
