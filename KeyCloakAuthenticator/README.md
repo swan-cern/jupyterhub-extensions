@@ -4,6 +4,8 @@ Authenticates users via SSO using OIDC.
 
 This authenticator implements a refresh mechanism, ensuring that the tokens stored in the user dict are always up-to-date (if the update is not possible, it forces a re-authentication of the user). It also allows exchanging the user token for tokens that can be used to authenticate against other (external) services.
 
+This Authenticator is built on top of [OAuthenticator](https://github.com/jupyterhub/oauthenticator) and should be possible to use some of its configuration values.
+
 
 ## Requirements
 
@@ -31,11 +33,13 @@ c.KeyCloakAuthenticator.oauth_callback_url = 'https://swan.cern.ch/hub/oauth_cal
 # Specify the issuer url, to get all the endpoints automatically from .well-known/openid-configuration
 c.KeyCloakAuthenticator.oidc_issuer = 'https://auth.cern.ch/auth/realms/cern'
 
+# If you need to set a different scope, like adding the offline option for longer lived refresh token
+c.KeyCloakAuthenticator.scope = ['profile', 'email', 'offline_access']
 # Only allow users with this specific roles (none, to allow all)
 c.KeyCloakAuthenticator.accepted_roles = set()
 # Specify the role to set a user as admin
 c.KeyCloakAuthenticator.admin_role = 'swan-admin'
-# Exchange the token for tokens usable on other services (pass the audience/app id of the other services)
+# Request access tokens for other services by passing their id's (this uses the token exchange mechanism)
 c.KeyCloakAuthenticator.exchange_tokens = ['eos-service', 'cernbox-service']
 
 # If your authenticator needs extra configurations, set them in the pre-spawn hook
