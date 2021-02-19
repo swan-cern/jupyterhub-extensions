@@ -196,7 +196,8 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             decoded_refresh_token = self._decode_token(auth_state['refresh_token'])
 
             diff_access = decoded_access_token['exp'] - time.time()
-            diff_refresh = decoded_refresh_token['exp'] - time.time()
+            # If we request the offline_access scope, our refresh token won't have expiration
+            diff_refresh = (decoded_refresh_token['exp'] - time.time()) if 'exp' in decoded_refresh_token else 0
 
             if diff_access > self.auth_refresh_age:
                 # Access token is still valid and will stay until next refresh
