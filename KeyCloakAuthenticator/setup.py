@@ -24,7 +24,7 @@ setup_args = dict(
     install_requires=[
         'jupyterhub',
         'oauthenticator',
-        'PyJWT'
+        'PyJWT[crypto]>=2.0.0'
     ],
     zip_safe=False,
     include_package_data=True,
