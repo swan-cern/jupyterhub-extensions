@@ -11,13 +11,16 @@ This Authenticator is built on top of [OAuthenticator](https://github.com/jupyte
 
 * Jupyterhub
 * oauthenticator
-* PyJWT
+* PyJWT[crypto]
+* openssl\_devel (see below)
 
 ## Installation
 
 ```bash
 pip install keycloakauthenticator
 ```
+
+If you enable check\_signature, you also need the `openssl_devel` (or equivalent in your distribution) package.
 
 ## Usage
 
@@ -49,6 +52,10 @@ def pre_spawn_hook(authenticator, spawner, auth_state):
     spawner.user_roles = authenticator.get_roles_for_token(auth_state['access_token'])
     spawner.user_uid = auth_state['oauth_user']['cern_uid']
 c.KeyCloakAuthenticator.pre_spawn_hook = pre_spawn_hook
+
+#Configure token signature verification
+c.KeyCloakAuthenticator.check_signature=True
+c.KeyCloakAuthenticator.jwt_signing_algorithms = ["HS256", "RS256"]
 ```
 
 It's also necessary to configure the Client ID and secret. One way of doing this is by setting the following environment variables:

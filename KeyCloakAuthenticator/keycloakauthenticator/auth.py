@@ -9,6 +9,7 @@ from oauthenticator.generic import GenericOAuthenticator
 from tornado import gen, web
 from traitlets import Unicode, Set, Bool, Any, List
 import jwt, os, pwd, time, json
+from jwt.algorithms import RSAAlgorithm
 from urllib import request, parse
 from urllib.error import HTTPError
 
@@ -61,7 +62,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         config=True,
         help="Users with this role login as jupyterhub administrators"
     )
-        
+
     pre_spawn_hook = Any(
         help="""
         Function to execute before spawning a session. Usefull to inject extra variables, like the oauth tokens
@@ -71,6 +72,19 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             c.KeyCloakAuthenticator.pre_spawn_hook = pre_spawn_hook
         """
     ).tag(config=True)
+
+    check_signature = Bool(
+        default_value=True,
+        config=True,
+        help="If False, it will disable JWT signature verification."
+    )
+
+    jwt_signing_algorithms = List (
+        Unicode(),
+        default_value=["HS256", "RS256"],
+        config=True,
+        help="The algorithms that can be used to check jwt signatures."
+    )
 
     exchange_tokens = List (
         Unicode(),
@@ -93,7 +107,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         try:
             with request.urlopen('%s/.well-known/openid-configuration' % self.oidc_issuer) as response:
                 data = json.loads(response.read())
-                
+
                 if not set(['authorization_endpoint', 'token_endpoint', 'userinfo_endpoint', 'end_session_endpoint']).issubset(data.keys()):
                     raise Exception('Unable to retrieve OIDC necessary values')
 
@@ -101,17 +115,36 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 self.token_url = data['token_endpoint']
                 self.userdata_url = data['userinfo_endpoint']
                 self.end_session_url = data['end_session_endpoint']
-        
+
+                if self.config.check_signature :
+                    jwks_uri = data['jwks_uri']
+                    with request.urlopen(jwks_uri) as jkws_response:
+                        jwk_data = json.loads(jkws_response.read())
+                        self.public_key = RSAAlgorithm(RSAAlgorithm.SHA256).from_jwk(jwk_data['keys'][0])
+                        self.log.info('aquired public key from %s' % jwks_uri)
+
         except HTTPError:
             self.log.error("Failure to retrieve the openid configuration")
             raise
 
 
+
     def _validate_roles(self, user_roles):
         return not self.accepted_roles or (self.accepted_roles & user_roles)
 
-    def _decode_token(self, token):
-        return jwt.decode(token, verify=False, algorithms='RS256')
+    def _decode_token(self, token, options={}):
+        if not self.config.check_signature:
+            options.update({"verify_signature": False})
+        #if not explicitly disabled, verify issuer
+        options.setdefault("verify_iss", True)
+
+        try:
+            decoded_token = jwt.decode(token, self.public_key, options=options, audience=self.client_id,
+                    issuer=self.oidc_issuer, algorithms=self.jwt_signing_algorithms)
+            return decoded_token
+        except jwt.exceptions.ExpiredSignatureError:
+            self.log.info("Token expired")
+            return None
 
     def get_roles_for_token(self, token):
         decoded_token = self._decode_token(token)
@@ -164,7 +197,11 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         if not user:
             return None
 
-        user_roles = self.get_roles_for_token(user['auth_state']['access_token'])
+        try:
+            user_roles = self.get_roles_for_token(user['auth_state']['access_token'])
+        except:
+            return None
+
         if not self._validate_roles(user_roles):
             return None
 
@@ -193,7 +230,9 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             auth_state = await user.get_auth_state()
 
             decoded_access_token = self._decode_token(auth_state['access_token'])
-            decoded_refresh_token = self._decode_token(auth_state['refresh_token'])
+            # no verification of the refresh token signature as it is not needed, the auth server
+            # verifies it
+            decoded_refresh_token = self._decode_token(auth_state['refresh_token'], options={"verify_signature": False})
 
             diff_access = decoded_access_token['exp'] - time.time()
             # If we request the offline_access scope, our refresh token won't have expiration
@@ -210,6 +249,8 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             else:
                 # We need to refresh access token (which will also refresh the refresh token)
                 access_token, refresh_token = self._refresh_token(auth_state['refresh_token'])
+                #check signature for new access token, if it fails we catch in the exception below
+                self._decode_token(access_token)
                 auth_state['access_token'] = access_token
                 auth_state['refresh_token'] = refresh_token
                 auth_state['exchanged_tokens'] = self._exchange_tokens(access_token)
