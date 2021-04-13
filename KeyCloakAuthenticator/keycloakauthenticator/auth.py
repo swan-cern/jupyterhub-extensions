@@ -50,8 +50,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         help="URL to invalidate the SSO cookie."
     )
 
-    claim_roles_key = Set (
-        Unicode(),
+    claim_roles_key = Unicode(
         default_value='Default',
         config=True,
         help="This is the roles claim key. Default is resource_access.{client_id}.roles"
