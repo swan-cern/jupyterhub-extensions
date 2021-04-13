@@ -50,6 +50,13 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         help="URL to invalidate the SSO cookie."
     )
 
+    claim_roles_key = Set (
+        Unicode(),
+        default_value='Default',
+        config=True,
+        help="This is the roles claim key. Default is resource_access.{client_id}.roles"
+    )
+
     accepted_roles = Set (
         Unicode(),
         default_value=set(),
@@ -148,12 +155,16 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
 
     def get_roles_for_token(self, token):
         decoded_token = self._decode_token(token)
-        return set(
-            decoded_token.\
-               get('resource_access', {'app': ''}).\
-               get(self.client_id, {'roles_list': ''}).\
-               get('roles', 'no_roles')
-        )
+
+        if self.claim_roles_key == "Default":
+            return set(
+                decoded_token. \
+                    get('resource_access', {'app': ''}). \
+                    get('self.client_id', {'roles_list': ''}). \
+                    get('roles', 'no_roles')
+            )
+        else:
+            return set(decoded_token.get(self.claim_roles_key, {'app': ''}))
 
     def _exchange_tokens(self, token):
 

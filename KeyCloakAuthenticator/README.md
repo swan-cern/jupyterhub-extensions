@@ -38,6 +38,8 @@ c.KeyCloakAuthenticator.oidc_issuer = 'https://auth.cern.ch/auth/realms/cern'
 
 # If you need to set a different scope, like adding the offline option for longer lived refresh token
 c.KeyCloakAuthenticator.scope = ['profile', 'email', 'offline_access']
+# Roles claim key, by Default it looks for resource_access.{client_id}.roles; otherwise it looks for defined claim key
+c.KeyCloakAuthenticator.claim_roles_key = "Default"
 # Only allow users with this specific roles (none, to allow all)
 c.KeyCloakAuthenticator.accepted_roles = set()
 # Specify the role to set a user as admin
