@@ -163,7 +163,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                     get('roles', 'no_roles')
             )
         else:
-            return set(decoded_token.get(self.claim_roles_key, {'app': ''}))
+            return set(decoded_token.get(self.claim_roles_key, 'no_roles'))
 
     def _exchange_tokens(self, token):
 
