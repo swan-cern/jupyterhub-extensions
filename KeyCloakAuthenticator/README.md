@@ -39,9 +39,16 @@ c.KeyCloakAuthenticator.oidc_issuer = 'https://auth.cern.ch/auth/realms/cern'
 # If you need to set a different scope, like adding the offline option for longer lived refresh token
 c.KeyCloakAuthenticator.scope = ['profile', 'email', 'offline_access']
 # Only allow users with this specific roles (none, to allow all)
-c.KeyCloakAuthenticator.accepted_roles = set()
+c.KeyCloakAuthenticator.allowed_roles = []
 # Specify the role to set a user as admin
 c.KeyCloakAuthenticator.admin_role = 'swan-admin'
+
+# If you have the roles in a non default place inside the user token, you can retrieve them
+# This must return a set
+def claim_roles_key(env, token):
+    return set(token.get('app_roles', []))
+c.KeyCloakAuthenticator.claim_roles_key = claim_roles_key
+
 # Request access tokens for other services by passing their id's (this uses the token exchange mechanism)
 c.KeyCloakAuthenticator.exchange_tokens = ['eos-service', 'cernbox-service']
 
