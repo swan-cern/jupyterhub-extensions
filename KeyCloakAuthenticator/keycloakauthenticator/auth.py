@@ -7,7 +7,7 @@ from jupyterhub.handlers import LogoutHandler
 from jupyterhub.utils import maybe_future
 from oauthenticator.generic import GenericOAuthenticator
 from tornado import gen, web
-from traitlets import Unicode, Set, Bool, Any, List
+from traitlets import Unicode, Bool, List, Any, TraitError, default, validate
 import jwt, os, pwd, time, json
 from jwt.algorithms import RSAAlgorithm
 from urllib import request, parse
@@ -50,11 +50,23 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         help="URL to invalidate the SSO cookie."
     )
 
-    accepted_roles = Set (
-        Unicode(),
-        default_value=set(),
+    # Use Any instead of Callable for compatibility with Python < 3.7
+    claim_roles_key = Any (
         config=True,
-        help="The role for which the login will be accepted. Default is all roles."
+        help="""
+            Callable that receives the spawner object and the user token json (as a dict) and returns the roles set.
+            Useful for retrieving the info from a nested object.
+            By default, retrieves the roles in resource_access.{client_id}.roles.
+        """,
+    )
+
+    # Use list instead of set to allow easy configuration in Helm/Kbernetes yaml files
+    # This gets converted to a set internally
+    allowed_roles = List (
+        Unicode(),
+        default_value=[],
+        config=True,
+        help="List with the roles for which the login will be accepted. If an empty list is given (default) all users are allowed."
     )
 
     admin_role = Unicode(
@@ -64,14 +76,16 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
     )
 
     pre_spawn_hook = Any(
+        allow_none=True,
+        config=True,
         help="""
-        Function to execute before spawning a session. Usefull to inject extra variables, like the oauth tokens
+        Callable to execute before spawning a session. Usefull to inject extra variables, like the oauth tokens
         Example::
             def pre_spawn_hook(authenticator, spawner, auth_state):
                 spawner.environment['ACCESS_TOKEN'] = auth_state['exchanged_tokens']['eos-service']
             c.KeyCloakAuthenticator.pre_spawn_hook = pre_spawn_hook
         """
-    ).tag(config=True)
+    )
 
     check_signature = Bool(
         default_value=True,
@@ -93,11 +107,35 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         help="List of audiences to exchange our token to"
     )
 
+    @validate('pre_spawn_hook')
+    def _validate_pre_spawn_hook(self, proposal):
+        value = proposal['value']
+        if not callable(value):
+            raise TraitError("pre_spawn_hook must be callable")
+        return value
+
+    @validate('claim_roles_key')
+    def _validate_claim_roles_key(self, proposal):
+        value = proposal['value']
+        if not callable(value):
+            raise TraitError("claim_roles_key must be callable")
+        return value
+
+    @default("claim_roles_key")
+    def _default_claim_roles_key(self):
+        def get_roles(env, token):
+            return set(token.\
+                get('resource_access', {'app': ''}).\
+                get(env.client_id, {'roles_list': ''}).\
+                get('roles', []))
+        return get_roles
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         # Force auth state so that we can store the tokens in the user dict
         self.enable_auth_state = True
+        self._allowed_roles = set(self.allowed_roles)
 
         if not self.oidc_issuer:
             raise Exception('No OIDC issuer url provided')
@@ -128,9 +166,9 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             raise
 
 
-
     def _validate_roles(self, user_roles):
-        return not self.accepted_roles or (self.accepted_roles & user_roles)
+        return not self._allowed_roles or \
+            (self._allowed_roles & user_roles)
 
     def _decode_token(self, token, options={}):
         if not self.config.check_signature:
@@ -145,15 +183,6 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         except jwt.exceptions.ExpiredSignatureError:
             self.log.info("Token expired")
             return None
-
-    def get_roles_for_token(self, token):
-        decoded_token = self._decode_token(token)
-        return set(
-            decoded_token.\
-               get('resource_access', {'app': ''}).\
-               get(self.client_id, {'roles_list': ''}).\
-               get('roles', 'no_roles')
-        )
 
     def _exchange_tokens(self, token):
 
@@ -198,11 +227,18 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             return None
 
         try:
-            user_roles = self.get_roles_for_token(user['auth_state']['access_token'])
+            decoded_token = self._decode_token(user['auth_state']['access_token'])
+            user_roles = self.claim_roles_key(self, decoded_token)
         except:
+            self.log.error("Unable to retrieve the roles, denying access.", exc_info=True)
+            return None
+
+        if not isinstance(user_roles, set):
+            self.log.error("User roles is not a 'set', denying access")
             return None
 
         if not self._validate_roles(user_roles):
+            self.log.info(f"User '{user['name']}' doesn't have apropriate role to be allowed")
             return None
 
         user['auth_state']['exchanged_tokens'] = self._exchange_tokens(user['auth_state']['access_token'])
