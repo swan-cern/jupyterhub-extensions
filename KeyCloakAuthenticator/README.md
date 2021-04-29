@@ -56,8 +56,9 @@ c.KeyCloakAuthenticator.exchange_tokens = ['eos-service', 'cernbox-service']
 def pre_spawn_hook(authenticator, spawner, auth_state):
     spawner.environment['ACCESS_TOKEN'] = auth_state['exchanged_tokens']['eos-service']
     spawner.environment['OAUTH_INSPECTION_ENDPOINT'] = authenticator.userdata_url.replace('https://', '')
-    spawner.user_roles = authenticator.get_roles_for_token(auth_state['access_token'])
     spawner.user_uid = auth_state['oauth_user']['cern_uid']
+    decoded_token = authenticator._decode_token(auth_state['access_token'])
+    spawner.user_roles = authenticator.claim_roles_key(authenticator, decoded_token)
 c.KeyCloakAuthenticator.pre_spawn_hook = pre_spawn_hook
 
 #Configure token signature verification
