@@ -266,7 +266,7 @@ class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
                         raise ValueError(
                             """
                             Access to the Analytix cluster is not granted. 
-                            Please <a href="https://cern.service-now.com/service-portal/report-ticket.do?name=request&fe=Hadoop-Components" target="_blank">request access</a>
+                            Please <a href="https://cern.service-now.com/service-portal?id=sc_cat_item&name=access-cluster-hadoop&se=Hadoop-Service" target="_blank">request access</a>
                             """)
 
                 self.log_metric(
