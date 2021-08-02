@@ -146,13 +146,13 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             with request.urlopen('%s/.well-known/openid-configuration' % self.oidc_issuer) as response:
                 data = json.loads(response.read())
 
-                if not set(['authorization_endpoint', 'token_endpoint', 'userinfo_endpoint', 'end_session_endpoint']).issubset(data.keys()):
+                if not set(['authorization_endpoint', 'token_endpoint', 'userinfo_endpoint']).issubset(data.keys()):
                     raise Exception('Unable to retrieve OIDC necessary values')
 
                 self.authorize_url = data['authorization_endpoint']
                 self.token_url = data['token_endpoint']
                 self.userdata_url = data['userinfo_endpoint']
-                self.end_session_url = data['end_session_endpoint']
+                self.end_session_url = data.get('end_session_endpoint')
 
                 if self.config.check_signature :
                     jwks_uri = data['jwks_uri']
