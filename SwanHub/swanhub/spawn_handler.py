@@ -180,7 +180,7 @@ class SpawnHandler(JHSpawnHandler):
 
     async def _render_form_wrapper(self, for_user, message=''):
         spawner_options_form = await for_user.spawner.get_options_form()
-        form = await self._render_form(for_user, spawner_options_form, message)
+        form = self._render_form(for_user, spawner_options_form, message)
         return form
 
     async def _render_form(self, for_user, spawner_options_form, message=''):
@@ -189,7 +189,7 @@ class SpawnHandler(JHSpawnHandler):
 
         save_config = not configs.local_home and not self.allow_named_servers
 
-        return self.render_template('spawn.html',
+        return await self.render_template('spawn.html',
                                     for_user=for_user,
                                     auth_state=auth_state,
                                     spawner_options_form=spawner_options_form,
