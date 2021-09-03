@@ -256,7 +256,7 @@ class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
                         raise ValueError(
                             """
                             Access to the NXCALS cluster is not granted. 
-                            Please <a href="https://wikis.cern.ch/display/NXCALS/Data+Access+User+Guide#DataAccessUserGuide-nxcals_access" target="_blank">request access</a>
+                            Please <a href="http://nxcals-docs.web.cern.ch/current/user-guide/data-access/nxcals-access-request/" target="_blank">request access</a>
                             """)
                     elif cluster == 'k8s':
                         # if there is no HADOOP_TOKEN_FILE or WEBHDFS_TOKEN with K8s we ignore (no HDFS access granted)
