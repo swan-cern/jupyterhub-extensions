@@ -56,16 +56,6 @@ class SpawnHandler(JHSpawnHandler):
             self.finish(form)
             return
 
-        if not self.allow_named_servers and for_user is None:
-            if 'changeconfig' in self.request.query_arguments:
-                self._swanrc_delete(user.name)
-            else:
-                form_options = self._swanrc_read(user.name)
-                if form_options:
-                    self.log.info('User has default session configuration: loading saved options')
-                    await self._spawn(user, '', form_options, configs)
-                    return
-
         try:
             await super().get(for_user, server_name)
         except web.HTTPError as e:
@@ -96,14 +86,9 @@ class SpawnHandler(JHSpawnHandler):
 
         form_options = {}
         for key, byte_list in self.request.body_arguments.items():
-            if key == 'keep-config':
-                continue
             form_options[key] = [bs.decode('utf8') for bs in byte_list]
         for key, byte_list in self.request.files.items():
             form_options["%s_file" % key] = byte_list
-
-        if 'keep-config' in self.request.body_arguments:
-            self._swanrc_write(user.name, form_options)
 
         await self._spawn(user, server_name, form_options, configs)
 
@@ -199,43 +184,6 @@ class SpawnHandler(JHSpawnHandler):
                                     save_config=save_config
                                     )
 
-    def _swanrc_read(self, user):
-        """ Read the user's swanrc file stored in CERNBox.
-            This file contains the user's session configuration in order to automatically start the session when accessing SWAN.
-            Swanrc bash scripts runs as the user in order to read his files.
-        """
-        options = {}
-        configs = SpawnHandlersConfigs.instance()
-        if not configs.local_home:
-            subprocess.call(
-                ['sudo', '/srv/jupyterhub/culler/check_ticket.sh', user])
-            rc = subprocess.Popen(
-                ['sudo', configs.swanrc_path, 'read', user], stdout=subprocess.PIPE)
-            for line in io.TextIOWrapper(rc.stdout, encoding="utf-8"):
-                if line == 0:
-                    break
-                line_split = line.split('=')
-                if len(line_split) == 2:
-                    options[line_split[0]] = [line_split[1].rstrip('\n')]
-
-        return options
-
-    def _swanrc_write(self, user, options):
-        """Write the configurations selected in a .swanrc file inside user's CERNBox"""
-        new_list = []
-        for key in options:
-            new_list.append('%s=%s' % (key, options[key][0]))
-
-        configs = SpawnHandlersConfigs.instance()
-        if not configs.local_home:
-            subprocess.call(['sudo', configs.swanrc_path, 'write',
-                             user, " ".join(new_list).replace('$', '\$')])
-
-    def _swanrc_delete(self, user):
-        """Remove the configuration file in order to start a new configuration"""
-        configs = SpawnHandlersConfigs.instance()
-        if not configs.local_home:
-            subprocess.call(['sudo', configs.swanrc_path, 'remove', user])
 
     def _log_spawn_metrics(self, user, options, spawn_duration_sec, spawn_exception=None):
         """

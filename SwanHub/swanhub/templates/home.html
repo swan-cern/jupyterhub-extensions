@@ -124,7 +124,7 @@
 
       api.stop_server(user, {
         success: function () {
-          window.location.replace('{{base_url}}spawn?changeconfig');
+          window.location.replace('{{base_url}}spawn');
         },
         error: function () {
           $('#swan-loader .text').html('<p class="extra">There was an error shutting down your session.<br>Try again later.<br><a href="{{base_url}}">Click here to return to SWAN</a></p>');
