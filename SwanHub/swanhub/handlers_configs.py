@@ -21,12 +21,6 @@ class SpawnHandlersConfigs(SingletonConfigurable):
 
     user_script_env_field = 'scriptenv'
 
-    swanrc_path = Unicode(
-        default_value='/srv/jupyterhub/swanrc/swanrc.sh',
-        config=True,
-        help='Path of the bash script to read and write user swanrc file'
-    )
-
     local_home = Bool(
         default_value=False,
         config=True,
