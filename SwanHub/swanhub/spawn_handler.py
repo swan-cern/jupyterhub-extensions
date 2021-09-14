@@ -180,7 +180,7 @@ class SpawnHandler(JHSpawnHandler):
 
     async def _render_form_wrapper(self, for_user, message=''):
         spawner_options_form = await for_user.spawner.get_options_form()
-        form = self._render_form(for_user, spawner_options_form, message)
+        form = await self._render_form(for_user, spawner_options_form, message)
         return form
 
     async def _render_form(self, for_user, spawner_options_form, message=''):
