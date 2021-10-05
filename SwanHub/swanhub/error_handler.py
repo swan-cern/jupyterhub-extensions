@@ -10,14 +10,14 @@ class ProxyErrorHandler(pages.ProxyErrorHandler):
         button, users are unable to clear their states.
     """
 
-    def get(self, status_code_s):
+    async def get(self, status_code_s):
         status_code = int(status_code_s)
 
         # If the error is container not reachable, redirect to home#changeconfig
         # where the cleanup will take place (including removing the stored configuration 
         # which might be causing the problem)
         if status_code == 503:
-            html = self.render_template(
+            html = await self.render_template(
                 'unreachable_container.html',
             )
             self.finish(html)
