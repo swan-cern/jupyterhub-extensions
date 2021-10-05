@@ -48,7 +48,7 @@ class SpawnHandler(JHSpawnHandler):
         user = self.current_user
 
         if not user.admin and os.path.isfile(configs.maintenance_file):
-            self.finish(self.render_template('maintenance.html'))
+            self.finish(await self.render_template('maintenance.html'))
             return
 
         if 'failed' in self.request.query_arguments:
