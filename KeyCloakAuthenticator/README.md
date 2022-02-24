@@ -65,8 +65,8 @@ c.KeyCloakAuthenticator.pre_spawn_hook = pre_spawn_hook
 c.KeyCloakAuthenticator.check_signature=True
 c.KeyCloakAuthenticator.jwt_signing_algorithms = ["HS256", "RS256"]
 
-# By default jupyterhub does not trigger a refresh in `Authenticator.auth_refresh_age` seconds (default 5 minutes)
-# If you want to refresh the token less often:
+# Once a token is refreshed, by default jupyterhub does not trigger a refresh again (triggered when receiving any authenticated request) in `Authenticator.auth_refresh_age` seconds (default 5 minutes)
+# If you want to refresh the token less often, and align the refresh to your tokens expiration, this value can be changed:
 c.KeyCloakAuthenticator.auth_refresh_age = 900 # 15 minutes
 ```
 
