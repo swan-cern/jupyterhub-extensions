@@ -64,7 +64,12 @@ c.KeyCloakAuthenticator.pre_spawn_hook = pre_spawn_hook
 #Configure token signature verification
 c.KeyCloakAuthenticator.check_signature=True
 c.KeyCloakAuthenticator.jwt_signing_algorithms = ["HS256", "RS256"]
+
+# By default jupyterhub does not trigger a refresh in `Authenticator.auth_refresh_age` seconds (default 5 minutes)
+# If you want to refresh the token less often:
+c.KeyCloakAuthenticator.auth_refresh_age = 900 # 15 minutes
 ```
+
 
 It's also necessary to configure the Client ID and secret. One way of doing this is by setting the following environment variables:
 
