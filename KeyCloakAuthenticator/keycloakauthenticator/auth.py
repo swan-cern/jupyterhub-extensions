@@ -2,32 +2,13 @@
 # Copyright CERN
 
 """KeyCloakAuthenticator"""
-
-from jupyterhub.handlers import LogoutHandler
 from jupyterhub.utils import maybe_future
 from oauthenticator.generic import GenericOAuthenticator
-from tornado import gen, web
 from traitlets import Unicode, Bool, List, Any, TraitError, default, validate
-import jwt, os, pwd, time, json
+import jwt, time, json
 from jwt.algorithms import RSAAlgorithm
 from urllib import request, parse
 from urllib.error import HTTPError
-
-class KeyCloakLogoutHandler(LogoutHandler):
-    """Log a user out by clearing both their JupyterHub login cookie and SSO cookie."""
-
-    async def get(self):
-        if self.authenticator.enable_logout:
-            await self.default_handle_logout()
-            await self.handle_logout()
-
-            redirect_url = self.authenticator.end_session_url
-            if self.authenticator.logout_redirect_uri:
-                redirect_url += '?redirect_uri=%s' % self.authenticator.logout_redirect_uri
-
-            self.redirect(redirect_url)
-        else:
-            await super().get()
 
 class KeyCloakAuthenticator(GenericOAuthenticator):
     """KeyCloakAuthenticator based on upstream jupyterhub/oauthenticator"""
@@ -42,12 +23,6 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         default_value=True,
         config=True,
         help="If True, it will logout in SSO."
-    )
-
-    logout_redirect_uri = Unicode(
-        default_value='',
-        config=True,
-        help="URL to invalidate the SSO cookie."
     )
 
     # Use Any instead of Callable for compatibility with Python < 3.7
@@ -152,7 +127,13 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 self.authorize_url = data['authorization_endpoint']
                 self.token_url = data['token_endpoint']
                 self.userdata_url = data['userinfo_endpoint']
-                self.end_session_url = data.get('end_session_endpoint')
+                
+                end_session_url = data.get('end_session_endpoint')
+                if self.enable_logout and end_session_url:
+                    if self.logout_redirect_url:
+                        end_session_url += '?redirect_uri=%s' % self.logout_redirect_url
+                    # Update parent class OAuthenticator.logout_redirect_url
+                    self.logout_redirect_url = end_session_url 
 
                 if self.config.check_signature :
                     jwks_uri = data['jwks_uri']
@@ -297,6 +278,3 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             self.log.error("Failed to refresh the oAuth tokens", exc_info=True)
 
         return False
-
-    def get_handlers(self, app):
-        return super().get_handlers(app) + [(r'/logout', KeyCloakLogoutHandler)]
