@@ -221,8 +221,11 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         if not self._validate_roles(user_roles):
             self.log.info(f"User '{user['name']}' doesn't have apropriate role to be allowed")
             return None
-
-        user['auth_state']['exchanged_tokens'] = self._exchange_tokens(user['auth_state']['access_token'])
+        try:
+            user['auth_state']['exchanged_tokens'] = self._exchange_tokens(user['auth_state']['access_token'])
+        except:
+            self.log.error("Failed to exchange tokens during authenticate.", exc_info=True)
+            return None
 
         user['admin'] = self.admin_role and (self.admin_role in user_roles)
         self.log.info("Authentication Successful for user: %s, roles: %s, admin: %s" % (user['name'], user_roles, user['admin']))
@@ -264,7 +267,11 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 self._decode_token(access_token)
                 auth_state['access_token'] = access_token
                 auth_state['refresh_token'] = refresh_token
-                auth_state['exchanged_tokens'] = self._exchange_tokens(access_token)
+                try:
+                    auth_state['exchanged_tokens'] = self._exchange_tokens(access_token)
+                except:
+                    self.log.error("Failed to exchange tokens during refresh.", exc_info=True)
+                    return False
 
                 self.log.info('User %s oAuth tokens refreshed' % user.name)
                 return {
