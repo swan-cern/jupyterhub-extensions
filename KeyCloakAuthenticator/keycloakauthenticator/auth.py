@@ -265,20 +265,14 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             # Retrieve user authentication info, decode, and check if refresh is needed
             auth_state = await user.get_auth_state()
 
-            decoded_access_token = self._decode_token(auth_state['access_token'])
             # no verification of the refresh token signature as it is not needed, the auth server
             # verifies it
             decoded_refresh_token = self._decode_token(auth_state['refresh_token'], options={"verify_signature": False})
 
-            diff_access = decoded_access_token['exp'] - time.time()
             # If we request the offline_access scope, our refresh token won't have expiration
             diff_refresh = (decoded_refresh_token['exp'] - time.time()) if 'exp' in decoded_refresh_token else 0
 
-            if diff_access > self.auth_refresh_age:
-                # Access token is still valid and will stay until next refresh
-                return True
-
-            elif diff_refresh < 0:
+            if diff_refresh < 0:
                 # Refresh token not valid, need to re-authenticate again
                 return False
 
