@@ -30,7 +30,9 @@ In your JupyterHub config file, set the authenticator and configure it:
 # Enable the authenticator
 c.JupyterHub.authenticator_class = 'keycloakauthenticator.KeyCloakAuthenticator'
 c.KeyCloakAuthenticator.username_key = 'preferred_username'
-c.KeyCloakAuthenticator.logout_redirect_uri = 'https://cern.ch/swan'
+
+# URL to redirect to after logout is complete with auth provider.
+c.KeyCloakAuthenticator.logout_redirect_url = 'https://cern.ch/swan'
 c.KeyCloakAuthenticator.oauth_callback_url = 'https://swan.cern.ch/hub/oauth_callback'
 
 # Specify the issuer url, to get all the endpoints automatically from .well-known/openid-configuration
