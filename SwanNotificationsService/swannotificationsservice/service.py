@@ -5,10 +5,11 @@
 import os
 import json
 from tornado import web
-from jupyterhub.services.auth import HubAuthenticated
+from jupyterhub.services.auth import HubOAuthenticated, HubOAuthCallbackHandler
+from kubernetes import client,config
 
 
-class SwanNotificationsService(HubAuthenticated, web.RequestHandler):
+class SwanNotificationsService(HubOAuthenticated, web.RequestHandler):
     """
         Render the user's notifications in JSON.
         Used by Jupyter extension SwanNotifications to display the messages in the interface.
@@ -16,24 +17,31 @@ class SwanNotificationsService(HubAuthenticated, web.RequestHandler):
 
     def initialize(self, notifications_file, maintenance_file):
         self.notifications_file = notifications_file
-        self.maintenance_file = maintenance_file
+        config.load_incluster_config()
+        self.v1 = client.CoreV1Api()
+        self.namespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
 
     @web.authenticated
     def get(self):
 
         response = []
 
-        if os.path.isfile(self.maintenance_file):
-            with open(self.maintenance_file, 'r') as maintenance:
-                response.append({
-                    'id': 'maintenance_notice',
-                    'level': 'notice',
-                    'dismissible': 0,
-                    'message': 'This machine is scheduled for maintenance. Please finish your session, at your earliest convenience,'
-                               ' and visit swan.cern.ch to open a new one.<br>' + maintenance.read().replace('\n', '<br>')
-                })
+        user = self.get_current_user()
 
-        user = self.current_user['name']
+        username= user['name']
+
+        user_pod = self.v1.read_namespaced_pod(f'jupyter-{username}', self.namespace)
+        user_node = user_pod.spec.node_name
+
+        if self.v1.read_node(user_node).spec.unschedulable:
+           response.append({
+               'id': 'maintenance_notice',
+               'level': 'notice',
+               'dismissible': 0,
+               'message': 'This machine is scheduled for maintenance. Please finish your session, at your earliest convenience,'
+                          ' and visit swan.cern.ch to open a new one.<br>'
+           })
+
 
         notifications = {}
         if os.path.isfile(self.notifications_file):

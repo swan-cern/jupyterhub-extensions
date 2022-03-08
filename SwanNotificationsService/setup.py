@@ -22,7 +22,8 @@ setup_args = dict(
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
     install_requires=[
-          'jupyterhub'
+          'jupyterhub~=1.5.0',
+          'kubernetes~=22.0'
     ],
     zip_safe=False,
     include_package_data=True,
