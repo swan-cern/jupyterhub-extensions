@@ -5,6 +5,7 @@
 import os
 import json
 from tornado import web
+from tornado.ioloop import IOLoop
 from jupyterhub.services.auth import HubOAuthenticated, HubOAuthCallbackHandler
 from kubernetes import client,config
 
@@ -21,8 +22,14 @@ class SwanNotificationsService(HubOAuthenticated, web.RequestHandler):
         self.v1 = client.CoreV1Api()
         self.namespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
 
+    def check_node_schedulable(self,username):
+        user_pod = self.v1.read_namespaced_pod(f'jupyter-{username}', self.namespace)
+        user_node = user_pod.spec.node_name
+
+        return self.v1.read_node(user_node).spec.unschedulable
+
     @web.authenticated
-    def get(self):
+    async def get(self):
 
         response = []
 
@@ -30,10 +37,9 @@ class SwanNotificationsService(HubOAuthenticated, web.RequestHandler):
 
         username= user['name']
 
-        user_pod = self.v1.read_namespaced_pod(f'jupyter-{username}', self.namespace)
-        user_node = user_pod.spec.node_name
+        is_node_unschedulable= await IOLoop.current().run_in_executor(None, self.check_node_schedulable, username)
 
-        if self.v1.read_node(user_node).spec.unschedulable:
+        if is_node_unschedulable:
            response.append({
                'id': 'maintenance_notice',
                'level': 'notice',

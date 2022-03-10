@@ -17,6 +17,14 @@ Install the package:
 pip install swannotificationsservice
 ```
 
+## Update the container image
+
+This folder contains a Dockerfile that can be used to create an image for the pod that runs the notifications service. Once you release to PyPI you need to create a new image, e.g.
+
+```bash
+docker build -t gitlab-registry.cern.ch/swan/docker-images/jupyterhub/notifications:v0.1.0 && docker push gitlab-registry.cern.ch/swan/docker-images/jupyterhub/notifications:v0.1.0
+```
+
 ## Usage
 
 Call the binary and specify configuration parameters:

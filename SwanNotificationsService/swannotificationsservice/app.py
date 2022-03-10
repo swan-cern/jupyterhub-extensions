@@ -22,8 +22,6 @@ def main():
             (prefix, SwanNotificationsService,
                 {'notifications_file': args.notification, 'maintenance_file': args.maintenance}),
             (url_path_join(prefix,"oauth_callback"),HubOAuthCallbackHandler),
-            (r'.*', SwanNotificationsService,
-                {'notifications_file': args.notification, 'maintenance_file': args.maintenance}),
             ],
             cookie_secret=os.urandom(32))
     app.listen(args.port)
