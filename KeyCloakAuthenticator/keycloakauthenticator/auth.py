@@ -9,6 +9,8 @@ import jwt, time, json
 from jwt.algorithms import RSAAlgorithm
 from urllib import request, parse
 from urllib.error import HTTPError
+from tornado.httpclient import HTTPRequest
+import asyncio
 
 class KeyCloakAuthenticator(GenericOAuthenticator):
     """KeyCloakAuthenticator based on upstream jupyterhub/oauthenticator"""
@@ -115,34 +117,39 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         if not self.oidc_issuer:
             raise Exception('No OIDC issuer url provided')
 
+        asyncio.ensure_future(self._get_oidc_configs())
+
+    async def _get_oidc_configs(self):
+
         self.log.info('Configuring OIDC from %s' % self.oidc_issuer)
 
         try:
-            with request.urlopen('%s/.well-known/openid-configuration' % self.oidc_issuer) as response:
-                data = json.loads(response.read())
+            req = HTTPRequest(f"{self.oidc_issuer}/.well-known/openid-configuration", headers=self._get_headers())
+            data = await self.fetch(req, "fetching oidc config")
 
-                if not set(['authorization_endpoint', 'token_endpoint', 'userinfo_endpoint']).issubset(data.keys()):
-                    raise Exception('Unable to retrieve OIDC necessary values')
+            if not set(['authorization_endpoint', 'token_endpoint', 'userinfo_endpoint']).issubset(data.keys()):
+                raise Exception('Unable to retrieve OIDC necessary values')
 
-                self.authorize_url = data['authorization_endpoint']
-                self.token_url = data['token_endpoint']
-                self.userdata_url = data['userinfo_endpoint']
-                
-                end_session_url = data.get('end_session_endpoint')
-                if self.enable_logout and end_session_url:
-                    if self.logout_redirect_url:
-                        end_session_url += '?redirect_uri=%s' % self.logout_redirect_url
-                    # Update parent class OAuthenticator.logout_redirect_url
-                    self.logout_redirect_url = end_session_url 
+            self.authorize_url = data['authorization_endpoint']
+            self.token_url = data['token_endpoint']
+            self.userdata_url = data['userinfo_endpoint']
+            
+            end_session_url = data.get('end_session_endpoint')
+            if self.enable_logout and end_session_url:
+                if self.logout_redirect_url:
+                    end_session_url += '?redirect_uri=%s' % self.logout_redirect_url
+                # Update parent class OAuthenticator.logout_redirect_url
+                self.logout_redirect_url = end_session_url 
 
-                if self.config.check_signature :
-                    jwks_uri = data['jwks_uri']
-                    with request.urlopen(jwks_uri) as jkws_response:
-                        jwk_data = json.loads(jkws_response.read())
-                        self.public_key = RSAAlgorithm(RSAAlgorithm.SHA256).from_jwk(jwk_data['keys'][0])
-                        self.log.info('aquired public key from %s' % jwks_uri)
+            if self.config.check_signature :
+                jwks_uri = data['jwks_uri']
 
-        except HTTPError:
+                req = HTTPRequest(jwks_uri, headers=self._get_headers())
+                jwk_data = await self.fetch(req, "fetching jwks")
+                self.public_key = RSAAlgorithm(RSAAlgorithm.SHA256).from_jwk(jwk_data['keys'][0])
+                self.log.info(f"aquired public key from {jwks_uri}")
+
+        except:
             self.log.error("Failure to retrieve the openid configuration")
             raise
 
@@ -165,7 +172,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             self.log.info("Token expired")
             return None
 
-    def _exchange_tokens(self, token):
+    async def _exchange_tokens(self, token):
 
         tokens = dict()
 
@@ -179,28 +186,36 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 audience = new_token,
                 requested_token_type = 'urn:ietf:params:oauth:token-type:access_token'
             )
-            data = parse.urlencode(values).encode('ascii')
+            data = parse.urlencode(values)
 
-            req = request.Request(self.token_url, data)
-            with request.urlopen(req) as response:
-                data = json.loads(response.read())
-                tokens[new_token] = data.get('access_token', None)
+            req = HTTPRequest(
+                self.token_url,
+                method="POST",
+                headers=self._get_headers(),
+                body=data,
+            )
+            response = await self.fetch(req, "exchanging token")
+            tokens[new_token] = response.get('access_token', None)
 
         return tokens
 
-    def _refresh_token(self, refresh_token):
+    async def _refresh_token(self, refresh_token):
         values = dict(
             grant_type = 'refresh_token',
             client_id = self.client_id,
             client_secret = self.client_secret,
             refresh_token = refresh_token
         )
-        data = parse.urlencode(values).encode('ascii')
+        data = parse.urlencode(values)
 
-        req = request.Request(self.token_url, data)
-        with request.urlopen(req) as response:
-            data = json.loads(response.read())
-            return (data.get('access_token', None), data.get('refresh_token', None))
+        req = HTTPRequest(
+            self.token_url,
+            method="POST",
+            headers=self._get_headers(),
+            body=data,
+        )
+        response = await self.fetch(req, "refreshing token")
+        return (response.get('access_token', None), response.get('refresh_token', None))
 
     async def authenticate(self, handler, data=None):
         user = await super().authenticate(handler, data=data)
@@ -222,7 +237,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             self.log.info(f"User '{user['name']}' doesn't have apropriate role to be allowed")
             return None
         try:
-            user['auth_state']['exchanged_tokens'] = self._exchange_tokens(user['auth_state']['access_token'])
+            user['auth_state']['exchanged_tokens'] = await self._exchange_tokens(user['auth_state']['access_token'])
         except:
             self.log.error("Failed to exchange tokens during authenticate.", exc_info=True)
             return None
@@ -262,13 +277,13 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
 
             else:
                 # We need to refresh access token (which will also refresh the refresh token)
-                access_token, refresh_token = self._refresh_token(auth_state['refresh_token'])
+                access_token, refresh_token = await self._refresh_token(auth_state['refresh_token'])
                 #check signature for new access token, if it fails we catch in the exception below
                 self._decode_token(access_token)
                 auth_state['access_token'] = access_token
                 auth_state['refresh_token'] = refresh_token
                 try:
-                    auth_state['exchanged_tokens'] = self._exchange_tokens(access_token)
+                    auth_state['exchanged_tokens'] = await self._exchange_tokens(access_token)
                 except:
                     self.log.error("Failed to exchange tokens during refresh.", exc_info=True)
                     return False
