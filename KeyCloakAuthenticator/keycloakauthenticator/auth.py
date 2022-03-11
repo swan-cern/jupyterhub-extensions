@@ -166,6 +166,8 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                     jwk_data = await self.fetch(req, "fetching jwks")
                     self.public_key = RSAAlgorithm(RSAAlgorithm.SHA256).from_jwk(jwk_data['keys'][0])
                     self.log.info(f"aquired public key from {jwks_uri}")
+                else:
+                    self.public_key = None
 
                 self.configured = True
                 # All good, let's finish
