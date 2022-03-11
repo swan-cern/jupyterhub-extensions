@@ -4,13 +4,26 @@
 """KeyCloakAuthenticator"""
 from jupyterhub.utils import maybe_future
 from oauthenticator.generic import GenericOAuthenticator
+from oauthenticator.oauth2 import OAuthLoginHandler
 from traitlets import Unicode, Bool, List, Any, TraitError, default, validate
 import jwt, time, json
 from jwt.algorithms import RSAAlgorithm
 from urllib import request, parse
 from urllib.error import HTTPError
 from tornado.httpclient import HTTPRequest
+from tornado import web
 import asyncio
+
+# Use a login handler wrapper to ensure the configuration was loaded before redirecting the user
+# Otherwise, the login will end up in infinite loop of redirects
+class OIDCOAuthLoginHandler(OAuthLoginHandler):
+    def get(self):
+        if not self.authenticator.configured:
+            raise web.HTTPError(
+                500, "Error configuring authenticator from IDP"
+            )
+        super().get()
+
 
 class KeyCloakAuthenticator(GenericOAuthenticator):
     """KeyCloakAuthenticator based on upstream jupyterhub/oauthenticator"""
@@ -117,42 +130,50 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         if not self.oidc_issuer:
             raise Exception('No OIDC issuer url provided')
 
+        # Try to configure the authenticator
+        self.configured = False
         asyncio.ensure_future(self._get_oidc_configs())
+        self.login_handler = OIDCOAuthLoginHandler
 
     async def _get_oidc_configs(self):
 
         self.log.info('Configuring OIDC from %s' % self.oidc_issuer)
 
-        try:
-            req = HTTPRequest(f"{self.oidc_issuer}/.well-known/openid-configuration", headers=self._get_headers())
-            data = await self.fetch(req, "fetching oidc config")
+        # Try to load the configs until it succeeds
+        while True:
+            try:
+                req = HTTPRequest(f"{self.oidc_issuer}/.well-known/openid-configuration", headers=self._get_headers())
+                data = await self.fetch(req, "fetching oidc config")
 
-            if not set(['authorization_endpoint', 'token_endpoint', 'userinfo_endpoint']).issubset(data.keys()):
-                raise Exception('Unable to retrieve OIDC necessary values')
+                if not set(['authorization_endpoint', 'token_endpoint', 'userinfo_endpoint']).issubset(data.keys()):
+                    raise Exception('Unable to retrieve OIDC necessary values')
 
-            self.authorize_url = data['authorization_endpoint']
-            self.token_url = data['token_endpoint']
-            self.userdata_url = data['userinfo_endpoint']
-            
-            end_session_url = data.get('end_session_endpoint')
-            if self.enable_logout and end_session_url:
-                if self.logout_redirect_url:
-                    end_session_url += '?redirect_uri=%s' % self.logout_redirect_url
-                # Update parent class OAuthenticator.logout_redirect_url
-                self.logout_redirect_url = end_session_url 
+                self.authorize_url = data['authorization_endpoint']
+                self.token_url = data['token_endpoint']
+                self.userdata_url = data['userinfo_endpoint']
+                
+                end_session_url = data.get('end_session_endpoint')
+                if self.enable_logout and end_session_url:
+                    if self.logout_redirect_url:
+                        end_session_url += '?redirect_uri=%s' % self.logout_redirect_url
+                    # Update parent class OAuthenticator.logout_redirect_url
+                    self.logout_redirect_url = end_session_url 
 
-            if self.config.check_signature :
-                jwks_uri = data['jwks_uri']
+                if self.config.check_signature :
+                    jwks_uri = data['jwks_uri']
 
-                req = HTTPRequest(jwks_uri, headers=self._get_headers())
-                jwk_data = await self.fetch(req, "fetching jwks")
-                self.public_key = RSAAlgorithm(RSAAlgorithm.SHA256).from_jwk(jwk_data['keys'][0])
-                self.log.info(f"aquired public key from {jwks_uri}")
+                    req = HTTPRequest(jwks_uri, headers=self._get_headers())
+                    jwk_data = await self.fetch(req, "fetching jwks")
+                    self.public_key = RSAAlgorithm(RSAAlgorithm.SHA256).from_jwk(jwk_data['keys'][0])
+                    self.log.info(f"aquired public key from {jwks_uri}")
 
-        except:
-            self.log.error("Failure to retrieve the openid configuration")
-            raise
-
+                self.configured = True
+                # All good, let's finish
+                self.log.info('KeycloakAuthenticator fully configured')
+                break
+            except:
+                self.log.error("Failure to retrieve the openid configuration, will try again in 1 min (auth calls will fail)")
+                await asyncio.sleep(60)
 
     def _validate_roles(self, user_roles):
         return not self._allowed_roles or \
@@ -259,6 +280,10 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             This is called when user info is requested and
             has passed more than "auth_refresh_age" seconds.
         """
+
+        # The config was not loaded yet, just fail
+        if not self.configured:
+            return False
 
         try:
             # Retrieve user authentication info, decode, and check if refresh is needed
