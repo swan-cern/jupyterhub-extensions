@@ -1,0 +1,52 @@
+diff --git a/jupyterhub/apihandlers/base.py b/jupyterhub/apihandlers/base.py
+index d59cfb12..64249588 100644
+--- a/jupyterhub/apihandlers/base.py
++++ b/jupyterhub/apihandlers/base.py
+@@ -40,7 +40,9 @@ class APIHandler(BaseHandler):
+         - allow unspecified host/referer (e.g. scripts)
+         """
+         host = self.request.headers.get("Host")
++        self.log.debug("Host is %s",host)
+         referer = self.request.headers.get("Referer")
++        self.log.debug("Referer is %s",referer)
+ 
+         # If no header is provided, assume it comes from a script/curl.
+         # We are only concerned with cross-site browser stuff here.
+@@ -51,16 +53,27 @@ class APIHandler(BaseHandler):
+             self.log.warning("Blocking API request with no referer")
+             return False
+ 
+-        host_path = url_path_join(host, self.hub.base_url)
+-        referer_path = referer.split('://', 1)[-1]
+-        if not (referer_path + '/').startswith(host_path):
+-            self.log.warning(
+-                "Blocking Cross Origin API request.  Referer: %s, Host: %s",
+-                referer,
+-                host_path,
+-            )
+-            return False
+-        return True
++        # 2 chained Apache proxies present Host with a comma
++        # separated list, need to split it
++        import re
++        hosts=re.split("\s*,\s*",host)
++
++        for host_path in hosts:
++
++          self.log.debug("base url is %s",self.hub.base_url)
++          host_path = url_path_join(host_path, self.hub.base_url)
++          self.log.debug("host path is %s",host_path)
++          referer_path = referer.split('://', 1)[-1]
++          self.log.debug("referer path url is %s",referer_path)
++          if (referer_path + '/').startswith(host_path):
++            return True
++
++        self.log.warning(
++            "Blocking Cross Origin API request.  Referer: %s, Host: %s",
++            referer,
++            host,
++        )
++        return False
+ 
+     def get_current_user_cookie(self):
+         """Override get_user_cookie to check Referer header"""
