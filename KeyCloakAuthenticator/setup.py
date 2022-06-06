@@ -23,7 +23,7 @@ setup_args = dict(
     packages=setuptools.find_packages(),
     install_requires=[
         'jupyterhub',
-        'oauthenticator==14.2.0',
+        'oauthenticator==15.0.0',
         'PyJWT[crypto]>=2.0.0'
     ],
     zip_safe=False,
