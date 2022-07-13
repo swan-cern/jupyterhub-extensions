@@ -1,9 +1,9 @@
 import os
 
-from jupyter_packaging import get_version
 import setuptools
+from jupyter_packaging import get_version
 
-name="swanhub"
+name = "swanhub"
 
 # Get our version
 version = get_version(os.path.join(name, "_version.py"))
@@ -18,29 +18,27 @@ setup_args = dict(
     url="https://github.com/swan-cern/jupyterhub-extensions",
     author="SWAN Admins",
     description="Custom SWAN templates and handlers for JupyterHub",
-    long_description= long_description,
+    long_description=long_description,
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
-    install_requires=[
-          'jupyterhub~=1.4.2'
-    ],
+    install_requires=["jupyterhub~=1.4"],
     zip_safe=False,
     include_package_data=True,
     license="AGPL-3.0",
     platforms="Linux, Mac OS X",
     keywords=["JupyterHub", "SWAN", "CERN"],
     entry_points={
-        'console_scripts': [
-            'swanhub = swanhub.app:main',
+        "console_scripts": [
+            "swanhub = swanhub.app:main",
         ],
     },
     classifiers=[
         "License :: OSI Approved :: GNU Affero General Public License v3",
-        'Intended Audience :: Developers',
-        'Intended Audience :: System Administrators',
-        'Intended Audience :: Science/Research',
-        'Programming Language :: Python',
-        'Programming Language :: Python :: 3',
+        "Intended Audience :: Developers",
+        "Intended Audience :: System Administrators",
+        "Intended Audience :: Science/Research",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
     ],
 )
 
