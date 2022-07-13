@@ -1,4 +1,5 @@
-from . import BinderSpawnerMixin, SwanSpawner
+from .binderspawner_mixin import BinderSpawnerMixin
+from .swanspawner import SwanSpawner
 
 
 class SwanBinderSpawner(BinderSpawnerMixin, SwanSpawner):

@@ -21,7 +21,7 @@ setup_args = dict(
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
-    install_requires=["setuptools", "jupyterhub", "psutil", "jupyterhub-kubespawner~=4.0.0"],
+    install_requires=["setuptools", "jupyterhub", "psutil", "jupyterhub-kubespawner~=2.0"],
     zip_safe=False,
     include_package_data=True,
     license="AGPL-3.0",

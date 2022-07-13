@@ -141,8 +141,8 @@ class SwanSpawner(KubeSpawner):
                     USER="jovyan",
                     HOME="/home/jovyan",
                     NB_USER="jovyan",
-                    USER_ID=1000,
-                    NB_UID=1000,
+                    USER_ID="1000",
+                    NB_UID="1000",
                     SERVER_HOSTNAME=os.uname().nodename,
                 )
             )
