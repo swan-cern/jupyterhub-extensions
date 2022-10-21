@@ -1,0 +1,30 @@
+# Workflow to run unit tests on pull requests that change KeyCloakAuthenticator.
+# Sets up python, installs requirements-dev.txt, and runs pytest
+
+on:
+  pull_request:
+    paths:
+      - KeyCloakAuthenticator/**
+
+jobs:
+  check_unit_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install testing dependencies
+        working-directory: KeyCloakAuthenticator/
+        run: |
+          # Install dependencies required by the package
+          pip install -e .
+
+          # Install dependencies for testing framework
+          pip install -r requirements-dev.txt
+
+      - name: Run Unit tests
+        working-directory: KeyCloakAuthenticator/
+        run: pytest
