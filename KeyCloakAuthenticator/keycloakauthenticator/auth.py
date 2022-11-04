@@ -13,6 +13,8 @@ from urllib.error import HTTPError
 from tornado.httpclient import HTTPRequest
 from tornado import web
 import asyncio
+import time
+from .metrics import metric_refresh_user, metric_exchange_token, metric_refresh_token, metric_authenticate, metric_pre_spawn_start
 
 # Use a login handler wrapper to ensure the configuration was loaded before redirecting the user
 # Otherwise, the login will end up in infinite loop of redirects
@@ -200,29 +202,32 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         tokens = dict()
 
         for new_token in self.exchange_tokens:
+            with metric_exchange_token.time():
+                start = time.time()
+                values = dict(
+                    grant_type = 'urn:ietf:params:oauth:grant-type:token-exchange',
+                    client_id = self.client_id,
+                    client_secret = self.client_secret,
+                    subject_token = token,
+                    audience = new_token,
+                    requested_token_type = 'urn:ietf:params:oauth:token-type:access_token'
+                )
+                data = parse.urlencode(values)
 
-            values = dict(
-                grant_type = 'urn:ietf:params:oauth:grant-type:token-exchange',
-                client_id = self.client_id,
-                client_secret = self.client_secret,
-                subject_token = token,
-                audience = new_token,
-                requested_token_type = 'urn:ietf:params:oauth:token-type:access_token'
-            )
-            data = parse.urlencode(values)
-
-            req = HTTPRequest(
-                self.token_url,
-                method="POST",
-                headers=self._get_headers(),
-                body=data,
-            )
-            response = await self.fetch(req, "exchanging token")
-            tokens[new_token] = response.get('access_token', None)
-
+                req = HTTPRequest(
+                    self.token_url,
+                    method="POST",
+                    headers=self._get_headers(),
+                    body=data,
+                )
+                response = await self.fetch(req, "exchanging token")
+                tokens[new_token] = response.get('access_token', None)
+                self.log.info('Exchanged {} token in {} seconds'.format(new_token, time.time() - start))
         return tokens
-
+    
+    @metric_refresh_token.time()
     async def _refresh_token(self, refresh_token):
+        start = time.time()
         values = dict(
             grant_type = 'refresh_token',
             client_id = self.client_id,
@@ -238,8 +243,10 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             body=data,
         )
         response = await self.fetch(req, "refreshing token")
+        self.log.info('Refresh token request completed in {} seconds'.format(time.time() - start))
         return (response.get('access_token', None), response.get('refresh_token', None))
-
+    
+    @metric_authenticate.time()
     async def authenticate(self, handler, data=None):
         user = await super().authenticate(handler, data=data)
         if not user:
@@ -270,18 +277,20 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
 
         return user
 
+    @metric_pre_spawn_start.time()
     async def pre_spawn_start(self, user, spawner):
         if self.pre_spawn_hook:
             auth_state = await user.get_auth_state()
             await maybe_future(self.pre_spawn_hook(self, spawner, auth_state))
 
-
+    @metric_refresh_user.time()
     async def refresh_user(self, user, handler=None):
         """
             Refresh user's oAuth tokens.
             This is called when user info is requested and
             has passed more than "auth_refresh_age" seconds.
         """
+        start = time.time()
 
         # The config was not loaded yet, just fail
         if not self.configured:
@@ -300,6 +309,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
 
             if diff_refresh < 0:
                 # Refresh token not valid, need to re-authenticate again
+                self.log.info('Failed to refresh token as refresh token expired, took {}'.format(time.time() - start))
                 return False
 
             else:
@@ -312,10 +322,11 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 try:
                     auth_state['exchanged_tokens'] = await self._exchange_tokens(access_token)
                 except:
-                    self.log.error("Failed to exchange tokens during refresh.", exc_info=True)
+                    self.log.error("Failed to exchange tokens during refresh, took %s seconds" % (time.time()-start), exc_info=True)
+
                     return False
 
-                self.log.info('User %s oAuth tokens refreshed' % user.name)
+                self.log.info('User %s oAuth tokens refreshed, took %s seconds' % (user.name, (time.time() - start)))
                 return {
                     'auth_state': auth_state
                 }
@@ -324,6 +335,6 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             self.log.error("Failure calling the renew endpoint: %s (code: %s)" % (e.read(), e.code))
 
         except:
-            self.log.error("Failed to refresh the oAuth tokens", exc_info=True)
+            self.log.error("Failed to refresh the oAuth tokens, took %s seconds" % (time.time()-start), exc_info=True)
 
         return False
