@@ -202,7 +202,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         tokens = dict()
 
         for new_token in self.exchange_tokens:
-            with metric_exchange_token.time():
+            with metric_exchange_token.labels("exchange_token_{}".format(new_token.replace("-","_"))).time():
                 start = time.time()
                 values = dict(
                     grant_type = 'urn:ietf:params:oauth:grant-type:token-exchange',

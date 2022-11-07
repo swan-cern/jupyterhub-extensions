@@ -1,3 +1,9 @@
+"""
+Defines custom prometheus metrics recording durations of actions in the KeyCloakAuthenticator
+
+These metrics are scraped by prometheus from the /hub/metrics endpoint
+"""
+
 from prometheus_client import Histogram
 
 # Customize default buckets to include more buckets between 10s-infinity
@@ -23,15 +29,23 @@ _buckets = (
 )
 
 
-_DURATION_SECONDS = Histogram(
-    "keycloak_authenticator_duration_seconds",
-    "Histogram of KeyCloakAuthenticator durations",
+_METHOD_DURATION_SECONDS = Histogram(
+    "keycloak_authenticator_method_duration_seconds",
+    "Histogram of durations of methods in the KeyCloakAuthenticator",
     labelnames=["method"],
     buckets=_buckets,
 )
 
-metric_refresh_user = _DURATION_SECONDS.labels("refresh_user")
-metric_exchange_token = _DURATION_SECONDS.labels("exchange_token")
-metric_refresh_token = _DURATION_SECONDS.labels("refresh_token")
-metric_authenticate = _DURATION_SECONDS.labels("authenticate")
-metric_pre_spawn_start = _DURATION_SECONDS.labels("pre_spawn_start")
+_REQUEST_DURATION_SECONDS = Histogram(
+    "keycloak_authenticator_request_duration_seconds",
+    "Histogram of durations of outgoing requests made by the KeyCloakAuthenticator",
+    labelnames=["request"],
+    buckets=_buckets,
+)
+
+metric_refresh_user = _METHOD_DURATION_SECONDS.labels("refresh_user")
+metric_authenticate = _METHOD_DURATION_SECONDS.labels("authenticate")
+metric_pre_spawn_start = _METHOD_DURATION_SECONDS.labels("pre_spawn_start")
+
+metric_exchange_token  = _REQUEST_DURATION_SECONDS # Label 'request' set dynamically
+metric_refresh_token = _REQUEST_DURATION_SECONDS.labels("refresh_token")
