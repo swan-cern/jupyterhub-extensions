@@ -202,6 +202,9 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         tokens = dict()
 
         for new_token in self.exchange_tokens:
+
+            # Record duration of request in metric with label:
+            # keycloak_authenticator_request_duration_seconds{request="exchange_token_<service_name>"}
             with metric_exchange_token.labels("exchange_token_{}".format(new_token.replace("-","_"))).time():
                 start = time.time()
                 values = dict(
