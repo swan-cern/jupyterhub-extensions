@@ -13,6 +13,7 @@ from . import get_templates
 from traitlets import default
 import sys
 import os
+import datetime
 
 handlers_map = {
     pages.SpawnHandler: SpawnHandler,
@@ -35,6 +36,8 @@ class SWAN(app.JupyterHub):
         )
 
     def init_tornado_settings(self):
+        self.template_vars['current_year'] = datetime.datetime.now().year # For copyright message
+
         # Add our templates to the end of the list to be used as fallback
         # The upstream templates will be added to the end in the parent init_tornado_settings as well
         for template_path in self._template_paths_default():
