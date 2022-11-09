@@ -228,116 +228,118 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 self.log.info('Exchanged {} token in {} seconds'.format(new_token, time.time() - start))
         return tokens
     
-    @metric_refresh_token.time()
+
     async def _refresh_token(self, refresh_token):
-        start = time.time()
-        values = dict(
-            grant_type = 'refresh_token',
-            client_id = self.client_id,
-            client_secret = self.client_secret,
-            refresh_token = refresh_token
-        )
-        data = parse.urlencode(values)
+        with metric_refresh_token.time():
+            start = time.time()
+            values = dict(
+                grant_type = 'refresh_token',
+                client_id = self.client_id,
+                client_secret = self.client_secret,
+                refresh_token = refresh_token
+            )
+            data = parse.urlencode(values)
 
-        req = HTTPRequest(
-            self.token_url,
-            method="POST",
-            headers=self._get_headers(),
-            body=data,
-        )
-        response = await self.fetch(req, "refreshing token")
-        self.log.info('Refresh token request completed in {} seconds'.format(time.time() - start))
-        return (response.get('access_token', None), response.get('refresh_token', None))
+            req = HTTPRequest(
+                self.token_url,
+                method="POST",
+                headers=self._get_headers(),
+                body=data,
+            )
+            response = await self.fetch(req, "refreshing token")
+            self.log.info('Refresh token request completed in {} seconds'.format(time.time() - start))
+            return (response.get('access_token', None), response.get('refresh_token', None))
     
-    @metric_authenticate.time()
     async def authenticate(self, handler, data=None):
-        user = await super().authenticate(handler, data=data)
-        if not user:
-            return None
+        with metric_authenticate.time():
+            user = await super().authenticate(handler, data=data)
+            if not user:
+                return None
 
-        try:
-            decoded_token = self._decode_token(user['auth_state']['access_token'])
-            user_roles = self.claim_roles_key(self, decoded_token)
-        except:
-            self.log.error("Unable to retrieve the roles, denying access.", exc_info=True)
-            return None
+            try:
+                decoded_token = self._decode_token(user['auth_state']['access_token'])
+                user_roles = self.claim_roles_key(self, decoded_token)
+            except:
+                self.log.error("Unable to retrieve the roles, denying access.", exc_info=True)
+                return None
 
-        if not isinstance(user_roles, set):
-            self.log.error("User roles is not a 'set', denying access")
-            return None
+            if not isinstance(user_roles, set):
+                self.log.error("User roles is not a 'set', denying access")
+                return None
 
-        if not self._validate_roles(user_roles):
-            self.log.info(f"User '{user['name']}' doesn't have apropriate role to be allowed")
-            return None
-        try:
-            user['auth_state']['exchanged_tokens'] = await self._exchange_tokens(user['auth_state']['access_token'])
-        except:
-            self.log.error("Failed to exchange tokens during authenticate.", exc_info=True)
-            return None
+            if not self._validate_roles(user_roles):
+                self.log.info(f"User '{user['name']}' doesn't have apropriate role to be allowed")
+                return None
+            try:
+                user['auth_state']['exchanged_tokens'] = await self._exchange_tokens(user['auth_state']['access_token'])
+            except:
+                self.log.error("Failed to exchange tokens during authenticate.", exc_info=True)
+                return None
 
-        user['admin'] = self.admin_role and (self.admin_role in user_roles)
-        self.log.info("Authentication Successful for user: %s, roles: %s, admin: %s" % (user['name'], user_roles, user['admin']))
+            user['admin'] = self.admin_role and (self.admin_role in user_roles)
+            self.log.info("Authentication Successful for user: %s, roles: %s, admin: %s" % (user['name'], user_roles, user['admin']))
 
-        return user
+            return user
 
-    @metric_pre_spawn_start.time()
     async def pre_spawn_start(self, user, spawner):
-        if self.pre_spawn_hook:
-            auth_state = await user.get_auth_state()
-            await maybe_future(self.pre_spawn_hook(self, spawner, auth_state))
+        with metric_pre_spawn_start.time():
+            if self.pre_spawn_hook:
+                auth_state = await user.get_auth_state()
+                await maybe_future(self.pre_spawn_hook(self, spawner, auth_state))
 
-    @metric_refresh_user.time()
+    
     async def refresh_user(self, user, handler=None):
         """
             Refresh user's oAuth tokens.
             This is called when user info is requested and
             has passed more than "auth_refresh_age" seconds.
         """
-        start = time.time()
+        with metric_refresh_user.time():
+            start = time.time()
 
-        # The config was not loaded yet, just fail
-        if not self.configured:
-            return False
-
-        try:
-            # Retrieve user authentication info, decode, and check if refresh is needed
-            auth_state = await user.get_auth_state()
-
-            # no verification of the refresh token signature as it is not needed, the auth server
-            # verifies it
-            decoded_refresh_token = self._decode_token(auth_state['refresh_token'], options={"verify_signature": False})
-
-            # If we request the offline_access scope, our refresh token won't have expiration
-            diff_refresh = (decoded_refresh_token['exp'] - time.time()) if 'exp' in decoded_refresh_token else 0
-
-            if diff_refresh < 0:
-                # Refresh token not valid, need to re-authenticate again
-                self.log.info('Failed to refresh token as refresh token expired, took {}'.format(time.time() - start))
+            # The config was not loaded yet, just fail
+            if not self.configured:
                 return False
 
-            else:
-                # We need to refresh access token (which will also refresh the refresh token)
-                access_token, refresh_token = await self._refresh_token(auth_state['refresh_token'])
-                #check signature for new access token, if it fails we catch in the exception below
-                self._decode_token(access_token)
-                auth_state['access_token'] = access_token
-                auth_state['refresh_token'] = refresh_token
-                try:
-                    auth_state['exchanged_tokens'] = await self._exchange_tokens(access_token)
-                except:
-                    self.log.error("Failed to exchange tokens during refresh, took %s seconds" % (time.time()-start), exc_info=True)
+            try:
+                # Retrieve user authentication info, decode, and check if refresh is needed
+                auth_state = await user.get_auth_state()
 
+                # no verification of the refresh token signature as it is not needed, the auth server
+                # verifies it
+                decoded_refresh_token = self._decode_token(auth_state['refresh_token'], options={"verify_signature": False})
+
+                # If we request the offline_access scope, our refresh token won't have expiration
+                diff_refresh = (decoded_refresh_token['exp'] - time.time()) if 'exp' in decoded_refresh_token else 0
+
+                if diff_refresh < 0:
+                    # Refresh token not valid, need to re-authenticate again
+                    self.log.info('Failed to refresh token as refresh token expired, took {}'.format(time.time() - start))
                     return False
 
-                self.log.info('User %s oAuth tokens refreshed, took %s seconds' % (user.name, (time.time() - start)))
-                return {
-                    'auth_state': auth_state
-                }
+                else:
+                    # We need to refresh access token (which will also refresh the refresh token)
+                    access_token, refresh_token = await self._refresh_token(auth_state['refresh_token'])
+                    #check signature for new access token, if it fails we catch in the exception below
+                    self._decode_token(access_token)
+                    auth_state['access_token'] = access_token
+                    auth_state['refresh_token'] = refresh_token
+                    try:
+                        auth_state['exchanged_tokens'] = await self._exchange_tokens(access_token)
+                    except:
+                        self.log.error("Failed to exchange tokens during refresh, took %s seconds" % (time.time()-start), exc_info=True)
 
-        except HTTPError as e:
-            self.log.error("Failure calling the renew endpoint: %s (code: %s)" % (e.read(), e.code))
+                        return False
 
-        except:
-            self.log.error("Failed to refresh the oAuth tokens, took %s seconds" % (time.time()-start), exc_info=True)
+                    self.log.info('User %s oAuth tokens refreshed, took %s seconds' % (user.name, (time.time() - start)))
+                    return {
+                        'auth_state': auth_state
+                    }
 
-        return False
+            except HTTPError as e:
+                self.log.error("Failure calling the renew endpoint: %s (code: %s)" % (e.read(), e.code))
+
+            except:
+                self.log.error("Failed to refresh the oAuth tokens, took %s seconds" % (time.time()-start), exc_info=True)
+
+            return False
