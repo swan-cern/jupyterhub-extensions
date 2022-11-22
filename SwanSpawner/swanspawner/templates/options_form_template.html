@@ -157,7 +157,7 @@
 </script>
 <div>
     <label for="placeholder">
-    <span class='nb' id="optionsHeader">Specify the parameters that will be used to contextualise the container which is created for you.</span>
+    <span class='nb' id="optionsHeader">Specify the configuration parameters for the SWAN container that will be created for you.</span>
     </label>
     <br><br>
     <label for="lcgReleaseOptions">Software stack <a href="#" onclick="toggle_visibility('lcgReleaseDetails');"><span class='nbs'>more...</span></a>
@@ -198,7 +198,7 @@
     <br>
     <label for="clusterOptions">Spark cluster <a href="#" onclick="toggle_visibility('sparkClusterDetails');"><span class='nbs'>more...</span></a>
     <div style="display:none;" id="sparkClusterDetails">
-        <span class='nb'>Name of the Spark cluster where to offload computations.</span>
+        <span class='nb'>Name of the Spark cluster used by the SWAN Spark connector. See the <a target="_blank" href="https://hadoop-user-guide.web.cern.ch/">Hadoop User guide</a> and the <a target="_blank" href="https://sparktraining.web.cern.ch/">Spark training course</a></span>
     </div>
     </label>
     <select id="clusterOptions" name="spark-cluster"></select>
