@@ -58,6 +58,7 @@ async def test_refresh_user(monkeypatch):
             })
         class MockResponse:
             def __init__(self):
+                self.code = 200
                 self.body = mock_response_body.encode('utf-8')
                 self.request_time = 0
                 self.time_info ={
@@ -127,6 +128,7 @@ async def test_refresh_user_with_expired_refresh_token(monkeypatch):
             })
         class MockResponse:
             def __init__(self):
+                self.code = 200
                 self.body = mock_response_body.encode('utf-8')
                 self.request_time = 0
                 self.time_info ={
