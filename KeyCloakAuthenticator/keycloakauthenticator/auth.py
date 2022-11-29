@@ -211,6 +211,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         exchange_requests = []
         for service_name in self.exchange_tokens:
             values = dict(
+                grant_type = 'urn:ietf:params:oauth:grant-type:token-exchange',
                 client_id = self.client_id,
                 client_secret = self.client_secret,
                 subject_token = token,
