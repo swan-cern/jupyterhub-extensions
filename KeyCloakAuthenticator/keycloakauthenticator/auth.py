@@ -233,14 +233,16 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                     headers=self._get_headers(),
                     body=data,
                 )
+                access_token = None
                 response = await self.fetch(req, "exchanging token", parse_json=False)
-                response_body = dict()
                 if response.body:
-                    response_body = json.loads(response.body.decode('utf8', 'replace'))
-
+                    body = json.loads(response.body.decode('utf8', 'replace'))
+                    access_token = body.get('access_token', None)
+                if access_token is None:
+                    self.log.error("Could not obtain access token for {}".format(new_token))
+                    
                 metric_exchange_tornado_request_time.labels("exchange_token_{}".format(new_token.replace("-","_"))).observe(response.request_time)
-                metric_exchange_tornado_queue_time.labels("exchange_token_{}".format(new_token.replace("-","_"))).observe(response.time_info.get('queue'))
-                tokens[new_token] = response_body.get('access_token', None)
+                metric_exchange_queue_time.labels("exchange_token_{}".format(new_token.replace("-","_"))).observe(response.time_info.get('queue'))            
                 self.log.info('Exchanged {} token in {} seconds'.format(new_token, time.time() - start))
         return tokens
     
@@ -262,16 +264,22 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 headers=self._get_headers(),
                 body=data,
             )
+            access_t = None
+            refresh_t = None
             response = await self.fetch(req, "refreshing token", parse_json=False)
-            response_body = dict()
             if response.body:
-                response_body = json.loads(response.body.decode('utf8', 'replace'))
+                body = json.loads(response.body.decode('utf8', 'replace'))
+                access_t = body.get('access_token', None)
+                refresh_t = body.get('refresh_token', None)
+            if access_t is None:
+               self.log.error("Could not obtain access token for swan") 
+            if refresh_t is None:
+               self.log.error("Could not obtain refresh token for swan") 
             
             metric_refresh_tornado_request_time.observe(response.request_time)
             metric_refresh_tornado_queue_time.observe(response.time_info.get('queue'))
-
             self.log.info('Refresh token request completed in {} seconds'.format(time.time() - start))
-            return (response_body.get('access_token', None), response_body.get('refresh_token', None))
+            return access_t, refresh_t
     
     async def authenticate(self, handler, data=None):
         with metric_authenticate.time():
