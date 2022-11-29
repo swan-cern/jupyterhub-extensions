@@ -60,7 +60,6 @@ metric_refresh_user = _METHOD_DURATION_SECONDS.labels("refresh_user")
 metric_authenticate = _METHOD_DURATION_SECONDS.labels("authenticate")
 metric_pre_spawn_start = _METHOD_DURATION_SECONDS.labels("pre_spawn_start")
 
-metric_exchange_token = _REQUEST_DURATION_SECONDS # Label 'request' set dynamically
 metric_refresh_token = _REQUEST_DURATION_SECONDS.labels("refresh_token")
 
 metric_exchange_tornado_request_time = _TORNADO_REQUEST_DURATION_SECONDS # Label 'request' set dynamically
