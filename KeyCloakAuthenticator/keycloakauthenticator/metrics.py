@@ -43,9 +43,27 @@ _REQUEST_DURATION_SECONDS = Histogram(
     buckets=_buckets,
 )
 
+_TORNADO_REQUEST_DURATION_SECONDS = Histogram(
+    "keycloak_authenticator_tornado_request_duration_seconds",
+    "Histogram of durations of outgoing requests made by the KeyCloakAuthenticator as reported by tornado",
+    labelnames=["request"],
+    buckets=_buckets,
+)
+_TORNADO_QUEUE_DURATION_SECONDS = Histogram(
+    "keycloak_authenticator_tornado_queue_duration_seconds",
+    "Histogram of durations of time spent in queue for requests made by the KeyCloakAuthenticator as reported by tornado",
+    labelnames=["request"],
+    buckets=_buckets,
+)
+
 metric_refresh_user = _METHOD_DURATION_SECONDS.labels("refresh_user")
 metric_authenticate = _METHOD_DURATION_SECONDS.labels("authenticate")
 metric_pre_spawn_start = _METHOD_DURATION_SECONDS.labels("pre_spawn_start")
 
-metric_exchange_token  = _REQUEST_DURATION_SECONDS # Label 'request' set dynamically
+metric_exchange_token = _REQUEST_DURATION_SECONDS # Label 'request' set dynamically
 metric_refresh_token = _REQUEST_DURATION_SECONDS.labels("refresh_token")
+
+metric_exchange_tornado_request_time = _TORNADO_REQUEST_DURATION_SECONDS # Label 'request' set dynamically
+metric_exchange_queue_time = _TORNADO_QUEUE_DURATION_SECONDS # Label 'request' set dynamically
+metric_refresh_tornado_request_time = _TORNADO_REQUEST_DURATION_SECONDS.labels("refresh_token")
+metric_refresh_queue_time = _TORNADO_QUEUE_DURATION_SECONDS.labels("refresh_token")

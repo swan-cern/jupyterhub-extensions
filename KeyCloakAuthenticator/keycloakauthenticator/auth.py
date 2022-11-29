@@ -14,7 +14,17 @@ from tornado.httpclient import HTTPRequest
 from tornado import web
 import asyncio
 import time
-from .metrics import metric_refresh_user, metric_exchange_token, metric_refresh_token, metric_authenticate, metric_pre_spawn_start
+from .metrics import (
+    metric_refresh_user,
+    metric_exchange_token, 
+    metric_refresh_token, 
+    metric_authenticate, 
+    metric_pre_spawn_start, 
+    metric_exchange_tornado_request_time, 
+    metric_exchange_queue_time,
+    metric_refresh_tornado_request_time, 
+    metric_refresh_queue_time
+)
 
 # Use a login handler wrapper to ensure the configuration was loaded before redirecting the user
 # Otherwise, the login will end up in infinite loop of redirects
@@ -223,8 +233,14 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                     headers=self._get_headers(),
                     body=data,
                 )
-                response = await self.fetch(req, "exchanging token")
-                tokens[new_token] = response.get('access_token', None)
+                response = await self.fetch(req, "exchanging token", parse_json=False)
+                response_body = dict()
+                if response.body:
+                    response_body = json.loads(response.body.decode('utf8', 'replace'))
+
+                metric_exchange_tornado_request_time.labels("exchange_token_{}".format(new_token.replace("-","_"))).observe(response.request_time)
+                metric_exchange_queue_time.labels("exchange_token_{}".format(new_token.replace("-","_"))).observe(response.time_info.get('queue'))
+                tokens[new_token] = response_body.get('access_token', None)
                 self.log.info('Exchanged {} token in {} seconds'.format(new_token, time.time() - start))
         return tokens
     
@@ -246,9 +262,16 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 headers=self._get_headers(),
                 body=data,
             )
-            response = await self.fetch(req, "refreshing token")
+            response = await self.fetch(req, "refreshing token", parse_json=False)
+            response_body = dict()
+            if response.body:
+                response_body = json.loads(response.body.decode('utf8', 'replace'))
+            
+            metric_refresh_tornado_request_time.observe(response.request_time)
+            metric_refresh_queue_time.observe(response.time_info.get('queue'))
+
             self.log.info('Refresh token request completed in {} seconds'.format(time.time() - start))
-            return (response.get('access_token', None), response.get('refresh_token', None))
+            return (response_body.get('access_token', None), response_body.get('refresh_token', None))
     
     async def authenticate(self, handler, data=None):
         with metric_authenticate.time():
