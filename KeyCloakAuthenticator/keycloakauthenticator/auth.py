@@ -21,9 +21,9 @@ from .metrics import (
     metric_authenticate, 
     metric_pre_spawn_start, 
     metric_exchange_tornado_request_time, 
-    metric_exchange_queue_time,
+    metric_exchange_tornado_queue_time,
     metric_refresh_tornado_request_time, 
-    metric_refresh_queue_time
+    metric_refresh_tornado_queue_time
 )
 
 # Use a login handler wrapper to ensure the configuration was loaded before redirecting the user
@@ -239,7 +239,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                     response_body = json.loads(response.body.decode('utf8', 'replace'))
 
                 metric_exchange_tornado_request_time.labels("exchange_token_{}".format(new_token.replace("-","_"))).observe(response.request_time)
-                metric_exchange_queue_time.labels("exchange_token_{}".format(new_token.replace("-","_"))).observe(response.time_info.get('queue'))
+                metric_exchange_tornado_queue_time.labels("exchange_token_{}".format(new_token.replace("-","_"))).observe(response.time_info.get('queue'))
                 tokens[new_token] = response_body.get('access_token', None)
                 self.log.info('Exchanged {} token in {} seconds'.format(new_token, time.time() - start))
         return tokens
@@ -268,7 +268,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 response_body = json.loads(response.body.decode('utf8', 'replace'))
             
             metric_refresh_tornado_request_time.observe(response.request_time)
-            metric_refresh_queue_time.observe(response.time_info.get('queue'))
+            metric_refresh_tornado_queue_time.observe(response.time_info.get('queue'))
 
             self.log.info('Refresh token request completed in {} seconds'.format(time.time() - start))
             return (response_body.get('access_token', None), response_body.get('refresh_token', None))

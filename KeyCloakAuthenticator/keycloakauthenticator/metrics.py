@@ -64,6 +64,6 @@ metric_exchange_token = _REQUEST_DURATION_SECONDS # Label 'request' set dynamica
 metric_refresh_token = _REQUEST_DURATION_SECONDS.labels("refresh_token")
 
 metric_exchange_tornado_request_time = _TORNADO_REQUEST_DURATION_SECONDS # Label 'request' set dynamically
-metric_exchange_queue_time = _TORNADO_QUEUE_DURATION_SECONDS # Label 'request' set dynamically
+metric_exchange_tornado_queue_time = _TORNADO_QUEUE_DURATION_SECONDS # Label 'request' set dynamically
 metric_refresh_tornado_request_time = _TORNADO_REQUEST_DURATION_SECONDS.labels("refresh_token")
-metric_refresh_queue_time = _TORNADO_QUEUE_DURATION_SECONDS.labels("refresh_token")
+metric_refresh_tornado_queue_time = _TORNADO_QUEUE_DURATION_SECONDS.labels("refresh_token")
