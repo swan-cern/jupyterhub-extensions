@@ -16,7 +16,6 @@ import asyncio
 import time
 from .metrics import (
     metric_refresh_user,
-    metric_exchange_token, 
     metric_refresh_token, 
     metric_authenticate, 
     metric_pre_spawn_start, 
@@ -208,43 +207,55 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             return None
 
     async def _exchange_tokens(self, token):
+        # Construct requests for all token exchanges
+        exchange_requests = []
+        for service_name in self.exchange_tokens:
+            values = dict(
+                client_id = self.client_id,
+                client_secret = self.client_secret,
+                subject_token = token,
+                audience = service_name,
+                requested_token_type = 'urn:ietf:params:oauth:token-type:access_token'
+            )
+            data = parse.urlencode(values)
 
-        tokens = dict()
+            req = HTTPRequest(
+                self.token_url,
+                method="POST",
+                headers=self._get_headers(),
+                body=data,
+            )
 
-        for new_token in self.exchange_tokens:
+            exchange_requests.append(req)
 
-            # Record duration of request in metric with label:
-            # keycloak_authenticator_request_duration_seconds{request="exchange_token_<service_name>"}
-            with metric_exchange_token.labels("exchange_token_{}".format(new_token.replace("-","_"))).time():
-                start = time.time()
-                values = dict(
-                    grant_type = 'urn:ietf:params:oauth:grant-type:token-exchange',
-                    client_id = self.client_id,
-                    client_secret = self.client_secret,
-                    subject_token = token,
-                    audience = new_token,
-                    requested_token_type = 'urn:ietf:params:oauth:token-type:access_token'
-                )
-                data = parse.urlencode(values)
+        # Schedule all exchange requests at once
+        start = time.time()
+        responses = await asyncio.gather(*(self.fetch(req, "exchanging token", parse_json=False) for req in exchange_requests))
+        total_t = time.time() - start
+        self.log.info('Token exchanges finished, total time: {} s'.format(total_t))
 
-                req = HTTPRequest(
-                    self.token_url,
-                    method="POST",
-                    headers=self._get_headers(),
-                    body=data,
-                )
-                access_token = None
-                response = await self.fetch(req, "exchanging token", parse_json=False)
-                if response.body:
-                    body = json.loads(response.body.decode('utf8', 'replace'))
-                    access_token = body.get('access_token', None)
-                if access_token is None:
-                    self.log.error("Could not obtain access token for {}".format(new_token))
-                    
-                metric_exchange_tornado_request_time.labels("exchange_token_{}".format(new_token.replace("-","_")), response.code).observe(response.request_time)
-                metric_exchange_tornado_queue_time.labels("exchange_token_{}".format(new_token.replace("-","_"))).observe(response.time_info.get('queue'))            
-                self.log.info('Exchanged {} token in {} seconds'.format(new_token, time.time() - start))
-        return tokens
+        # Inspect the responses obtained for each service
+        access_tokens = {}
+        for response, service_name in zip(responses, self.exchange_tokens):
+            # Get the access token obtained for this service
+            access_token = None
+            if response.body:
+                body = json.loads(response.body.decode('utf8', 'replace'))
+                access_token = body.get('access_token', None)
+            if access_token is None:
+                self.log.error("Could not obtain access token for {}".format(service_name))
+                continue
+                
+            access_tokens[service_name] = access_token
+
+            # Produce logs and metrics for this token exchange
+            queue_t = response.time_info['queue']
+            request_t = response.request_time
+            self.log.info('Exchanged {} token, queue time: {} s, request time: {} s'.format(service_name, queue_t, request_t))
+            metric_exchange_tornado_queue_time.labels("exchange_token_{}".format(service_name.replace("-","_"))).observe(queue_t)            
+            metric_exchange_tornado_request_time.labels("exchange_token_{}".format(service_name.replace("-","_")), response.code).observe(request_t)
+
+        return access_tokens
     
 
     async def _refresh_token(self, refresh_token):
