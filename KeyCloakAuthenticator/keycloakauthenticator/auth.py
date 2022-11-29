@@ -240,7 +240,9 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                     access_token = body.get('access_token', None)
                 if access_token is None:
                     self.log.error("Could not obtain access token for {}".format(new_token))
-                    
+                
+                tokens[new_token] = access_token
+                
                 metric_exchange_tornado_request_time.labels("exchange_token_{}".format(new_token.replace("-","_")), response.code).observe(response.request_time)
                 metric_exchange_tornado_queue_time.labels("exchange_token_{}".format(new_token.replace("-","_"))).observe(response.time_info.get('queue'))            
                 self.log.info('Exchanged {} token in {} seconds'.format(new_token, time.time() - start))
