@@ -242,7 +242,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                     self.log.error("Could not obtain access token for {}".format(new_token))
                     
                 metric_exchange_tornado_request_time.labels("exchange_token_{}".format(new_token.replace("-","_"))).observe(response.request_time)
-                metric_exchange_queue_time.labels("exchange_token_{}".format(new_token.replace("-","_"))).observe(response.time_info.get('queue'))            
+                metric_exchange_tornado_queue_time.labels("exchange_token_{}".format(new_token.replace("-","_"))).observe(response.time_info.get('queue'))            
                 self.log.info('Exchanged {} token in {} seconds'.format(new_token, time.time() - start))
         return tokens
     

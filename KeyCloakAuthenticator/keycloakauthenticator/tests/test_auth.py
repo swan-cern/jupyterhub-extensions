@@ -1,7 +1,7 @@
 import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
-
+import json
 from ..auth import KeyCloakAuthenticator
 
 
@@ -30,7 +30,6 @@ def _get_mock_token(private_key, token_id, expired=False):
         headers={"kid": "dummy-key-id"},
     )
 
-
 @pytest.mark.asyncio
 async def test_refresh_user(monkeypatch):
     """
@@ -50,15 +49,22 @@ async def test_refresh_user(monkeypatch):
     )
     monkeypatch.setattr(KeyCloakAuthenticator, "oidc_issuer", "dummy-oidc-url")
 
-    async def fetch(self, request, label):
+    # Mock the response from the server on refresh and exchange tokens
+    async def _mock_fetch(self, request, label, parse_json):
         print("Mocking fetch for ", request, label)
-        return {
+        mock_response_body = json.dumps({ 
             "access_token": _get_mock_token(private_key, "new_access_token"),
             "refresh_token": _get_mock_token(private_key, "new_refresh_token"),
-        }
-
-    # Mock the response from the server on refresh and exchange tokens
-    monkeypatch.setattr(KeyCloakAuthenticator, "fetch", fetch)
+            })
+        class MockResponse:
+            def __init__(self):
+                self.body = mock_response_body.encode('utf-8')
+                self.request_time = 0
+                self.time_info ={
+                "queue": 0
+                }
+        return MockResponse()
+    monkeypatch.setattr(KeyCloakAuthenticator, "fetch", _mock_fetch)
 
     class MockUser:
         """Fake user object, with dummy authentication state from DB"""
@@ -113,14 +119,21 @@ async def test_refresh_user_with_expired_refresh_token(monkeypatch):
     # Mock the response from the server on refresh and exchange tokens
     monkeypatch.setattr(KeyCloakAuthenticator, "oidc_issuer", "dummy-oidc-url")
 
-    async def fetch(self, request, label):
+    async def _mock_fetch(self, request, label, parse_json):
         print("Mocking fetch for ", request, label)
-        return {
+        mock_response_body = json.dumps({ 
             "access_token": _get_mock_token(private_key, "new_access_token"),
             "refresh_token": _get_mock_token(private_key, "new_refresh_token"),
-        }
-
-    monkeypatch.setattr(KeyCloakAuthenticator, "fetch", fetch)
+            })
+        class MockResponse:
+            def __init__(self):
+                self.body = mock_response_body.encode('utf-8')
+                self.request_time = 0
+                self.time_info ={
+                "queue": 0
+                }
+        return MockResponse()
+    monkeypatch.setattr(KeyCloakAuthenticator, "fetch", _mock_fetch)
 
     class MockUser:
         """Fake user object, with dummy authentication state from DB"""
