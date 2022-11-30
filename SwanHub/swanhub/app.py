@@ -37,6 +37,11 @@ class SWAN(app.JupyterHub):
 
     def init_tornado_settings(self):
         self.template_vars['current_year'] = datetime.datetime.now().year # For copyright message
+        if datetime.date.today().month == 12:
+            # It's Christmas time!
+            self.template_vars['swan_logo_filename'] = 'swan_letters_christmas.png' 
+        else:
+            self.template_vars['swan_logo_filename'] = 'logo_swan_letters.png' 
 
         # Add our templates to the end of the list to be used as fallback
         # The upstream templates will be added to the end in the parent init_tornado_settings as well
