@@ -45,3 +45,23 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
             ))
 
         return env
+
+    # The state management methods below are a temporary fix to store `user_options`
+    # in the database, so that it is restored after a hub restart.
+    # To be removed when updating to JupyterHub 2.1.0 or higher, which stores
+    # `user_options` in the database by default:
+    # https://github.com/jupyterhub/jupyterhub/pull/3773
+    def get_state(self):
+        """Get the current state to save in the database"""
+        state = super().get_state()
+        if self.user_options:
+            state['user_options'] = self.user_options
+        self.log.debug("State to save for {} is: {}".format(self.user.name, state))
+        return state
+
+    def load_state(self, state):
+        """Load state from the database"""
+        super().load_state(state)
+        if 'user_options' in state:
+            self.user_options = state['user_options']
+        self.log.debug("State loaded for {} is {}".format(self.user.name, state))
