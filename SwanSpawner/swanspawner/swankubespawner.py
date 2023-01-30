@@ -1,9 +1,18 @@
 from .swanspawner import define_SwanSpawner_from
 from kubespawner import KubeSpawner
 
+from math import ceil
 from tornado import gen
+from traitlets import Float
+
 
 class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
+
+    mem_request_fraction = Float(
+        default_value=0.5,
+        config=True,
+        help="Fraction of the memory value selected by the user that will be requested"
+    )
 
     @gen.coroutine
     def start(self):
@@ -20,9 +29,19 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
                 del self.extra_resource_guarantees["nvidia.com/gpu"]
                 del self.extra_resource_limits["nvidia.com/gpu"]
 
-            self.cpu_limit = self.user_options[self.user_n_cores]
-            self.mem_limit = self.user_options[self.user_memory]
+            # Resource requests and limits for user pods
 
+            # CPU limit is set to what the user selects in the form
+            # The request (guarantee) is statically set to 1 in the chart;
+            # the resulting overcommit is acceptable since users stay idle
+            # most of the time
+            self.cpu_limit = self.user_options[self.user_n_cores]
+
+            # Memory limit is set to what the user selects in the form
+            # The request (guarantee) is a fraction of the above
+            self.mem_limit = self.user_options[self.user_memory]
+            self.mem_guarantee = ceil(self.mem_limit * self.mem_request_fraction)
+            
             # start configured container
             startup = yield super().start()
 
