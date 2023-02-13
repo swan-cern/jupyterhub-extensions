@@ -370,8 +370,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                     try:
                         auth_state['exchanged_tokens'] = await self._exchange_tokens(access_token)
                     except:
-                        self.log.error("Failed to exchange tokens during refresh, took %s seconds" % (time.time()-start), exc_info=True)
-
+                        self.log.error("Failed to exchange tokens during refresh, took %s seconds, access token %s" % (time.time()-start, access_token), exc_info=True)
                         return False
 
                     self.log.info('User %s oAuth tokens refreshed, took %s seconds' % (user.name, (time.time() - start)))
