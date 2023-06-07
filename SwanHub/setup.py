@@ -22,7 +22,7 @@ setup_args = dict(
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
     install_requires=[
-          'jupyterhub~=1.4.2'
+          'jupyterhub~=4.0.2'
     ],
     zip_safe=False,
     include_package_data=True,

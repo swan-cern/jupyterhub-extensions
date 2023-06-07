@@ -5,16 +5,12 @@
 
 import time
 import os
-import io
-import requests
-import subprocess
-from jupyterhub.handlers.base import BaseHandler
 from jupyterhub.handlers.pages import SpawnHandler as JHSpawnHandler
 from jupyterhub.utils import url_path_join, maybe_future
+from jupyterhub.scopes import needs_scope
 from tornado import web
-from tornado.httputil import url_concat
-from urllib.parse import parse_qs, unquote, urlparse
 from .handlers_configs import SpawnHandlersConfigs
+from tornado.httputil import url_concat
 import datetime
 import calendar
 import pickle
@@ -47,6 +43,8 @@ class SpawnHandler(JHSpawnHandler):
         configs = SpawnHandlersConfigs.instance()
         user = self.current_user
 
+        # FIXME with RBAC the admin property looks like it has changed,
+        # but we're going to drop this code soon either way...
         if not user.admin and os.path.isfile(configs.maintenance_file):
             self.finish(await self.render_template('maintenance.html'))
             return
@@ -64,25 +62,42 @@ class SpawnHandler(JHSpawnHandler):
             return
 
     @web.authenticated
-    async def post(self, for_user=None, server_name=''):
+    def post(self, user_name=None, server_name=''):
         """POST spawns with user-specified options"""
         self.log.info("Handling spawner POST request")
 
         configs = SpawnHandlersConfigs.instance()
-        user = current_user = self.current_user
-
-        if for_user is not None and for_user != user.name:
-            if not user.admin:
-                raise web.HTTPError(
-                    403, "Only admins can spawn on behalf of other users"
-                )
-            user = self.find_user(for_user)
-            if user is None:
-                raise web.HTTPError(404, "No such user: %s" % for_user)
+        current_user = self.current_user
 
         if not current_user.admin and os.path.isfile(configs.maintenance_file):
             self.finish(self.render_template('maintenance.html'))
             return
+        
+        if user_name is None:
+            user_name = self.current_user.name
+        if server_name is None:
+            server_name = ""
+        return self._post(user_name=user_name, server_name=server_name)
+
+    @needs_scope("servers")
+    async def _post(self, user_name, server_name):
+        configs = SpawnHandlersConfigs.instance()
+        for_user = user_name
+        user = current_user = self.current_user
+
+        if for_user != user.name:
+            user = self.find_user(for_user)
+            if user is None:
+                raise web.HTTPError(404, "No such user: %s" % for_user)
+            
+        spawner = user.get_spawner(server_name, replace_failed=True)
+
+        if spawner.ready:
+            raise web.HTTPError(400, "%s is already running" % (spawner._log_name))
+        elif spawner.pending:
+            raise web.HTTPError(
+                400, f"{spawner._log_name} is pending {spawner.pending}"
+            )
 
         form_options = {}
         for key, byte_list in self.request.body_arguments.items():
@@ -90,25 +105,10 @@ class SpawnHandler(JHSpawnHandler):
         for key, byte_list in self.request.files.items():
             form_options["%s_file" % key] = byte_list
 
-        await self._spawn(user, server_name, form_options, configs)
-
-    async def _spawn(self, user, server_name, form_options, configs):
-        # log spawn start time
-        current_user = self.current_user
-        spawner = user.spawners[server_name]
-
-        if spawner.ready:
-            raise web.HTTPError(400, "%s is already running" %
-                                (spawner._log_name))
-        elif spawner.pending:
-            raise web.HTTPError(
-                400, "%s is pending %s" % (spawner._log_name, spawner.pending)
-            )
-
         start_time_spawn = time.time()
 
         try:
-            options = await maybe_future(spawner.options_from_form(form_options))
+            options = await maybe_future(spawner.run_options_from_form(form_options))
             await self.spawn_single_user(user, server_name=server_name, options=options)
 
             # if spawn future is already done it is success,
@@ -179,7 +179,9 @@ class SpawnHandler(JHSpawnHandler):
                                     auth_state=auth_state,
                                     spawner_options_form=spawner_options_form,
                                     error_message=message,
-                                    url=self.request.uri,
+                                    url=url_concat(
+                                        self.request.uri, {"_xsrf": self.xsrf_token.decode('ascii')}
+                                    ),
                                     spawner=for_user.spawner,
                                     save_config=save_config
                                     )

@@ -1,5 +1,5 @@
 {% extends "page.html" %}
-{% if announcement_spawn %}
+{% if announcement_spawn is string %}
   {% set announcement = announcement_spawn %}
 {% endif %}
 
@@ -23,7 +23,7 @@
 </div>
 
 <div id="configuration-modal" class="modal fade right" role="dialog">
-  <form enctype="multipart/form-data" id="spawn_form" action="{{url}}" method="post" role="form">
+  <form enctype="multipart/form-data" id="spawn_form" action="{{ url | safe }}" method="post" role="form">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">

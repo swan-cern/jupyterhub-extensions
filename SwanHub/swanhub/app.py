@@ -2,13 +2,9 @@
 # Copyright CERN
 
 import jupyterhub.handlers.pages as pages
-import jupyterhub.handlers.base as base
-import jupyterhub.apihandlers.users as users
-from jupyterhub.utils import url_path_join
 from jupyterhub import app
 from .spawn_handler import SpawnHandler
 from .error_handler import ProxyErrorHandler
-from .userapi_handler import SelfAPIHandler
 from . import get_templates
 from traitlets import default
 import sys
@@ -17,8 +13,7 @@ import datetime
 
 handlers_map = {
     pages.SpawnHandler: SpawnHandler,
-    pages.ProxyErrorHandler: ProxyErrorHandler,
-    users.SelfAPIHandler: SelfAPIHandler
+    pages.ProxyErrorHandler: ProxyErrorHandler
 }
 
 
@@ -34,6 +29,23 @@ class SWAN(app.JupyterHub):
         return os.path.join(
             self.data_files_path, 'static', 'swan', 'logos', 'logo_swan_cloudhisto.png'
         )
+    
+    @default('load_roles')
+    def _load_roles_default(self):
+        # Ensure that users can see their own auth_state
+        # This allows retrieving the up to date tokens and put them inside
+        # the user container
+        # Replace this config with care
+        return [
+            {
+                "name": "user",
+                "scopes": ["self", "admin:auth_state!user"]
+            },
+            {
+                'name': 'server',
+                'scopes': ["access:servers!user", "read:users:activity!user", "users:activity!user", "admin:auth_state!user"]
+            }
+        ]
 
     def init_tornado_settings(self):
         self.template_vars['current_year'] = datetime.datetime.now().year # For copyright message
