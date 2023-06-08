@@ -250,7 +250,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             access_tokens[service_name] = access_token
 
             # Produce logs and metrics for this token exchange
-            queue_t = response.time_info['queue']
+            queue_t = response.time_info['queue'] if 'queue' in response.time_info else -1
             request_t = response.request_time
             self.log.info('Exchanged {} token, queue time: {} s, request time: {} s'.format(service_name, queue_t, request_t))
             metric_exchange_tornado_queue_time.labels("exchange_token_{}".format(service_name.replace("-","_"))).observe(queue_t)            
@@ -289,7 +289,8 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                self.log.error("Could not obtain refresh token for swan") 
             
             metric_refresh_tornado_request_time.labels("refresh_token",response.code).observe(response.request_time)
-            metric_refresh_tornado_queue_time.observe(response.time_info.get('queue'))
+            queue_t = response.time_info['queue'] if 'queue' in response.time_info else -1
+            metric_refresh_tornado_queue_time.observe(queue_t)
             self.log.info('Refresh token request completed in {} seconds'.format(time.time() - start))
             return access_t, refresh_t
     
