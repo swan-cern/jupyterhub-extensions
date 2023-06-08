@@ -2,9 +2,11 @@
 # Copyright CERN
 
 import jupyterhub.handlers.pages as pages
+import jupyterhub.apihandlers.users as users
 from jupyterhub import app
 from .spawn_handler import SpawnHandler
 from .error_handler import ProxyErrorHandler
+from .userapi_handler import SelfAPIHandler
 from . import get_templates
 from traitlets import default
 import sys
@@ -13,7 +15,8 @@ import datetime
 
 handlers_map = {
     pages.SpawnHandler: SpawnHandler,
-    pages.ProxyErrorHandler: ProxyErrorHandler
+    pages.ProxyErrorHandler: ProxyErrorHandler,
+    users.SelfAPIHandler: SelfAPIHandler
 }
 
 
