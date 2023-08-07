@@ -60,7 +60,6 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
             env.update(dict(
                 NVIDIA_VISIBLE_DEVICES      = 'all',  # We are making visible all the devices, if the host has more that one can be used.
                 NVIDIA_DRIVER_CAPABILITIES  = 'compute,utility',
-                NVIDIA_REQUIRE_CUDA         = 'cuda>=10.0 driver>=410',
 
                 # Configure OpenCL to use NVIDIA backend
                 OCL_ICD_FILENAMES = 'libnvidia-opencl.so.1',
