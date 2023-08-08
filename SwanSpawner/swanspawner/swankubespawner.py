@@ -22,7 +22,7 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
         try:
             # Enabling GPU for cuda stacks
             # Options to export nvidia device can be found in https://github.com/NVIDIA/nvidia-container-runtime#nvidia_require_
-            if "cu" in self.user_options[self.lcg_rel_field]:
+            if self._gpu_requested():
                 self.extra_resource_guarantees["nvidia.com/gpu"] = "1"
                 self.extra_resource_limits["nvidia.com/gpu"] = "1"
             elif "nvidia.com/gpu" in self.extra_resource_guarantees:
@@ -56,7 +56,7 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
 
         # Enabling GPU for cuda stacks
         # Options to export nvidia device can be found in https://github.com/NVIDIA/nvidia-container-runtime#nvidia_require_
-        if "cu" in self.user_options[self.lcg_rel_field]:
+        if self._gpu_requested():
             env.update(dict(
                 NVIDIA_VISIBLE_DEVICES      = 'all',  # We are making visible all the devices, if the host has more that one can be used.
                 NVIDIA_DRIVER_CAPABILITIES  = 'compute,utility',
@@ -66,6 +66,10 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
             ))
 
         return env
+
+    def _gpu_requested(self):
+        """Returns true if the user requested a GPU"""
+        return "cu" in self.user_options[self.lcg_rel_field]
 
     # The state management methods below are a temporary fix to store `user_options`
     # in the database, so that it is restored after a hub restart.
