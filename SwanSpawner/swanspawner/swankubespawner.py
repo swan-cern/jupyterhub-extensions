@@ -58,7 +58,6 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
         # Options to export nvidia device can be found in https://github.com/NVIDIA/nvidia-container-runtime#nvidia_require_
         if self._gpu_requested():
             env.update(dict(
-                NVIDIA_VISIBLE_DEVICES      = 'all',  # We are making visible all the devices, if the host has more that one can be used.
                 NVIDIA_DRIVER_CAPABILITIES  = 'compute,utility',
 
                 # Configure OpenCL to use NVIDIA backend
