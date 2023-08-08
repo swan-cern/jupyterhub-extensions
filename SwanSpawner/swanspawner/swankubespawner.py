@@ -20,8 +20,6 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
         """
 
         try:
-            # Enabling GPU for cuda stacks
-            # Options to export nvidia device can be found in https://github.com/NVIDIA/nvidia-container-runtime#nvidia_require_
             if self._gpu_requested():
                 self.extra_resource_guarantees["nvidia.com/gpu"] = "1"
                 self.extra_resource_limits["nvidia.com/gpu"] = "1"
@@ -54,8 +52,6 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
         """ Set base environmental variables for swan jupyter docker image """
         env = super().get_env()
 
-        # Enabling GPU for cuda stacks
-        # Options to export nvidia device can be found in https://github.com/NVIDIA/nvidia-container-runtime#nvidia_require_
         if self._gpu_requested():
             env.update(dict(
                 # Configure OpenCL to use NVIDIA backend
