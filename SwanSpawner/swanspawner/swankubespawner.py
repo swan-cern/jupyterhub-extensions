@@ -19,27 +19,29 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
         """Perform the operations necessary for GPU support
         """
 
+        if self._gpu_requested():
+            self._check_gpu_access()
+
+            self.extra_resource_guarantees["nvidia.com/gpu"] = "1"
+            self.extra_resource_limits["nvidia.com/gpu"] = "1"
+        elif "nvidia.com/gpu" in self.extra_resource_guarantees:
+            del self.extra_resource_guarantees["nvidia.com/gpu"]
+            del self.extra_resource_limits["nvidia.com/gpu"]
+
+        # Resource requests and limits for user pods
+
+        # CPU limit is set to what the user selects in the form
+        # The request (guarantee) is statically set to 1 in the chart;
+        # the resulting overcommit is acceptable since users stay idle
+        # most of the time
+        self.cpu_limit = self.user_options[self.user_n_cores]
+
+        # Memory limit is set to what the user selects in the form
+        # The request (guarantee) is a fraction of the above
+        self.mem_limit = self.user_options[self.user_memory]
+        self.mem_guarantee = ceil(self.mem_limit * self.mem_request_fraction)
+
         try:
-            if self._gpu_requested():
-                self.extra_resource_guarantees["nvidia.com/gpu"] = "1"
-                self.extra_resource_limits["nvidia.com/gpu"] = "1"
-            elif "nvidia.com/gpu" in self.extra_resource_guarantees:
-                del self.extra_resource_guarantees["nvidia.com/gpu"]
-                del self.extra_resource_limits["nvidia.com/gpu"]
-
-            # Resource requests and limits for user pods
-
-            # CPU limit is set to what the user selects in the form
-            # The request (guarantee) is statically set to 1 in the chart;
-            # the resulting overcommit is acceptable since users stay idle
-            # most of the time
-            self.cpu_limit = self.user_options[self.user_n_cores]
-
-            # Memory limit is set to what the user selects in the form
-            # The request (guarantee) is a fraction of the above
-            self.mem_limit = self.user_options[self.user_memory]
-            self.mem_guarantee = ceil(self.mem_limit * self.mem_request_fraction)
-            
             # start configured container
             startup = yield super().start()
 
@@ -63,6 +65,14 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
     def _gpu_requested(self):
         """Returns true if the user requested a GPU"""
         return "cu" in self.user_options[self.lcg_rel_field]
+
+    def _check_gpu_access(self):
+        """Checks if the user is allowed to start a session with a GPU"""
+        if "swan-gpu" not in self.user_roles:
+            raise ValueError(
+                """Access to GPUs is not granted;
+                please <a href="https://cern.service-now.com/service-portal?id=functional_element&name=swan" target="_blank">open a Support Ticket</a>"""
+                )
 
     # The state management methods below are a temporary fix to store `user_options`
     # in the database, so that it is restored after a hub restart.
