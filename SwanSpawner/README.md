@@ -131,3 +131,24 @@ Options type selection
 }
 ```
 An example json file can be seen in [options_form_config.json]()
+
+## Mount options
+
+To mount EOS or CVMFS with SwanDockerSpawner (which requires a mount with propagation "shared"), a new configuration was introduced by upstream:
+
+```python
+c.SwanSpawner.mounts = [
+    {
+        'source': '/eos',
+        'target': '/eos',
+        'type': 'bind',
+        'propagation': 'shared'
+    },
+    {
+        'source': '/cvmfs',
+        'target': '/cvmfs',
+        'type': 'bind',
+        'propagation': 'shared'
+    }
+]
+```

@@ -14,8 +14,6 @@ from traitlets import (
     Int
 )
 
-from tornado import gen
-
 from jinja2 import Environment, FileSystemLoader
 
 def define_SwanSpawner_from(base_class):
@@ -62,11 +60,6 @@ def define_SwanSpawner_from(base_class):
             default_value='/eos/user/{username[0]}/{username}/',
             config=True,
             help='Path format of the users home folder in EOS.'
-        )
-
-        extra_env = Dict(
-            config=True,
-            help='Extra environment variables to pass to the container',
         )
 
         extended_timeout = Int(
@@ -141,13 +134,9 @@ def define_SwanSpawner_from(base_class):
                     SERVER_HOSTNAME        = os.uname().nodename,
                 ))
 
-            if self.extra_env:
-                env.update(self.extra_env)
-
             return env
 
-        @gen.coroutine
-        def stop(self, now=False):
+        async def stop(self, now=False):
             """ Overwrite default spawner to report stop of the container """
 
             if self._spawn_future and not self._spawn_future.done():
@@ -157,7 +146,7 @@ def define_SwanSpawner_from(base_class):
                 # Return 0 exit code as container got stopped after spawning correctly
                 container_exit_code = "0"
 
-            stop_result = yield super().stop(now)
+            stop_result = await super().stop(now)
 
             self.log_metric(
                 self.user.name,
@@ -168,10 +157,9 @@ def define_SwanSpawner_from(base_class):
 
             return stop_result
 
-        @gen.coroutine
-        def poll(self):
+        async def poll(self):
             """ Overwrite default poll to get status of container """
-            container_exit_code = yield super().poll()
+            container_exit_code = await super().poll()
 
             # None if single - user process is running.
             # Integer exit code status, if it is not running and not stopped by JupyterHub.
@@ -194,8 +182,7 @@ def define_SwanSpawner_from(base_class):
 
             return container_exit_code
 
-        @gen.coroutine
-        def start(self):
+        async def start(self):
             """
             Start the container
             """
@@ -207,7 +194,7 @@ def define_SwanSpawner_from(base_class):
                 self.start_timeout = self.extended_timeout
 
             # start configured container
-            startup = yield super().start()
+            startup = await super().start()
 
             self.log_metric(
                 self.user.name,
