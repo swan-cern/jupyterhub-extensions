@@ -115,13 +115,7 @@ def define_SwanSpawner_from(base_class):
                     NB_UID                 = self.user_uid,
                     HOME                   = homepath,
                     EOS_PATH_FORMAT        = self.eos_path_format,
-                    SERVER_HOSTNAME        = os.uname().nodename,
-
-                    JPY_USER               = self.user.name,
-                    JPY_COOKIE_NAME        = self.user.server.cookie_name,
-                    JPY_BASE_URL           = self.user.base_url,
-                    JPY_HUB_PREFIX         = self.hub.base_url,
-                    JPY_HUB_API_URL        = self.hub.api_url
+                    SERVER_HOSTNAME        = os.uname().nodename
                 ))
             else:
                 # session spawned via the API
