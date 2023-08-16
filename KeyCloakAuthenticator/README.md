@@ -29,7 +29,7 @@ In your JupyterHub config file, set the authenticator and configure it:
 ```python
 # Enable the authenticator
 c.JupyterHub.authenticator_class = 'keycloakauthenticator.KeyCloakAuthenticator'
-c.KeyCloakAuthenticator.username_key = 'preferred_username'
+c.KeyCloakAuthenticator.username_claim = 'preferred_username'
 
 # URL to redirect to after logout is complete with auth provider.
 c.KeyCloakAuthenticator.logout_redirect_url = 'https://cern.ch/swan'
