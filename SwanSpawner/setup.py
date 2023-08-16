@@ -25,8 +25,8 @@ setup_args = dict(
         'setuptools',
         'jupyterhub',
         'psutil',
-        'dockerspawner==0.11.1',
-        'jupyterhub-kubespawner==1.1.0'
+        'dockerspawner==12.1.0',
+        'jupyterhub-kubespawner==6.0.0'
     ],
     zip_safe=False,
     include_package_data=True,

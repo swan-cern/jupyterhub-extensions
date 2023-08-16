@@ -8,8 +8,6 @@ import random
 import psutil
 import json
 
-from tornado import gen
-
 from traitlets import (
     Unicode,
     Bool,
@@ -52,10 +50,6 @@ class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
         help='Path in CVMFS of the script to configure a K8s cluster.'
     )
 
-    shared_volumes = Dict(
-        config=True,
-        help='Volumes to be mounted with a "shared" tag. This allows mount propagation.',
-    )
     spark_max_sessions = Int(
         default_value=1,
         config=True,
@@ -96,9 +90,6 @@ class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
         env = super().get_env()
 
         username = self.user.name
-
-        if self.extra_env:
-            env.update(self.extra_env)
 
         # Only dockerspawner has these vars, and for now is the only one that needs this code
         if hasattr(self, 'extra_host_config') and hasattr(self, 'extra_create_kwargs'):
@@ -151,8 +142,7 @@ class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
 
         return env
 
-    @gen.coroutine
-    def start(self):
+    async def start(self):
         """Perform the operations necessary for mounting
         EOS, GPU support, authenticating HDFS and authenticating spark clusters.
         """
@@ -295,56 +285,12 @@ class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
                 self.extra_host_config.update({'runtime': 'nvidia'})
 
             # start configured container
-            startup = yield super().start()
+            startup = await super().start()
 
             return startup
         except BaseException as e:
             self.log.error("Error while spawning the user container: %s", e, exc_info=True)
             raise e
-
-    @property
-    def volume_mount_points(self):
-        """
-        Override this method to take into account the "shared" volumes.
-        """
-        return self.get_volumes(only_mount=True)
-
-    @property
-    def volume_binds(self):
-        """
-        Since EOS now uses autofs (mounts and unmounts mount points automatically), we have to mount
-        eos in the container with the propagation option set to "shared".
-        This means that: when users try to access /eos/projects, the endpoint will be mounted automatically,
-        and made available in the container without the need to restart the session (it gets propagated).
-        This also means that, if the user endpoint fails, when it gets back up it will be made available in
-        the container without the need to restart the session.
-        The Spawnwer/dockerpy do not support this option. But, if volume_bins return a list of string, they will
-        pass the list forward until the container construction, without checking or trying to manipulate the list.
-        """
-        return self.get_volumes()
-
-    def get_volumes(self, only_mount=False):
-
-        def _fmt(v):
-            return self.format_volume_name(v, self)
-
-        def _convert_list(volumes, binds, mode="rw"):
-            for k, v in volumes.items():
-                m = mode
-                if isinstance(v, dict):
-                    if "mode" in v:
-                        m = v["mode"]
-                    v = v["bind"]
-
-                if only_mount:
-                    binds.append(_fmt(v))
-                else:
-                    binds.append("%s:%s:%s" % (_fmt(k), _fmt(v), m))
-            return binds
-
-        binds = _convert_list(self.volumes, [])
-        binds = _convert_list(self.read_only_volumes, binds, mode="ro")
-        return _convert_list(self.shared_volumes, binds, mode="shared")
 
     @staticmethod
     def get_reserved_port(start, end, n_tries=10):

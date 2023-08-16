@@ -2,7 +2,6 @@ from .swanspawner import define_SwanSpawner_from
 from kubespawner import KubeSpawner
 
 from math import ceil
-from tornado import gen
 from traitlets import Float
 
 
@@ -14,8 +13,7 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
         help="Fraction of the memory value selected by the user that will be requested"
     )
 
-    @gen.coroutine
-    def start(self):
+    async def start(self):
         """Perform the operations necessary for GPU support
         """
 
@@ -43,7 +41,7 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
 
         try:
             # start configured container
-            startup = yield super().start()
+            startup = await super().start()
 
             return startup
         except BaseException as e:
