@@ -153,8 +153,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         # Try to load the configs until it succeeds
         while True:
             try:
-                req = HTTPRequest(f"{self.oidc_issuer}/.well-known/openid-configuration", headers=self._get_headers())
-                data = await self.fetch(req, "fetching oidc config")
+                data = await self.httpfetch(f"{self.oidc_issuer}/.well-known/openid-configuration", label="fetching oidc config")
 
                 if not set(['authorization_endpoint', 'token_endpoint', 'userinfo_endpoint']).issubset(data.keys()):
                     raise Exception('Unable to retrieve OIDC necessary values')
@@ -173,8 +172,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 if self.config.check_signature :
                     jwks_uri = data['jwks_uri']
 
-                    req = HTTPRequest(jwks_uri, headers=self._get_headers())
-                    jwk_data = await self.fetch(req, "fetching jwks")
+                    jwk_data = await self.httpfetch(jwks_uri, label="fetching jwks")
                     self.public_key = RSAAlgorithm(RSAAlgorithm.SHA256).from_jwk(jwk_data['keys'][0])
                     self.log.info(f"aquired public key from {jwks_uri}")
                 else:
@@ -185,7 +183,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 self.log.info('KeycloakAuthenticator fully configured')
                 break
             except:
-                self.log.error("Failure to retrieve the openid configuration, will try again in 1 min (auth calls will fail)")
+                self.log.error("Failure to retrieve the openid configuration, will try again in 1 min (auth calls will fail)", exc_info=True)
                 await asyncio.sleep(60)
 
     def _validate_roles(self, user_roles):
@@ -223,7 +221,6 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             req = HTTPRequest(
                 self.token_url,
                 method="POST",
-                headers=self._get_headers(),
                 body=data,
             )
 
@@ -269,16 +266,13 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 refresh_token = refresh_token
             )
             data = parse.urlencode(values)
-
-            req = HTTPRequest(
-                self.token_url,
-                method="POST",
-                headers=self._get_headers(),
-                body=data,
-            )
             access_t = None
             refresh_t = None
-            response = await self.fetch(req, "refreshing token", parse_json=False)
+            response = await self.httpfetch(self.token_url,
+                                            label="refreshing token",
+                                            method="POST",
+                                            body=data,
+                                            parse_json=False)
             if response.body:
                 body = json.loads(response.body.decode('utf8', 'replace'))
                 access_t = body.get('access_token', None)
