@@ -57,7 +57,7 @@ from subprocess import call
 
 def check_ticket(username):
     app_log.info("Checking ticket for user %s", username)
-    call(['sudo', "%s/check_ticket.sh" % options.hooks_dir, username])
+    call(['sudo', '--preserve-env=SWAN_DEV', "%s/check_ticket.sh" % options.hooks_dir, username])
 
 def delete_ticket(username):
     app_log.info("Deleting ticket for user %s", username)
