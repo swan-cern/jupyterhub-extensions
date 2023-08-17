@@ -50,19 +50,20 @@ async def test_refresh_user(monkeypatch):
     monkeypatch.setattr(KeyCloakAuthenticator, "oidc_issuer", "dummy-oidc-url")
 
     # Mock the response from the server on refresh and exchange tokens
-    async def _mock_fetch(self, request, label, parse_json):
-        print("Mocking fetch for ", request, label)
+    async def _mock_fetch(self, req, label, **kargs):
+        print(f"Mocking fetch for {req} ({label})")
         mock_response_body = json.dumps({ 
             "access_token": _get_mock_token(private_key, "new_access_token"),
             "refresh_token": _get_mock_token(private_key, "new_refresh_token"),
             })
+
         class MockResponse:
             def __init__(self):
                 self.code = 200
                 self.body = mock_response_body.encode('utf-8')
                 self.request_time = 0
-                self.time_info ={
-                "queue": 0
+                self.time_info = {
+                    "queue": 0
                 }
         return MockResponse()
     monkeypatch.setattr(KeyCloakAuthenticator, "fetch", _mock_fetch)
@@ -120,22 +121,23 @@ async def test_refresh_user_with_expired_refresh_token(monkeypatch):
     # Mock the response from the server on refresh and exchange tokens
     monkeypatch.setattr(KeyCloakAuthenticator, "oidc_issuer", "dummy-oidc-url")
 
-    async def _mock_fetch(self, request, label, parse_json):
-        print("Mocking fetch for ", request, label)
+    async def _mock_httpfetch(self, url, label, **kargs):
+        print(f"Mocking httpfetch for {url} ({label})")
         mock_response_body = json.dumps({ 
             "access_token": _get_mock_token(private_key, "new_access_token"),
             "refresh_token": _get_mock_token(private_key, "new_refresh_token"),
             })
+
         class MockResponse:
             def __init__(self):
                 self.code = 200
                 self.body = mock_response_body.encode('utf-8')
                 self.request_time = 0
-                self.time_info ={
-                "queue": 0
+                self.time_info = {
+                    "queue": 0
                 }
         return MockResponse()
-    monkeypatch.setattr(KeyCloakAuthenticator, "fetch", _mock_fetch)
+    monkeypatch.setattr(KeyCloakAuthenticator, "httpfetch", _mock_httpfetch)
 
     class MockUser:
         """Fake user object, with dummy authentication state from DB"""
