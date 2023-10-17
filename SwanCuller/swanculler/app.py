@@ -58,10 +58,6 @@ from subprocess import call
 def check_ticket(username):
     app_log.info("Checking ticket for user %s", username)
     call(['sudo', '--preserve-env=SWAN_DEV', "%s/check_ticket.sh" % options.hooks_dir, username])
-
-def delete_ticket(username):
-    app_log.info("Deleting ticket for user %s", username)
-    call(['sudo', "%s/delete_ticket.sh" % options.hooks_dir, username])
 # End SWAN code
 
 def parse_date(date_string):
@@ -347,7 +343,6 @@ def cull_idle(
         else:
             if result:
                 app_log.debug("Finished culling %s", name)
-                if not disable_hooks: delete_ticket(name)
             else:
                 if not disable_hooks: check_ticket(name)
 
@@ -384,7 +379,7 @@ def main():
                 so limit the number of API requests we have outstanding at any given time.
                 """,
     )
-    define('hooks_dir', default="/srv/jupyterhub/culler", help="Path to the directory for the krb tickets scripts (check_ticket.sh and delete_ticket.sh)")
+    define('hooks_dir', default="/srv/jupyterhub/culler", help="Path to the directory for the krb tickets script (check_ticket.sh)")
     define('disable_hooks', default=False, help="The user's home is a temporary scratch directory and we should not check krb tickets")
 
 
