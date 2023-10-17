@@ -29,5 +29,5 @@ Configuration parameters:
 * max_age: The maximum age (in seconds) of servers that should be culled even if they are active (default=0)
 * cull_users: Cull users in addition to servers (default=False)
 * concurrency: Limit the number of concurrent requests made to the Hub (default=10)
-* hooks_dir: Path to the directory for the krb tickets scripts (check_ticket.sh and delete_ticket.sh) (default="/srv/jupyterhub/culler)
+* hooks_dir: Path to the directory for the krb tickets script (check_ticket.sh) (default="/srv/jupyterhub/culler)
 * disable_hooks: Whether to  call the krb tickets scripts or not (default=False)
