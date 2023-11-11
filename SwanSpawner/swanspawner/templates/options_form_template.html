@@ -202,4 +202,19 @@
     </div>
     </label>
     <select id="clusterOptions" name="spark-cluster"></select>
+    <br />
+    <label> User Interface <a href="#" onclick="toggle_visibility('userInterfaceDetails');"><span class='nbs'>more...</span></a></label>
+    <div style="display:none;" id="userInterfaceDetails">
+        <span class='nb'>The JupyterLab interface offers a more complete development environment for notebooks. Please let us know about any issues you encounter or any feedback you have.</span>
+    </div>
+    <div style="display: flex; align-items: center">
+      <input
+        id="use-jupyterlab"
+        type="checkbox"
+        name="use-jupyterlab"
+        value="checked"
+        style="display: inline; width: initial; margin: 0 8px 0 0"
+      />
+      <span> Try the new JupyterLab interface (experimental)</span>
+    </div>
 </div>
