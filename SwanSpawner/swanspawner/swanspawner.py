@@ -39,6 +39,8 @@ def define_SwanSpawner_from(base_class):
 
         spark_cluster_field = 'spark-cluster'
 
+        condor_pool = 'condor-pool'
+
         options_form_config = Unicode(
             config=True,
             help='Path to configuration file for options_form rendering.'
@@ -81,6 +83,7 @@ def define_SwanSpawner_from(base_class):
             options[self.platform_field]        = formdata[self.platform_field][0]
             options[self.user_script_env_field] = formdata[self.user_script_env_field][0]
             options[self.spark_cluster_field]   = formdata[self.spark_cluster_field][0] if self.spark_cluster_field in formdata.keys() else 'none'
+            options[self.condor_pool]           = formdata[self.condor_pool][0]
             options[self.user_n_cores]          = int(formdata[self.user_n_cores][0])
             options[self.user_memory]           = formdata[self.user_memory][0] + 'G'
 
@@ -128,6 +131,10 @@ def define_SwanSpawner_from(base_class):
                     NB_UID                 = 1000,
                     SERVER_HOSTNAME        = os.uname().nodename,
                 ))
+
+            # Enable configuration for CERN HTCondor pool
+            if self.user_options[self.condor_pool] != 'none':
+                env['CERN_HTCONDOR'] = 'true'
 
             return env
 
