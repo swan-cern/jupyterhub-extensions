@@ -150,6 +150,23 @@
 
             selectCluster.add(selectClusterOption);
         }
+
+        // adjust condor option for lcg
+        var selectCondor = document.getElementById('condorOptions');
+        selectCondor.innerHTML = '';
+
+        for( var i = 0 ; i < lcgData.condor.length ; i++ ){
+            var lcgCondor = lcgData.condor[i];
+
+            var selectCondorOption = document.createElement("option");
+            selectCondorOption.value = lcgCondor.value;
+            selectCondorOption.text = lcgCondor.text;
+            if (i === 0) {
+                selectCondorOption.selected = true;
+            }
+
+            selectCondor.add(selectCondorOption);
+        }
     }
 
     window.onload = adjust_form;
@@ -196,10 +213,18 @@
     </label>
     <select id="memoryOptions" name="memory"></select>
     <br>
+    <h2 for="computing-resources">External computing resources</h2>
     <label for="clusterOptions">Spark cluster <a href="#" onclick="toggle_visibility('sparkClusterDetails');"><span class='nbs'>more...</span></a>
     <div style="display:none;" id="sparkClusterDetails">
         <span class='nb'>Name of the Spark cluster to connect to from notebooks. See the <a target="_blank" href="https://hadoop-user-guide.web.cern.ch/">Hadoop User guide</a> and the <a target="_blank" href="https://sparktraining.web.cern.ch/">Spark training course</a></span>
     </div>
     </label>
     <select id="clusterOptions" name="spark-cluster"></select>
+    <br>
+    <label for="condorOptions">HTCondor pool <a href="#" onclick="toggle_visibility('condorDetails');"><span class='nbs'>more...</span></a>
+    <div style="display:none;" id="condorDetails">
+        <span class='nb'>Name of the HTCondor pool to use.</span>
+    </div>
+    </label>
+    <select id="condorOptions" name="condor-pool"></select>
 </div>
