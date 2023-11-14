@@ -81,24 +81,26 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
             except ApiException as e:
                 self.log.error('Error deleting secret {namespace}:{eos_secret_name}: {e}')
 
-            # Spark-related cleanup
-            spark_cluster = self.user_options[self.spark_cluster_field]
-            if spark_cluster and spark_cluster != 'none':
-                # Delete NodePort service opening ports for the user Spark processes
-                spark_ports_service = f'spark-ports-{username}'
-                self.log.info(f'Deleting service {namespace}:{spark_ports_service}')
+            # Cleanup for computing integrations (Spark, HTCondor)
+            clean_spark = self.user_options[self.spark_cluster_field] != 'none'
+            clean_condor = self.user_options[self.condor_pool] != 'none'
+            if clean_spark or clean_condor:
+                # Delete NodePort service opening ports for computing integrations
+                computing_ports_service = f'computing-ports-{username}'
+                self.log.info(f'Deleting service {namespace}:{computing_ports_service}')
                 try:
-                    await self.api.delete_namespaced_service(spark_ports_service, namespace)
+                    await self.api.delete_namespaced_service(computing_ports_service, namespace)
                 except ApiException as e:
-                    self.log.error('Error deleting service {namespace}:{spark_ports_service}: {e}')
+                    self.log.error('Error deleting service {namespace}:{computing_ports_service}: {e}')
 
-                # Delete Kubernetes secret with Hadoop delegation tokens
-                hadoop_secret_name = f'hadoop-tokens-{username}'
-                self.log.info(f'Deleting secret {namespace}:{hadoop_secret_name}')
-                try:
-                    await self.api.delete_namespaced_secret(hadoop_secret_name, namespace)
-                except ApiException as e:
-                    self.log.error('Error deleting secret {namespace}:{hadoop_secret_name}: {e}')
+                if clean_spark:
+                    # Delete Kubernetes secret with Hadoop delegation tokens
+                    hadoop_secret_name = f'hadoop-tokens-{username}'
+                    self.log.info(f'Deleting secret {namespace}:{hadoop_secret_name}')
+                    try:
+                        await self.api.delete_namespaced_secret(hadoop_secret_name, namespace)
+                    except ApiException as e:
+                        self.log.error('Error deleting secret {namespace}:{hadoop_secret_name}: {e}')
 
     def get_env(self):
         """ Set base environmental variables for swan jupyter docker image """
