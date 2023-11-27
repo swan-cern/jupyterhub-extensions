@@ -5,7 +5,7 @@ from kubernetes_asyncio.client.rest import ApiException
 
 import os
 from math import ceil
-from traitlets import Float
+from traitlets import Float, Unicode
 
 
 class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
@@ -14,6 +14,11 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
         default_value=0.5,
         config=True,
         help="Fraction of the memory value selected by the user that will be requested"
+    )
+
+    centos7_image = Unicode(
+        config=True,
+        help='URL of the CentOS7 user image.'
     )
 
     async def start(self):
@@ -41,6 +46,15 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
         # The request (guarantee) is a fraction of the above
         self.mem_limit = self.user_options[self.user_memory]
         self.mem_guarantee = ceil(self.mem_limit * self.mem_request_fraction)
+
+        # An Alma9-based user image is configured by default via the chart
+        # settings, but users could still select a CentOS7 platform.
+        # In that case, reconfigure to use a CentOS7-based user image
+        if 'centos7' in self.user_options[self.platform_field]:
+            image = self.centos7_image
+            if not image:
+                raise RuntimeError('The user selected the CentOS7 platform, but no CentOS7 image was configured')
+            self.image = image
 
         try:
             # start configured container
