@@ -22,7 +22,8 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
     )
 
     async def start(self):
-        """Perform the operations necessary for GPU support
+        """Perform extra configurations required for SWAN session spawning in
+        kubernetes.
         """
 
         if self._gpu_requested():
