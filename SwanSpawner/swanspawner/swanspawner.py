@@ -111,6 +111,7 @@ def define_SwanSpawner_from(base_class):
                     USER_ENV_SCRIPT        = self.user_options[self.user_script_env_field],
                     ROOT_LCG_VIEW_PATH     = self.lcg_view_path,
                     USER                   = username,
+                    NB_USER                = username,
                     USER_ID                = self.user_uid,
                     NB_UID                 = self.user_uid,
                     HOME                   = homepath,
