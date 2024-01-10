@@ -138,6 +138,8 @@
         // adjust clusters option for lcg
         var selectCluster = document.getElementById('clusterOptions');
         selectCluster.innerHTML = '';
+        // Make sure Spark cluster options are enabled on LCG release change
+        selectCluster.removeAttribute('disabled');
 
         for( var i = 0 ; i < lcgData.clusters.length ; i++ ){
             var lcgCluster = lcgData.clusters[i];
@@ -170,6 +172,27 @@
         }
     }
 
+    /**
+     * Modifies the selection of Spark clusters depending on the chosen platform
+     */
+    function adjust_spark() {
+        var platformOptions = document.getElementById('platformOptions');
+        var clusterOptions  = document.getElementById('clusterOptions');
+
+        var isAlma = platformOptions.selectedOptions[0].text.startsWith('AlmaLinux 9');
+
+        if (isAlma) {
+            // Disable Spark cluster selection, since Spark is still not supported
+            // on Alma9
+            clusterOptions.setAttribute('disabled', '');
+            clusterOptions.selectedIndex = 0;
+        }
+        else {
+            // On CentOS7, make sure cluster selection is enabled
+            clusterOptions.removeAttribute('disabled');
+        }
+    }
+
     window.onload = adjust_form;
 //-->
 </script>
@@ -194,7 +217,7 @@
        <span class='nb'>The combination of compiler version and flags.</span>
     </div>
     </label>
-    <select id="platformOptions" name="platform"></select>
+    <select id="platformOptions" name="platform" onchange="adjust_spark();"></select>
     <br>
     <label for="scriptenvOption">Environment script <a href="#" onclick="toggle_visibility('scriptenvDetails');"><span class='nbs'>more...</span></a>
     <div style="display:none;" id="scriptenvDetails">
