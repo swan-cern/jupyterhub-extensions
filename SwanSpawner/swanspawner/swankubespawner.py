@@ -38,7 +38,7 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
         # Resource requests and limits for user pods
 
         # CPU limit is set to what the user selects in the form
-        # The request (guarantee) is statically set to 1 in the chart;
+        # The request (guarantee) is statically set in the chart;
         # the resulting overcommit is acceptable since users stay idle
         # most of the time
         self.cpu_limit = self.user_options[self.user_n_cores]
