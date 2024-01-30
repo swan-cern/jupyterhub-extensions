@@ -27,8 +27,6 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
         """
 
         if self._gpu_requested():
-            self._check_gpu_access()
-
             self.extra_resource_guarantees["nvidia.com/gpu"] = "1"
             self.extra_resource_limits["nvidia.com/gpu"] = "1"
         elif "nvidia.com/gpu" in self.extra_resource_guarantees:
@@ -117,11 +115,3 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
     def _gpu_requested(self):
         """Returns true if the user requested a GPU"""
         return "cu" in self.user_options[self.lcg_rel_field]
-
-    def _check_gpu_access(self):
-        """Checks if the user is allowed to start a session with a GPU"""
-        if "swan-gpu" not in self.user_roles:
-            raise ValueError(
-                """Access to GPUs is not granted;
-                please <a href="https://cern.service-now.com/service-portal?id=functional_element&name=swan" target="_blank">open a Support Ticket</a>"""
-                )
