@@ -25,16 +25,6 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
         """Perform extra configurations required for SWAN session spawning in
         kubernetes.
         """
-
-        if self._gpu_requested():
-            self.extra_resource_guarantees["nvidia.com/gpu"] = "1"
-            self.extra_resource_limits["nvidia.com/gpu"] = "1"
-        elif "nvidia.com/gpu" in self.extra_resource_guarantees:
-            del self.extra_resource_guarantees["nvidia.com/gpu"]
-            del self.extra_resource_limits["nvidia.com/gpu"]
-
-        # Resource requests and limits for user pods
-
         # CPU limit is set to what the user selects in the form
         # The request (guarantee) is statically set in the chart;
         # the resulting overcommit is acceptable since users stay idle
@@ -104,7 +94,7 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
         """ Set base environmental variables for swan jupyter docker image """
         env = super().get_env()
 
-        if self._gpu_requested():
+        if self.gpu_requested():
             env.update(dict(
                 # Configure OpenCL to use NVIDIA backend
                 OCL_ICD_FILENAMES = 'libnvidia-opencl.so.1',
@@ -112,6 +102,6 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
 
         return env
 
-    def _gpu_requested(self):
+    def gpu_requested(self):
         """Returns true if the user requested a GPU"""
         return "cu" in self.user_options[self.lcg_rel_field]
