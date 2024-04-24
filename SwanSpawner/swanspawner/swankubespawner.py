@@ -89,19 +89,3 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
                         await self.api.delete_namespaced_secret(hadoop_secret_name, namespace)
                     except ApiException as e:
                         self.log.error('Error deleting secret {namespace}:{hadoop_secret_name}: {e}')
-
-    def get_env(self):
-        """ Set base environmental variables for swan jupyter docker image """
-        env = super().get_env()
-
-        if self.gpu_requested():
-            env.update(dict(
-                # Configure OpenCL to use NVIDIA backend
-                OCL_ICD_FILENAMES = 'libnvidia-opencl.so.1',
-            ))
-
-        return env
-
-    def gpu_requested(self):
-        """Returns true if the user requested a GPU"""
-        return "cu" in self.user_options[self.lcg_rel_field]
