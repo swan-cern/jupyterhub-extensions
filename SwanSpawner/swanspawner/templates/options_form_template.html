@@ -6,6 +6,8 @@
 
     var formConfig = {{ options_form_config }};
 
+    var accpyVersions = ["2020.11", "2021.12", "2023.06"];
+
     var formInitialized = false;
 
     /**
@@ -22,6 +24,32 @@
         }
 
         throw `${formElement} Data not found`
+    }
+
+    /*
+     * Selects AlmaLinux 9 in the LCG plataform options
+     */
+    function selectAlma9(selector) {
+        for (var i = 0; i < selector.options.length; i++) {
+            if (selector.options[i].text.startsWith('AlmaLinux 9')) {
+                selector.options[i].selected = true;
+                break;
+            }
+        }
+        selector.setAttribute('disabled', '');
+    }
+    
+    /*
+    * Selects default LCG release (105)
+    */
+   function selectDefaultLCG(selector) {
+        for (var i = 0; i < selector.options.length; i++) {
+           if (selector.options[i].value === '105') {
+               selector.options[i].selected = true;
+               break;
+            }
+        }
+        selector.setAttribute('disabled', '');
     }
 
     /**
@@ -209,6 +237,51 @@
         } 
     }
 
+    function adjust_customenv() {
+        adjust_form();
+        var lcgOption = document.getElementById('lcgOption');
+        var customenvOption = document.getElementById('customenvOption');
+        
+        var customenv_config = document.getElementById('customenv_config');
+        var external_config = document.getElementById('external_config');
+        
+        var lcgSection = document.getElementById('lcgSection');
+        var lcgReleaseOptions = document.getElementById('lcgReleaseOptions');
+        var platformOptions = document.getElementById('platformOptions');
+        
+        if (lcgOption.checked) {
+            customenv_config.style.display = 'none';
+            external_config.style.display = 'block';
+            lcgSection.style.visibility = 'visible';
+            lcgReleaseOptions.removeAttribute('disabled');
+            lcgReleaseOptions.selectedIndex = 1;
+            platformOptions.selectedIndex = 0;
+            platformOptions.removeAttribute('disabled');
+            adjust_spark();
+        } else if (customenvOption.checked ) {
+            customenv_config.style.display = 'block';
+            external_config.style.display = 'none';
+            selectDefaultLCG(lcgReleaseOptions);
+            selectAlma9(platformOptions);
+            adjust_accpy();
+        } 
+    }
+
+    function adjust_accpy() {
+        var accpyOption = document.getElementById('accpyOption');
+        var cvmfsOption = document.getElementById('cvmfsOption');
+        var otherOption = document.getElementById('otherOption');
+        
+        var lcgSection = document.getElementById('lcgSection');
+        var accpySection = document.getElementById('accpySection');
+        var pythonSection = document.getElementById('pythonSection');
+
+        lcgSection.style.visibility = !cvmfsOption.checked ? 'hidden' : 'visible';
+        accpySection.style.display = !accpyOption.checked ? 'none' : 'block';
+        pythonSection.style.display = !otherOption.checked ? 'none' : 'block';
+    }
+
+
     /**
      * Modifies the selection of Spark clusters and enables users to choose
      * to use the JupyterLab interface depending on the chosen platform
@@ -370,9 +443,14 @@
     <select id="platformOptions" onchange="adjust_options();"></select>
     <input type="hidden" id="hiddenPlatformOptions" name="platform">
     <br>
-    <label for="scriptenvOption">Environment script <a href="#" onclick="toggle_visibility('scriptenvDetails');"><span class='nbs'>more...</span></a>
-    <div style="display:none;" id="scriptenvDetails">
-       <span class='nb'>User-provided bash script to define custom environment variables. The variable CERNBOX_HOME is resolved to the proper /eos/user/u/username directory.</span>
+    
+    <div id="plataformSection">
+        <label for="platformOptions">Platform <a href="#" onclick="toggle_visibility('platformDetails');"><span class='nbs'>more...</span></a>
+            <div style="display:none;" id="platformDetails">
+                <span class='nb'>The combination of compiler version and flags.</span>
+            </div>
+        </label>
+        <select id="platformOptions" name="platform" onchange="adjust_spark();"></select>
     </div>
     
     <!-- Resources configuration -->
