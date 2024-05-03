@@ -122,6 +122,8 @@ def define_SwanSpawner_from(base_class):
             """ Set base environmental variables for swan jupyter docker image """
             env = super().get_env()
 
+            deploy_lcg = True if self.user_options[self.config_type].upper() == 'LCG' or self.user_options[self.customenv_type].upper() == "CVMFS" else False
+
             username = self.user.name
             if self.local_home:
                 homepath = "/scratch/%s" %(username)
