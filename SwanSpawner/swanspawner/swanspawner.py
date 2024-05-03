@@ -27,6 +27,18 @@ def define_SwanSpawner_from(base_class):
 
     class SwanSpawner(base_class):
 
+        config_type = 'configType'
+        
+        env_name = 'env_name'
+        
+        requirements = 'requirements'
+
+        customenv_type = 'customenvType'
+        
+        accpy_version = 'accpy_version'
+        
+        custom_python = 'custom_python'
+        
         lcg_rel_field = 'LCG-rel'
 
         platform_field = 'platform'
@@ -79,6 +91,12 @@ def define_SwanSpawner_from(base_class):
 
         def options_from_form(self, formdata):
             options = {}
+            options[self.config_type]           = formdata[self.config_type][0]
+            options[self.env_name]              = formdata[self.env_name][0]
+            options[self.requirements]          = formdata[self.requirements][0]
+            options[self.customenv_type]        = formdata[self.customenv_type][0]
+            options[self.accpy_version]         = formdata[self.accpy_version][0]
+            options[self.custom_python]         = formdata[self.custom_python][0]
             options[self.lcg_rel_field]         = formdata[self.lcg_rel_field][0]
             options[self.platform_field]        = formdata[self.platform_field][0]
             options[self.user_script_env_field] = formdata[self.user_script_env_field][0]
@@ -95,6 +113,8 @@ def define_SwanSpawner_from(base_class):
             """ Set base environmental variables for swan jupyter docker image """
             env = super().get_env()
 
+            deploy_lcg = True if self.user_options[self.config_type].upper() == 'LCG' or self.user_options[self.customenv_type].upper() == "CVMFS" else False
+
             username = self.user.name
             if self.local_home:
                 homepath = "/scratch/%s" %(username)
@@ -109,10 +129,16 @@ def define_SwanSpawner_from(base_class):
             if self.lcg_rel_field in self.user_options:
                 # session spawned via the form
                 env.update(dict(
+                    LCG_ENVIRONMENT        = deploy_lcg,
                     ROOT_LCG_VIEW_NAME     = self.user_options[self.lcg_rel_field],
                     ROOT_LCG_VIEW_PLATFORM = self.user_options[self.platform_field],
                     USER_ENV_SCRIPT        = self.user_options[self.user_script_env_field],
+                    ENV_NAME               = self.user_options[self.env_name],
+                    REQUIREMENTS           = self.user_options[self.requirements],
+                    ACCPY_VERSION          = self.user_options[self.accpy_version],
+                    CUSTOM_PYTHON          = self.user_options[self.custom_python],
                     ROOT_LCG_VIEW_PATH     = self.lcg_view_path,
+                    PS1                    = f"[\u@{self.env_name} \W]\$",
                     USER                   = username,
                     NB_USER                = username,
                     USER_ID                = self.user_uid,
