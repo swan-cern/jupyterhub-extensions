@@ -138,7 +138,6 @@ def define_SwanSpawner_from(base_class):
                     ACCPY_VERSION          = self.user_options[self.accpy_version],
                     CUSTOM_PYTHON          = self.user_options[self.custom_python],
                     ROOT_LCG_VIEW_PATH     = self.lcg_view_path,
-                    PS1                    = f"[\u@{self.env_name} \W]\$",
                     USER                   = username,
                     NB_USER                = username,
                     USER_ID                = self.user_uid,
