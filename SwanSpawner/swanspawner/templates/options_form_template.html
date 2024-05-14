@@ -6,7 +6,24 @@
 
     var formConfig = {{ options_form_config }};
 
-    var accpyVersions = ["2020.11", "2021.12", "2023.06"];
+    const customenv_types = [
+      {
+        "value": "python-python3",
+        "text": "Python 3"
+      },
+      {
+        "value": "accpy-2023.06",
+        "text": "Acc-Py 2023.06"
+      },
+      {
+        "value": "accpy-2021.12",
+        "text": "Acc-Py 2021.12"
+      },
+      {
+        "value": "accpy-2020.11",
+        "text": "Acc-Py 2020.11"
+      }
+    ];
 
     var formInitialized = false;
 
@@ -36,7 +53,6 @@
                 break;
             }
         }
-        selector.setAttribute('disabled', '');
     }
 
     /*
@@ -45,11 +61,10 @@
    function selectDefaultLCG(selector) {
         for (var i = 0; i < selector.options.length; i++) {
             if (selector.options[i].value === 'LCG_105_swan') {
-               selector.options[i].selected = true;
-               break;
+                selector.options[i].selected = true;
+                break;
             }
         }
-        selector.setAttribute('disabled', '');
     }
 
     /**
@@ -243,53 +258,31 @@
     function adjust_customenv() {
         var lcgOption = document.getElementById('lcgOption');
         var customenvOption = document.getElementById('customenvOption');
+        
         var customenv_config = document.getElementById('customenv_config');
         var external_config = document.getElementById('external_config');
-        var lcgSection = document.getElementById('lcgSection');
+        var software_config = document.getElementById('software_config');
         var lcgReleaseOptions = document.getElementById('lcgReleaseOptions');
         var platformOptions = document.getElementById('platformOptions');
         
         if (lcgOption.checked) {
+            software_config.style.display = 'block';
             customenv_config.style.display = 'none';
             external_config.style.display = 'block';
-            lcgSection.style.visibility = 'visible';
-            lcgReleaseOptions.removeAttribute('disabled');
-            lcgReleaseOptions.selectedIndex = 1;
-            platformOptions.selectedIndex = 0;
-            platformOptions.removeAttribute('disabled');
             adjust_form();
             adjust_spark();
-        } else if (customenvOption.checked ) {
+        } else if (customenvOption.checked) {
             selectDefaultLCG(lcgReleaseOptions);
             adjust_form();
             selectAlma9(platformOptions);
+            software_config.style.display = 'none';
             customenv_config.style.display = 'block';
             external_config.style.display = 'none';
-            adjust_accpy();
         } 
     }
 
     /**
-     * Modifies the some elements according to the selected Acc-Py version
-     */
-    function adjust_accpy() {
-        var accpyOption = document.getElementById('accpyOption');
-        var cvmfsOption = document.getElementById('cvmfsOption');
-        var otherOption = document.getElementById('otherOption');
-        
-        var lcgSection = document.getElementById('lcgSection');
-        var accpySection = document.getElementById('accpySection');
-        var pythonSection = document.getElementById('pythonSection');
-
-        lcgSection.style.visibility = !cvmfsOption.checked ? 'hidden' : 'visible';
-        accpySection.style.display = !accpyOption.checked ? 'none' : 'block';
-        pythonSection.style.display = !otherOption.checked ? 'none' : 'block';
-    }
-
-
-    /**
-     * Modifies the selection of Spark clusters and enables users to choose
-     * to use the JupyterLab interface depending on the chosen platform
+     * Modifies the selection of Spark clusters depending on the chosen platform
      */
     function adjust_options() {
         var platformOptions = document.getElementById('platformOptions');
@@ -478,40 +471,41 @@
                     <span class='nb'>Amount of memory allocated to the container.</span>
                 </div>
             </label>
-            <input type="text" id="requirementsOption" name="requirements" placeholder="e.g. SWAN_projects/requirements.txt, https://github.com/user/env1">
+            <input type="text" id="requirementsOption" name="requirements" placeholder="e.g. https://gitlab.cern.ch/user/env1">
+        </div>
+        <br>
+        
+        <div id="customenv_typeSection">
+            <label for="customenv_typeOptions">Custom environment type <a href="#" onclick="toggle_visibility('customenv_typeDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="customenv_typeDetails">
+                    <span class='nb'>Type of custom environment to create. See more in the <a target="_blank" href="https://confluence.cern.ch/display/ACCPY/Getting+started+with+Acc-Py">Acc-Py User guide</a></span>
+                </div>
+            </label>
+            <select id="customenv_typeOptions" name="customenv_type"></select>
+        </div>
+        <br>
+    </div>
+    
+    <div id="resources_config">
+        <h2>Session resources</h2>
+
+        <div id="coresSection">
+            <label for="coresOptions">Number of cores <a href="#" onclick="toggle_visibility('ncoresDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="ncoresDetails">
+                    <span class='nb'>Number of cores to associate to the container.</span>
+                </div>
+            </label>
+            <select id="coresOptions" name="ncores"></select>
         </div>
         <br>
 
-        <div id="customenvTypeSection" style="display: block;">
-            <label>Custom environment type <a href="#" onclick="toggle_visibility('customenvDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="customenvDetails">
-                    <span class='nb'>Type of custom environment to create.</span>
+        <div id="memorySection">
+            <label for="memoryOptions">Memory <a href="#" onclick="toggle_visibility('memoryDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="memoryDetails">
+                    <span class='nb'>Amount of Memory allocated to the container.</span>
                 </div>
             </label>
-            <br>
-            <input type="radio" id="cvmfsOption" name="customenvType" value="cvmfs" checked onchange="adjust_accpy();" style="width: auto; height: auto; display: inline-block;">
-            <label for="cvmfsOption" style="margin-right: 5%;">CVMFS Python</label>
-            <input type="radio" id="accpyOption" name="customenvType" value="accpy" onchange="adjust_accpy();" style="width: auto; height: auto; display: inline-block;">
-            <label for="accpyOption" style="margin-right: 5%;">Acc-Py</label>
-            <input type="radio" id="otherOption" name="customenvType" value="custom_python" onchange="adjust_accpy();" style="width: auto; height: auto; display: inline-block;">
-            <label for="otherOption" style="margin-right: 5%;">Other</label>
-        </div>
-        <br>
-        <div id="accpySection" style="display: none;">
-            <label for="accpyOptions">Acc-Py version <a href="#" onclick="toggle_visibility('accpyDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="accpyDetails">
-                    <span class='nb'>Version for Acc-Py. See more in the <a target="_blank" href="https://confluence.cern.ch/display/ACCPY/Getting+started+with+Acc-Py">Acc-Py User guide</a></span>
-                </div>
-            </label>
-            <select id="accpyOptions" name="accpy_version"></select>
-        </div>
-        <div id="pythonSection" style="display: none;">
-            <label for="pythonOption">Python path <a href="#" onclick="toggle_visibility('pythonDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="pythonDetails">
-                    <span class='nb'>Path for an alternative Python binary</span>
-                </div>
-            </label>
-            <input type="text" id="pythonOption" name="custom_python" placeholder="e.g. /usr/bin/python3">
+            <select id="memoryOptions" name="memory"></select>
         </div>
         <br>
     </div>
