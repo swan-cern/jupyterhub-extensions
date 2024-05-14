@@ -105,6 +105,9 @@ class SpawnHandler(JHSpawnHandler):
         for key, byte_list in self.request.files.items():
             form_options["%s_file" % key] = byte_list
 
+        if form_options[configs.source_type][0] == "customenv" and form_options[configs.requirements][0] == '':
+            raise web.HTTPError(400, "Requirements not provided")
+
         start_time_spawn = time.time()
 
         options = {}
@@ -172,7 +175,6 @@ class SpawnHandler(JHSpawnHandler):
                 user,
                 default=url_path_join(self.hub.base_url, "spawn-pending", user.escaped_name, server_name),
             )
-
         self.redirect(next_url)
 
     async def _render_form_wrapper(self, for_user, message=''):
