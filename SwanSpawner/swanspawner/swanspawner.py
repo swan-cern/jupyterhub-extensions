@@ -26,19 +26,15 @@ def define_SwanSpawner_from(base_class):
     """
 
     class SwanSpawner(base_class):
+   
+        source_type = 'source_type'
 
-        config_type = 'configType'
+        customenv_type = 'customenv_type'
         
-        env_name = 'env_name'
-        
+        customenv_type_version = 'customenv_type_version'
+                
         requirements = 'requirements'
-
-        customenv_type = 'customenvType'
-        
-        accpy_version = 'accpy_version'
-        
-        custom_python = 'custom_python'
-        
+                
         lcg_rel_field = 'LCG-rel'
 
         platform_field = 'platform'
@@ -52,6 +48,8 @@ def define_SwanSpawner_from(base_class):
         spark_cluster_field = 'spark-cluster'
 
         condor_pool = 'condor-pool'
+
+        env_name = 'env_name'
 
         options_form_config = Unicode(
             config=True,
@@ -90,20 +88,29 @@ def define_SwanSpawner_from(base_class):
                 self.options_form = self._render_templated_options_form
 
         def options_from_form(self, formdata):
+            customenv_type, customenv_type_version = 'none', 'none'
+            requirements = 'none'
+            lcg = formdata[self.lcg_rel_field][0]
+            platform = formdata[self.platform_field][0]
+            if formdata[self.source_type][0] == 'customenv':
+                customenv_type, customenv_type_version = formdata[self.customenv_type][0].lower().split('-')
+                requirements = formdata[self.requirements][0]
+                lcg = 'none'
+                platform = 'x86_64-el9-gcc13-opt'
+
             options = {}
-            options[self.config_type]           = formdata[self.config_type][0]
-            options[self.env_name]              = formdata[self.env_name][0]
-            options[self.requirements]          = formdata[self.requirements][0]
-            options[self.customenv_type]        = formdata[self.customenv_type][0]
-            options[self.accpy_version]         = formdata[self.accpy_version][0]
-            options[self.custom_python]         = formdata[self.custom_python][0]
-            options[self.lcg_rel_field]         = formdata[self.lcg_rel_field][0]
-            options[self.platform_field]        = formdata[self.platform_field][0]
+            options[self.source_type]           = formdata[self.source_type][0]
+            options[self.customenv_type]        = customenv_type
+            options[self.customenv_type_version] = customenv_type_version
+            options[self.requirements]          = requirements
+            options[self.lcg_rel_field]         = lcg
+            options[self.platform_field]        = platform
             options[self.user_script_env_field] = formdata[self.user_script_env_field][0]
             options[self.spark_cluster_field]   = formdata[self.spark_cluster_field][0] if self.spark_cluster_field in formdata.keys() else 'none'
             options[self.condor_pool]           = formdata[self.condor_pool][0]
             options[self.user_n_cores]          = int(formdata[self.user_n_cores][0])
             options[self.user_memory]           = formdata[self.user_memory][0] + 'G'
+            options[self.env_name]              = ''
 
             self.offload = options[self.spark_cluster_field] != 'none'
 
@@ -112,8 +119,6 @@ def define_SwanSpawner_from(base_class):
         def get_env(self):
             """ Set base environmental variables for swan jupyter docker image """
             env = super().get_env()
-
-            deploy_lcg = "true" if self.user_options[self.config_type].upper() == 'LCG' or self.user_options[self.customenv_type].upper() == "CVMFS" else "false"
 
             username = self.user.name
             if self.local_home:
@@ -129,16 +134,7 @@ def define_SwanSpawner_from(base_class):
             if self.lcg_rel_field in self.user_options:
                 # session spawned via the form
                 env.update(dict(
-                    LCG_ENVIRONMENT        = deploy_lcg,
-                    ROOT_LCG_VIEW_NAME     = self.user_options[self.lcg_rel_field],
-                    ROOT_LCG_VIEW_PLATFORM = self.user_options[self.platform_field],
-                    USER_ENV_SCRIPT        = self.user_options[self.user_script_env_field],
-                    ENV_NAME               = self.user_options[self.env_name],
-                    REQUIREMENTS           = self.user_options[self.requirements],
-                    ACCPY_VERSION          = self.user_options[self.accpy_version],
-                    CUSTOM_PYTHON          = self.user_options[self.custom_python],
-                    ROOT_LCG_VIEW_PATH     = self.lcg_view_path,
-                    PS1                    = f"[\\u@{self.env_name} \\W]\\$",
+                    SOURCE_TYPE            = self.user_options[self.source_type],
                     USER                   = username,
                     NB_USER                = username,
                     USER_ID                = self.user_uid,
@@ -161,6 +157,13 @@ def define_SwanSpawner_from(base_class):
             # Enable configuration for CERN HTCondor pool
             if self.user_options[self.condor_pool] != 'none':
                 env['CERN_HTCONDOR'] = 'true'
+            if self.user_options[self.source_type] == "lcg":
+                env['ROOT_LCG_VIEW_NAME']     = self.user_options[self.lcg_rel_field]
+                env['ROOT_LCG_VIEW_PLATFORM'] = self.user_options[self.platform_field]
+                env['USER_ENV_SCRIPT']        = self.user_options[self.user_script_env_field]
+                env['ROOT_LCG_VIEW_PATH']     = self.lcg_view_path
+            else:
+                env['PS1'] = f'[\\u@{username}_env \\W]\\$'
 
             return env
 

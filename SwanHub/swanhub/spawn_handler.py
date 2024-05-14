@@ -105,6 +105,9 @@ class SpawnHandler(JHSpawnHandler):
         for key, byte_list in self.request.files.items():
             form_options["%s_file" % key] = byte_list
 
+        if form_options[configs.source_type][0] == "customenv" and form_options[configs.requirements][0] == '':
+            raise web.HTTPError(400, "Requirements not provided")
+
         start_time_spawn = time.time()
 
         try:
@@ -155,12 +158,21 @@ class SpawnHandler(JHSpawnHandler):
 
         if current_user is user:
             self.set_login_cookie(user)
-        next_url = self.get_next_url(
-            user,
-            default=url_path_join(
-                self.hub.base_url, "spawn-pending", user.escaped_name, server_name
-            ),
-        )
+
+        query_params = {"env": f"{user.escaped_name}_env", "req": options[configs.requirements]}
+        if options[configs.customenv_type] == "accpy":
+            query_params[configs.customenv_type] = options[configs.customenv_type_version]
+
+        if options[configs.source_type] == "customenv":
+            next_url = self.get_next_url(
+                user,
+                default=url_concat(url_path_join("user", user.escaped_name, "customenvs", server_name), query_params),
+            )
+        else:
+            next_url = self.get_next_url(
+                user,
+                default=url_path_join(self.hub.base_url, "spawn-pending", user.escaped_name, server_name),
+            )
         self.redirect(next_url)
 
     async def _render_form_wrapper(self, for_user, message=''):

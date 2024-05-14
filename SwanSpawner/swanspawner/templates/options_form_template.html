@@ -6,7 +6,24 @@
 
     var lcgFormConfig = {{ options_form_config }};
 
-    var accpyVersions = ["2020.11", "2021.12", "2023.06"];
+    const customenv_types = [
+      {
+        "value": "python-python3",
+        "text": "Python 3"
+      },
+      {
+        "value": "accpy-2023.06",
+        "text": "Acc-Py 2023.06"
+      },
+      {
+        "value": "accpy-2021.12",
+        "text": "Acc-Py 2021.12"
+      },
+      {
+        "value": "accpy-2020.11",
+        "text": "Acc-Py 2020.11"
+      }
+    ];
 
     var formInitialized = false;
 
@@ -38,7 +55,6 @@
                 break;
             }
         }
-        selector.setAttribute('disabled', '');
     }
 
     /*
@@ -47,11 +63,10 @@
    function selectDefaultLCG(selector) {
         for (var i = 0; i < selector.options.length; i++) {
             if (selector.options[i].value === 'LCG_105_swan') {
-               selector.options[i].selected = true;
-               break;
+                selector.options[i].selected = true;
+                break;
             }
         }
-        selector.setAttribute('disabled', '');
     }
 
     /**
@@ -199,17 +214,22 @@
             selectCondor.add(selectCondorOption);
         }
 
-        // adjust accpy versions option for customenvs
-        var selectAccpy = document.getElementById('accpyOptions');
-        selectAccpy.innerHTML = '';
+        // adjust customenv type options for customenvs
+        var selectCustomenv_type = document.getElementById('customenv_typeOptions');
+        selectCustomenv_type.innerHTML = '';
+        
+        for( var i = 0 ; i < customenv_types.length ; i++ ){
+            var customenv_type = customenv_types[i];
 
-        accpyVersions.forEach(version => {
-            var selectAccpyOption = document.createElement("option");
-            selectAccpyOption.value = version;
-            selectAccpyOption.text = version;
-            selectAccpy.add(selectAccpyOption);
-        });
-        selectAccpy.selectedIndex = 0;
+            var customenv_typeOption = document.createElement("option");
+            customenv_typeOption.value = customenv_type.value;
+            customenv_typeOption.text = customenv_type.text;
+            if (i === 0) {
+                customenv_typeOption.selected = true;
+            }
+
+            selectCustomenv_type.add(customenv_typeOption);
+        }
     }
 
     /**
@@ -218,49 +238,28 @@
     function adjust_customenv() {
         var lcgOption = document.getElementById('lcgOption');
         var customenvOption = document.getElementById('customenvOption');
+        
         var customenv_config = document.getElementById('customenv_config');
         var external_config = document.getElementById('external_config');
-        var lcgSection = document.getElementById('lcgSection');
+        var software_config = document.getElementById('software_config');
         var lcgReleaseOptions = document.getElementById('lcgReleaseOptions');
         var platformOptions = document.getElementById('platformOptions');
         
         if (lcgOption.checked) {
+            software_config.style.display = 'block';
             customenv_config.style.display = 'none';
             external_config.style.display = 'block';
-            lcgSection.style.visibility = 'visible';
-            lcgReleaseOptions.removeAttribute('disabled');
-            lcgReleaseOptions.selectedIndex = 1;
-            platformOptions.selectedIndex = 0;
-            platformOptions.removeAttribute('disabled');
             adjust_form();
             adjust_spark();
-        } else if (customenvOption.checked ) {
+        } else if (customenvOption.checked) {
             selectDefaultLCG(lcgReleaseOptions);
             adjust_form();
             selectAlma9(platformOptions);
+            software_config.style.display = 'none';
             customenv_config.style.display = 'block';
             external_config.style.display = 'none';
-            adjust_accpy();
         } 
     }
-
-    /**
-     * Modifies the some elements according to the selected Acc-Py version
-     */
-    function adjust_accpy() {
-        var accpyOption = document.getElementById('accpyOption');
-        var cvmfsOption = document.getElementById('cvmfsOption');
-        var otherOption = document.getElementById('otherOption');
-        
-        var lcgSection = document.getElementById('lcgSection');
-        var accpySection = document.getElementById('accpySection');
-        var pythonSection = document.getElementById('pythonSection');
-
-        lcgSection.style.visibility = !cvmfsOption.checked ? 'hidden' : 'visible';
-        accpySection.style.display = !accpyOption.checked ? 'none' : 'block';
-        pythonSection.style.display = !otherOption.checked ? 'none' : 'block';
-    }
-
 
     /**
      * Modifies the selection of Spark clusters depending on the chosen platform
@@ -294,132 +293,104 @@
     </label>
     <br><br>
 
-    <div>
-        <label>Configuration <a href="#" onclick="toggle_visibility('configDetails');"><span class='nbs'>more...</span></a>
-            <div style="display:none;" id="configDetails">
-                <span class='nb'>Configuration type for your container.</span>
+    <div id="source_typeSection">
+        <h2>Software</h2>
+        <label>Source <a href="#" onclick="toggle_visibility('sourceDetails');"><span class='nbs'>more...</span></a>
+            <div style="display:none;" id="sourceDetails">
+                <span class='nb'>Source type for your container.</span>
             </div>
         </label>
         <br>
-        <input type="radio" id="lcgOption" name="configType" value="lcg" checked onchange="adjust_customenv();" style="width: auto; height: auto; display: inline-block;">
+        <input type="radio" id="lcgOption" name="source_type" value="lcg" checked onchange="adjust_customenv();" style="width: auto; height: auto; display: inline-block;">
         <label for="lcgOption" style="margin-right: 5%;">LCG</label>
-        <input type="radio" id="customenvOption" name="configType" value="customenv" onchange="adjust_customenv();" style="width: auto; height: auto; display: inline-block;">
+        <input type="radio" id="customenvOption" name="source_type" value="customenv" onchange="adjust_customenv();" style="width: auto; height: auto; display: inline-block;">
         <label for="customenvOption">Custom Environment</label>
+        <br>
     </div>
-    <br>
-
-    <div id="lcgSection">
-        <label for="lcgReleaseOptions">Software stack <a href="#" onclick="toggle_visibility('lcgReleaseDetails');"><span class='nbs'>more...</span></a>
-            <div style="display:none;" id="lcgReleaseDetails">
-                <span class='nb'>The software stack to associate to the container. See the <a target="_blank" href="http://lcginfo.cern.ch/">LCG package info</a> page.</span>
-            </div>
-        </label>
-        <select id="lcgReleaseOptions" name="LCG-rel" onchange="adjust_form();">
-        </select>
-    </div>
-    <br>
     
-    <div id="plataformSection">
-        <label for="platformOptions">Platform <a href="#" onclick="toggle_visibility('platformDetails');"><span class='nbs'>more...</span></a>
-            <div style="display:none;" id="platformDetails">
-                <span class='nb'>The combination of compiler version and flags.</span>
-            </div>
-        </label>
-        <select id="platformOptions" name="platform" onchange="adjust_spark();"></select>
+    <div id="software_config">
+        <div id="lcgSection">
+            <label for="lcgReleaseOptions">Software stack <a href="#" onclick="toggle_visibility('lcgReleaseDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="lcgReleaseDetails">
+                    <span class='nb'>Software stack to associate to the container. See the <a target="_blank" href="http://lcginfo.cern.ch/">LCG package info</a> page.</span>
+                </div>
+            </label>
+            <select id="lcgReleaseOptions" name="LCG-rel" onchange="adjust_form();">
+            </select>
+        </div>
+        <br>
+        
+        <div id="plataformSection">
+            <label for="platformOptions">Platform <a href="#" onclick="toggle_visibility('platformDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="platformDetails">
+                    <span class='nb'>Combination of compiler version and flags.</span>
+                </div>
+            </label>
+            <select id="platformOptions" name="platform" onchange="adjust_spark();"></select>
+        </div>
+        <br>
+        
+        <div id="scriptenvSection">
+            <label for="scriptenvOption">Environment script <a href="#" onclick="toggle_visibility('scriptenvDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="scriptenvDetails">
+                    <span class='nb'>User-provided bash script to define custom environment variables. The variable CERNBOX_HOME is resolved to the proper /eos/user/u/username directory.</span>
+                </div>
+            </label>
+            <input type="text" id="scriptenvOption" name="scriptenv" placeholder="e.g. $CERNBOX_HOME/MySWAN/myscript.sh">
+        </div>
+        <br>
     </div>
-    <br>
-    
-    <div id="scriptenvSection">
-        <label for="scriptenvOption">Environment script <a href="#" onclick="toggle_visibility('scriptenvDetails');"><span class='nbs'>more...</span></a>
-            <div style="display:none;" id="scriptenvDetails">
-                <span class='nb'>User-provided bash script to define custom environment variables. The variable CERNBOX_HOME is resolved to the proper /eos/user/u/username directory.</span>
-            </div>
-        </label>
-        <input type="text" id="scriptenvOption" name="scriptenv" placeholder="e.g. $CERNBOX_HOME/MySWAN/myscript.sh">
-    </div>
-    <br>
-    
-    <div id="coresSection">
-        <label for="coresOptions">Number of cores <a href="#" onclick="toggle_visibility('ncoresDetails');"><span class='nbs'>more...</span></a>
-            <div style="display:none;" id="ncoresDetails">
-                <span class='nb'>Number of cores to associate to the container.</span>
-            </div>
-        </label>
-        <select id="coresOptions" name="ncores"></select>
-    </div>
-    <br>
-
-    <div id="memorySection">
-        <label for="memoryOptions">Memory <a href="#" onclick="toggle_visibility('memoryDetails');"><span class='nbs'>more...</span></a>
-            <div style="display:none;" id="memoryDetails">
-                <span class='nb'>Amount of Memory allocated to the container.</span>
-            </div>
-        </label>
-        <select id="memoryOptions" name="memory"></select>
-    </div>
-    <br>
 
     <!-- Custom environment configuration -->
     <div id="customenv_config" style="display: none;">
-        <h2 for="computing-resources">Custom environment configuration</h2>
-        
-        <div id="envnameSection">
-            <label for="envnameOption">Environment <a href="#" onclick="toggle_visibility('envnameDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="envnameDetails">
-                    <span class='nb'>Name of the new environment to create.</span>
-                </div>
-            </label>
-            <input type="text" id="envnameOption" name="env_name" placeholder="e.g. env1">
-        </div>
-        <br>
-
         <div id="requirementsSection">
-            <label for="requirementsOption">Requirements <a href="#" onclick="toggle_visibility('requirementsDetails');"><span class='nbs'>more...</span></a>
+            <label for="requirementsOption">Git Repository <a href="#" onclick="toggle_visibility('requirementsDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="requirementsDetails">
                     <span class='nb'>Path to a requirements file stored in your <a target="_blank" href="https://cernbox.cern.ch/">CERNBox</a>, or a <a target="_blank" href="https://github.com/new/">GitHub</a>/<a target="_blank" href="https://gitlab.cern.ch/projects/new">CERN GitLab</a> repository containing a requirements.txt in its root path.</span>
                 </div>
             </label>
-            <input type="text" id="requirementsOption" name="requirements" placeholder="e.g. SWAN_projects/requirements.txt, https://github.com/user/env1">
+            <input type="text" id="requirementsOption" name="requirements" placeholder="e.g. https://gitlab.cern.ch/user/env1">
+        </div>
+        <br>
+        
+        <div id="customenv_typeSection">
+            <label for="customenv_typeOptions">Custom environment type <a href="#" onclick="toggle_visibility('customenv_typeDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="customenv_typeDetails">
+                    <span class='nb'>Type of custom environment to create. See more in the <a target="_blank" href="https://confluence.cern.ch/display/ACCPY/Getting+started+with+Acc-Py">Acc-Py User guide</a></span>
+                </div>
+            </label>
+            <select id="customenv_typeOptions" name="customenv_type"></select>
+        </div>
+        <br>
+    </div>
+    
+    <div id="resources_config">
+        <h2>Session resources</h2>
+
+        <div id="coresSection">
+            <label for="coresOptions">Number of cores <a href="#" onclick="toggle_visibility('ncoresDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="ncoresDetails">
+                    <span class='nb'>Number of cores to associate to the container.</span>
+                </div>
+            </label>
+            <select id="coresOptions" name="ncores"></select>
         </div>
         <br>
 
-        <div id="customenvTypeSection" style="display: block;">
-            <label>Custom environment type <a href="#" onclick="toggle_visibility('customenvDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="customenvDetails">
-                    <span class='nb'>Type of custom environment to create.</span>
+        <div id="memorySection">
+            <label for="memoryOptions">Memory <a href="#" onclick="toggle_visibility('memoryDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="memoryDetails">
+                    <span class='nb'>Amount of Memory allocated to the container.</span>
                 </div>
             </label>
-            <br>
-            <input type="radio" id="cvmfsOption" name="customenvType" value="cvmfs" checked onchange="adjust_accpy();" style="width: auto; height: auto; display: inline-block;">
-            <label for="cvmfsOption" style="margin-right: 5%;">CVMFS Python</label>
-            <input type="radio" id="accpyOption" name="customenvType" value="accpy" onchange="adjust_accpy();" style="width: auto; height: auto; display: inline-block;">
-            <label for="accpyOption" style="margin-right: 5%;">Acc-Py</label>
-            <input type="radio" id="otherOption" name="customenvType" value="custom_python" onchange="adjust_accpy();" style="width: auto; height: auto; display: inline-block;">
-            <label for="otherOption" style="margin-right: 5%;">Other</label>
-        </div>
-        <br>
-        <div id="accpySection" style="display: none;">
-            <label for="accpyOptions">Acc-Py version <a href="#" onclick="toggle_visibility('accpyDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="accpyDetails">
-                    <span class='nb'>Version for Acc-Py. See more in the <a target="_blank" href="https://confluence.cern.ch/display/ACCPY/Getting+started+with+Acc-Py">Acc-Py User guide</a></span>
-                </div>
-            </label>
-            <select id="accpyOptions" name="accpy_version"></select>
-        </div>
-        <div id="pythonSection" style="display: none;">
-            <label for="pythonOption">Python path <a href="#" onclick="toggle_visibility('pythonDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="pythonDetails">
-                    <span class='nb'>Path for an alternative Python binary</span>
-                </div>
-            </label>
-            <input type="text" id="pythonOption" name="custom_python" placeholder="e.g. /usr/bin/python3">
+            <select id="memoryOptions" name="memory"></select>
         </div>
         <br>
     </div>
 
     <!-- External computing resources -->
     <div id="external_config" style="display: block;">
-        <h2 for="computing-resources">External computing resources</h2>
+        <h2>External computing resources</h2>
         
         <div id="clusterSection">
             <label for="clusterOptions">Spark cluster <a href="#" onclick="toggle_visibility('clusterDetails');"><span class='nbs'>more...</span></a>
