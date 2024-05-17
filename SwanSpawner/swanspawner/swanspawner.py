@@ -37,8 +37,6 @@ def define_SwanSpawner_from(base_class):
 
         requirements = 'requirements'
 
-        autoenv = 'autoenv'
-                        
         lcg_rel_field = 'LCG-rel'
 
         platform_field = 'platform'
@@ -104,7 +102,6 @@ def define_SwanSpawner_from(base_class):
             if len(aux_req) == 2:
                 customenv_type, customenv_type_version = aux_req
             requirements, requirements_type = '', ''
-            autoenv = formdata[self.autoenv][0] if self.autoenv in formdata.keys() else ''
             if source_type == self.customenv_special_type:
                 lcg, platform = '', 'x86_64-el9-gcc13-opt'
                 requirements = formdata[self.requirements][0]
@@ -116,7 +113,6 @@ def define_SwanSpawner_from(base_class):
             options[self.customenv_type_version] = customenv_type_version
             options[self.requirements]          = requirements
             options[self.requirements_type]     = requirements_type
-            options[self.autoenv]               = autoenv
             options[self.lcg_rel_field]         = lcg
             options[self.platform_field]        = platform
             options[self.user_script_env_field] = formdata[self.user_script_env_field][0]
@@ -178,7 +174,7 @@ def define_SwanSpawner_from(base_class):
                 env['USER_ENV_SCRIPT']        = self.user_options[self.user_script_env_field]
                 env['ROOT_LCG_VIEW_PATH']     = self.lcg_view_path
             elif self.user_options[self.source_type] == "customenv":
-                env['AUTOENV'] = self.user_options[self.autoenv]
+                env['AUTOENV'] = "true"
 
             return env
 

@@ -9,7 +9,7 @@
     const customenv_types = [
       {
         "value": "python-python3",
-        "text": "Python 3"
+        "text": "Generic"
       },
       {
         "value": "accpy-2023.06",
@@ -235,6 +235,25 @@
     }
 
     /**
+     * Allows to adjust the width of the select element based on the selected option
+     */
+    function adjustSelectWidth(id) {
+        const selectElement = document.getElementById(id);
+        const selectedOptionText = selectElement.options[selectElement.selectedIndex].text;
+        const tempElement = document.createElement('span');
+        tempElement.style.visibility = 'hidden';
+        tempElement.style.whiteSpace = 'nowrap';
+        tempElement.style.fontSize = window.getComputedStyle(selectElement).fontSize;
+        tempElement.innerHTML = selectedOptionText;
+
+        document.body.appendChild(tempElement);
+        const width = tempElement.offsetWidth;
+        document.body.removeChild(tempElement);
+
+        selectElement.style.width = `${width + 50}px`;
+    }
+
+    /**
      * Modifies the some elements according to the selected type of configuration (LCG or Custom Environments)
      */
     function toggle_forms() {
@@ -244,7 +263,6 @@
         var customenv_config = document.getElementById('customenv_config');
         var external_config = document.getElementById('external_config');
         var software_config = document.getElementById('software_config');
-        var autoenvOption = document.getElementById('autoenvOption');
         
         if (lcgOption.checked) {
             software_config.style.display = 'block';
@@ -256,6 +274,7 @@
             selectDefaultLCG('lcgReleaseOptions');
             adjust_form();
             selectAlma9('platformOptions');
+            adjustSelectWidth('requirements_dropdown');
             software_config.style.display = 'none';
             customenv_config.style.display = 'block';
             external_config.style.display = 'none';
@@ -345,36 +364,30 @@
     <!-- Custom environment configuration -->
     <div id="customenv_config" style="display: none;">
         <div id="requirementsSection">
-            <label for="requirementsOption">Git Repository <a href="#" onclick="toggle_visibility('requirementsDetails');"><span class='nbs'>more...</span></a>
+            <label for="requirementsOption">Repository 
+                <a href="#" onclick="toggle_visibility('requirementsDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="requirementsDetails">
                     <span class='nb'>Path to a folder stored in your <a target="_blank" href="https://cernbox.cern.ch/">CERNBox</a>, or a <a target="_blank" href="https://github.com/new/">GitHub</a>/<a target="_blank" href="https://gitlab.cern.ch/projects/new">CERN GitLab</a> repository containing a requirements.txt in its root path.</span>
                 </div>
             </label>
             <br>
-            <select id="requirements_dropdown" name="requirements_type" style="width: auto; height: auto; display: inline-block; border: 1px solid #ccc; background-color: #f7f7f7;">
-                  <option value="git">Git</option>
-                  <option value="cernbox">CERNBox</option>
-            </select>
-            <input type="text" id="requirementsOption" name="requirements" placeholder="e.g. https://gitlab.cern.ch/user/repo_env" style="width: 72%; height: auto; display: inline-block;">
+            <div style="display: flex;">
+                <select id="requirements_dropdown" name="requirements_type" onchange="adjustSelectWidth('requirements_dropdown');" style="width: auto; display: inline-flex; border: 1px solid #afafaf; background-color: #efefef;">
+                      <option value="git">Git</option>
+                      <option value="cernbox">CERNBox</option>
+                </select>
+                <input type="text" id="requirementsOption" name="requirements" placeholder="e.g. https://gitlab.cern.ch/user/repo_env" style="flex-grow: 1; margin-left: 0; border: 1px solid #afafaf;">
+            </div>
         </div>
         <br>
         
         <div id="customenv_typeSection">
-            <label for="customenv_typeOptions">Custom environment type <a href="#" onclick="toggle_visibility('customenv_typeDetails');"><span class='nbs'>more...</span></a>
+            <label for="customenv_typeOptions">Type <a href="#" onclick="toggle_visibility('customenv_typeDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="customenv_typeDetails">
                     <span class='nb'>Type of custom environment to create. See more in the <a target="_blank" href="https://confluence.cern.ch/display/ACCPY/Getting+started+with+Acc-Py">Acc-Py User guide</a></span>
                 </div>
             </label>
             <select id="customenv_typeOptions" name="customenv_type"></select>
-        </div>
-        <br>
-        <div id="autoenvSection">
-            <input type="checkbox" id="autoenvOption" name="autoenv" checked style="width: auto; height: auto; display: inline-block;">
-            <label for="autoenvOption" style="margin-right: 5%;">Automatically activation <a href="#" onclick="toggle_visibility('autoenvDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="autoenvDetails">
-                    <span class='nb'>Automatically activates the environment when opening the terminal.</span>
-                </div>
-            </label>
         </div>
         <br>
     </div>
