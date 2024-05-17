@@ -21,7 +21,7 @@ def define_SwanSpawner_from(base_class):
     """
 
     class SwanSpawner(base_class):
-   
+
         source_type = 'source_type'
 
         software_source = 'software_source'
@@ -170,13 +170,15 @@ def define_SwanSpawner_from(base_class):
             # Enable configuration for CERN HTCondor pool
             if self.user_options.get(self.condor_pool, 'none') != 'none':
                 env['CERN_HTCONDOR'] = 'true'
+
+            # Enable configuration for LCG and custom environments
             if self.user_options[self.source_type] == "lcg":
                 env['ROOT_LCG_VIEW_NAME']     = self.user_options[self.lcg_rel_field]
                 env['ROOT_LCG_VIEW_PLATFORM'] = self.user_options[self.platform_field]
                 env['USER_ENV_SCRIPT']        = self.user_options[self.user_script_env_field]
                 env['ROOT_LCG_VIEW_PATH']     = self.lcg_view_path
-            else:
-                env['PS1'] = f'[\\u@{username}_env \\W]\\$'
+            elif self.user_options[self.source_type] == "customenv":
+                env['AUTOENV'] = self.user_options[self.autoenv]
 
             return env
 
