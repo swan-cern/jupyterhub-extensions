@@ -46,7 +46,8 @@
     /*
      * Selects AlmaLinux 9 in the LCG plataform options
      */
-    function selectAlma9(selector) {
+    function selectAlma9(id) {
+        var selector = document.getElementById(id);
         for (var i = 0; i < selector.options.length; i++) {
             if (selector.options[i].text.startsWith('AlmaLinux 9')) {
                 selector.options[i].selected = true;
@@ -58,7 +59,8 @@
     /*
     * Selects default LCG release (105)
     */
-   function selectDefaultLCG(selector) {
+   function selectDefaultLCG(id) {
+        var selector = document.getElementById(id);
         for (var i = 0; i < selector.options.length; i++) {
             if (selector.options[i].value === 'LCG_105_swan') {
                 selector.options[i].selected = true;
@@ -255,15 +257,14 @@
     /**
      * Modifies the some elements according to the selected type of configuration (LCG or Custom Environments)
      */
-    function adjust_customenv() {
+    function toggle_forms() {
         var lcgOption = document.getElementById('lcgOption');
         var customenvOption = document.getElementById('customenvOption');
         
         var customenv_config = document.getElementById('customenv_config');
         var external_config = document.getElementById('external_config');
         var software_config = document.getElementById('software_config');
-        var lcgReleaseOptions = document.getElementById('lcgReleaseOptions');
-        var platformOptions = document.getElementById('platformOptions');
+        var autoenvOption = document.getElementById('autoenvOption');
         
         if (lcgOption.checked) {
             software_config.style.display = 'block';
@@ -272,9 +273,9 @@
             adjust_form();
             adjust_spark();
         } else if (customenvOption.checked) {
-            selectDefaultLCG(lcgReleaseOptions);
+            selectDefaultLCG('lcgReleaseOptions');
             adjust_form();
-            selectAlma9(platformOptions);
+            selectAlma9('platformOptions');
             software_config.style.display = 'none';
             customenv_config.style.display = 'block';
             external_config.style.display = 'none';
@@ -471,7 +472,12 @@
                     <span class='nb'>Amount of memory allocated to the container.</span>
                 </div>
             </label>
-            <input type="text" id="requirementsOption" name="requirements" placeholder="e.g. https://gitlab.cern.ch/user/env1">
+            <br>
+            <select id="requirements_dropdown" name="requirements_type" style="width: auto; height: auto; display: inline-block; border: 1px solid #ccc; background-color: #f7f7f7;">
+                  <option value="git">Git</option>
+                  <option value="cernbox">CERNBox</option>
+            </select>
+            <input type="text" id="requirementsOption" name="requirements" placeholder="e.g. https://gitlab.cern.ch/user/env1" style="width: max-content; height: auto; display: inline-block;">
         </div>
         <br>
         
@@ -482,6 +488,15 @@
                 </div>
             </label>
             <select id="customenv_typeOptions" name="customenv_type"></select>
+        </div>
+        <br>
+        <div id="autoenvSection">
+            <input type="checkbox" id="autoenvOption" name="autoenv" checked style="width: auto; height: auto; display: inline-block;">
+            <label for="autoenvOption" style="margin-right: 5%;">Automatically activation <a href="#" onclick="toggle_visibility('autoenvDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="autoenvDetails">
+                    <span class='nb'>Automatically activates the environment when opening the terminal.</span>
+                </div>
+            </label>
         </div>
         <br>
     </div>

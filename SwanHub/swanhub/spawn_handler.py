@@ -5,6 +5,7 @@
 
 import time
 import os
+import re
 from jupyterhub.handlers.pages import SpawnHandler as JHSpawnHandler
 from jupyterhub.utils import url_path_join, maybe_future
 from jupyterhub.scopes import needs_scope
@@ -105,14 +106,23 @@ class SpawnHandler(JHSpawnHandler):
         for key, byte_list in self.request.files.items():
             form_options["%s_file" % key] = byte_list
 
-        if form_options[configs.source_type][0] == "customenv" and form_options[configs.requirements][0] == '':
-            raise web.HTTPError(400, "Requirements not provided")
-
         start_time_spawn = time.time()
 
         options = {}
         try:
             options = await maybe_future(spawner.run_options_from_form(form_options))
+
+            if options[configs.source_type] == configs.customenv_special_type and not options[configs.requirements]:
+                raise ValueError("Requirements not provided")
+
+            # Dont allow the session to spawn if the requirements are not valid
+            cernbox_match = re.match(configs.cernbox_pattern, options[configs.requirements])
+            git_match = re.match(configs.git_pattern, options[configs.requirements])
+            if options[configs.requirements_type] == configs.cernbox_special_type and not cernbox_match:
+                raise ValueError(f"Invalid CERNBox folder for requirements: {options[configs.requirements]}")
+            if options[configs.requirements_type] == configs.git_special_type and not git_match:
+                raise ValueError(f"Invalid Git repository for requirements: {options[configs.requirements]}")
+
             await self.spawn_single_user(user, server_name=server_name, options=options)
 
             # if spawn future is already done it is success,

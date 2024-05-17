@@ -20,8 +20,6 @@ class SpawnHandlersConfigs(SingletonConfigurable):
     customenv_type = 'customenv_type'
     
     customenv_type_version = 'customenv_type_version'
-            
-    requirements = 'requirements'
 
     software_source = 'software_source'
 
