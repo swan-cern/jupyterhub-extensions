@@ -26,15 +26,19 @@ def define_SwanSpawner_from(base_class):
     """
 
     class SwanSpawner(base_class):
-   
+
         source_type = 'source_type'
 
         customenv_type = 'customenv_type'
         
         customenv_type_version = 'customenv_type_version'
                 
+        requirements_type = 'requirements_type'
+
         requirements = 'requirements'
-                
+
+        autoenv = 'autoenv'
+                        
         lcg_rel_field = 'LCG-rel'
 
         platform_field = 'platform'
@@ -49,7 +53,11 @@ def define_SwanSpawner_from(base_class):
 
         condor_pool = 'condor-pool'
 
-        env_name = 'env_name'
+        customenv_special_type = Unicode(
+            default_value='customenv',
+            config=True,
+            help='Special type for custom environments.'
+        )
 
         options_form_config = Unicode(
             config=True,
@@ -88,21 +96,27 @@ def define_SwanSpawner_from(base_class):
                 self.options_form = self._render_templated_options_form
 
         def options_from_form(self, formdata):
-            customenv_type, customenv_type_version = 'none', 'none'
-            requirements = 'none'
+            source_type = formdata[self.source_type][0]
             lcg = formdata[self.lcg_rel_field][0]
             platform = formdata[self.platform_field][0]
-            if formdata[self.source_type][0] == 'customenv':
-                customenv_type, customenv_type_version = formdata[self.customenv_type][0].lower().split('-')
+            aux_req = formdata[self.customenv_type][0].lower().split('-')
+            customenv_type, customenv_type_version = '', ''
+            if len(aux_req) == 2:
+                customenv_type, customenv_type_version = aux_req
+            requirements, requirements_type = '', ''
+            autoenv = formdata[self.autoenv][0] if self.autoenv in formdata.keys() else ''
+            if source_type == self.customenv_special_type:
+                lcg, platform = '', 'x86_64-el9-gcc13-opt'
                 requirements = formdata[self.requirements][0]
-                lcg = 'none'
-                platform = 'x86_64-el9-gcc13-opt'
+                requirements_type = formdata[self.requirements_type][0]
 
             options = {}
-            options[self.source_type]           = formdata[self.source_type][0]
+            options[self.source_type]           = source_type
             options[self.customenv_type]        = customenv_type
             options[self.customenv_type_version] = customenv_type_version
             options[self.requirements]          = requirements
+            options[self.requirements_type]     = requirements_type
+            options[self.autoenv]               = autoenv
             options[self.lcg_rel_field]         = lcg
             options[self.platform_field]        = platform
             options[self.user_script_env_field] = formdata[self.user_script_env_field][0]
@@ -110,10 +124,9 @@ def define_SwanSpawner_from(base_class):
             options[self.condor_pool]           = formdata[self.condor_pool][0]
             options[self.user_n_cores]          = int(formdata[self.user_n_cores][0])
             options[self.user_memory]           = formdata[self.user_memory][0] + 'G'
-            options[self.env_name]              = ''
 
             self.offload = options[self.spark_cluster_field] != 'none'
-
+            
             return options
 
         def get_env(self):
@@ -157,13 +170,15 @@ def define_SwanSpawner_from(base_class):
             # Enable configuration for CERN HTCondor pool
             if self.user_options[self.condor_pool] != 'none':
                 env['CERN_HTCONDOR'] = 'true'
+
+            # Enable configuration for LCG and custom environments
             if self.user_options[self.source_type] == "lcg":
                 env['ROOT_LCG_VIEW_NAME']     = self.user_options[self.lcg_rel_field]
                 env['ROOT_LCG_VIEW_PLATFORM'] = self.user_options[self.platform_field]
                 env['USER_ENV_SCRIPT']        = self.user_options[self.user_script_env_field]
                 env['ROOT_LCG_VIEW_PATH']     = self.lcg_view_path
-            else:
-                env['PS1'] = f'[\\u@{username}_env \\W]\\$'
+            elif self.user_options[self.source_type] == "customenv":
+                env['AUTOENV'] = self.user_options[self.autoenv]
 
             return env
 

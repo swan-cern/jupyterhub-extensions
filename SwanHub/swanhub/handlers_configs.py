@@ -20,14 +20,58 @@ class SpawnHandlersConfigs(SingletonConfigurable):
     customenv_type = 'customenv_type'
     
     customenv_type_version = 'customenv_type_version'
-            
-    requirements = 'requirements'
 
+    requirements = 'requirements'
+    
+    requirements_type = 'requirements_type'
+    
     lcg_rel_field = 'LCG-rel'
 
     spark_cluster_field = 'spark-cluster'
 
     user_script_env_field = 'scriptenv'
+    
+    cernbox_pattern = Unicode(
+        default_value=r'^\/?([\w-]+\/)*[\w-]+\/?$',
+        config=True,
+        help='Regular expression pattern for requirements provided by a CERNBox file.'
+    )
+
+    cernbox_special_type = Unicode(
+        default_value='cernbox',
+        config=True,
+        help='Special type for requirements provided by a CERNBox folder.'
+    )
+
+    git_pattern = Unicode(
+        default_value=r'https?://(?:github\.com|gitlab\.cern\.ch)/([^/\s]+)/([^/\s]+)/?',
+        config=True,
+        help='Regular expression pattern for requirements provided by a GitLab or GitHub repository.'
+    )
+
+    git_special_type = Unicode(
+        default_value='git',
+        config=True,
+        help='Special requirements type for Git repositories.'
+    )
+
+    customenv_special_type = Unicode(
+        default_value='customenv',
+        config=True,
+        help='Special type for sourcing the environment.'
+    )
+
+    accpy_special_type = Unicode(
+        default_value='accpy',
+        config=True,
+        help='Special type for custom environments.'
+    )
+
+    env_name = Unicode(
+        default_value='{project_folder}_env',
+        config=True,
+        help='Name format for custom environment launched by the user.'
+    )
 
     local_home = Bool(
         default_value=False,
