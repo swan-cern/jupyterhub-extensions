@@ -235,22 +235,29 @@
     }
 
     /**
-     * Allows to adjust the width of the select element based on the selected option
+     * Allows to adjust the width of the dropdown element based on the selected option
      */
-    function adjustSelectWidth(id) {
-        const selectElement = document.getElementById(id);
+    function adjustDropdownWidth() {
+        const selectElement = document.getElementById('requirements_dropdown');
         const selectedOptionText = selectElement.options[selectElement.selectedIndex].text;
         const tempElement = document.createElement('span');
         tempElement.style.visibility = 'hidden';
         tempElement.style.whiteSpace = 'nowrap';
         tempElement.style.fontSize = window.getComputedStyle(selectElement).fontSize;
         tempElement.innerHTML = selectedOptionText;
-
+        
         document.body.appendChild(tempElement);
         const width = tempElement.offsetWidth;
         document.body.removeChild(tempElement);
-
+        
         selectElement.style.width = `${width + 50}px`;
+
+        const requirementsOption = document.getElementById('requirementsOption');
+        if (selectElement.value === 'cernbox') {
+            requirementsOption.placeholder = 'e.g. SWAN_projects/myproject';
+        } else if (selectElement.value === 'git') {
+            requirementsOption.placeholder="e.g. https://gitlab.cern.ch/user/myrepo";
+        }
     }
 
     /**
@@ -274,7 +281,7 @@
             selectDefaultLCG('lcgReleaseOptions');
             adjust_form();
             selectAlma9('platformOptions');
-            adjustSelectWidth('requirements_dropdown');
+            adjustDropdownWidth();
             software_config.style.display = 'none';
             customenv_config.style.display = 'block';
             external_config.style.display = 'none';
@@ -372,11 +379,11 @@
             </label>
             <br>
             <div style="display: flex;">
-                <select id="requirements_dropdown" name="requirements_type" onchange="adjustSelectWidth('requirements_dropdown');" style="width: auto; display: inline-flex; border: 1px solid #afafaf; background-color: #efefef;">
+                <select id="requirements_dropdown" name="requirements_type" onchange="adjustDropdownWidth();" style="width: auto; display: inline-flex; border: 1px solid #afafaf; background-color: #efefef;">
                       <option value="git">Git</option>
                       <option value="cernbox">CERNBox</option>
                 </select>
-                <input type="text" id="requirementsOption" name="requirements" placeholder="e.g. https://gitlab.cern.ch/user/repo_env" style="flex-grow: 1; margin-left: 0; border: 1px solid #afafaf;">
+                <input type="text" id="requirementsOption" name="requirements" style="flex-grow: 1; margin-left: 0; border: 1px solid #afafaf;">
             </div>
         </div>
         <br>
