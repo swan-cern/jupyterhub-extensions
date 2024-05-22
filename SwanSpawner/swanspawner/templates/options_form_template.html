@@ -253,10 +253,10 @@
         selectElement.style.width = `${width + 50}px`;
 
         const requirementsOption = document.getElementById('requirementsOption');
-        if (selectElement.value === 'cernbox') {
-            requirementsOption.placeholder = 'e.g. SWAN_projects/myproject';
+        if (selectElement.value === 'eos') {
+            requirementsOption.placeholder = 'e.g. $CERNBOX_HOME/MySWAN';
         } else if (selectElement.value === 'git') {
-            requirementsOption.placeholder="e.g. https://gitlab.cern.ch/user/myrepo";
+            requirementsOption.placeholder= "e.g. https://gitlab.cern.ch/user/myrepo";
         }
     }
 
@@ -374,14 +374,14 @@
             <label for="requirementsOption">Repository 
                 <a href="#" onclick="toggle_visibility('requirementsDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="requirementsDetails">
-                    <span class='nb'>Path to a folder stored in your <a target="_blank" href="https://cernbox.cern.ch/">CERNBox</a>, or a <a target="_blank" href="https://github.com/new/">GitHub</a>/<a target="_blank" href="https://gitlab.cern.ch/projects/new">CERN GitLab</a> repository containing a requirements.txt in its root path.</span>
+                    <span class='nb'>Path to a folder stored in your <a target="_blank" href="https://cernbox.cern.ch/">EOS</a> (/eos/user/u/username), or a <a target="_blank" href="https://github.com/new/">GitHub</a>/<a target="_blank" href="https://gitlab.cern.ch/projects/new">CERN GitLab</a> repository containing a requirements.txt in its root path.</span>
                 </div>
             </label>
             <br>
             <div style="display: flex;">
                 <select id="requirements_dropdown" name="requirements_type" onchange="adjustDropdownWidth();" style="width: auto; display: inline-flex; border: 1px solid #afafaf; background-color: #efefef;">
                       <option value="git">Git</option>
-                      <option value="cernbox">CERNBox</option>
+                      <option value="eos">EOS</option>
                 </select>
                 <input type="text" id="requirementsOption" name="requirements" style="flex-grow: 1; margin-left: 0; border: 1px solid #afafaf;">
             </div>

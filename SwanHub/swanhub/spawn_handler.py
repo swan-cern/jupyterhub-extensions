@@ -115,10 +115,10 @@ class SpawnHandler(JHSpawnHandler):
                 raise ValueError("Requirements not provided")
 
             # Dont allow the session to spawn if the requirements are not valid
-            cernbox_match = re.match(configs.cernbox_pattern, options[configs.requirements])
+            eos_match = re.match(configs.eos_pattern, options[configs.requirements])
             git_match = re.match(configs.git_pattern, options[configs.requirements])
-            if options[configs.requirements_type] == configs.cernbox_special_type and not cernbox_match:
-                raise ValueError(f"Invalid CERNBox folder for requirements: {options[configs.requirements]}")
+            if options[configs.requirements_type] == configs.eos_special_type and not eos_match:
+                raise ValueError(f"Invalid EOS folder for requirements: {options[configs.requirements]}")
             if options[configs.requirements_type] == configs.git_special_type and not git_match:
                 raise ValueError(f"Invalid Git repository for requirements: {options[configs.requirements]}")
 

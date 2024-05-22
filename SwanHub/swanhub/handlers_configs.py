@@ -31,16 +31,16 @@ class SpawnHandlersConfigs(SingletonConfigurable):
 
     user_script_env_field = 'scriptenv'
     
-    cernbox_pattern = Unicode(
-        default_value=r'^\/?([\w-]+\/)*[\w-]+\/?$',
+    eos_pattern = Unicode(
+        default_value=r'^(?:\$CERNBOX_HOME\/)?\/?([\w-]+\/)*[\w-]+\/?$',
         config=True,
-        help='Regular expression pattern for requirements provided by a CERNBox file.'
+        help='Regular expression pattern for requirements provided by a EOS folder.'
     )
 
-    cernbox_special_type = Unicode(
-        default_value='cernbox',
+    eos_special_type = Unicode(
+        default_value='eos',
         config=True,
-        help='Special type for requirements provided by a CERNBox folder.'
+        help='Special type for requirements provided by a EOS folder.'
     )
 
     git_pattern = Unicode(
