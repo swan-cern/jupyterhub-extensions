@@ -32,7 +32,7 @@ class SpawnHandlersConfigs(SingletonConfigurable):
     user_script_env_field = 'scriptenv'
     
     eos_pattern = Unicode(
-        default_value=r'^(?:\$CERNBOX_HOME\/)?\/?([\w-]+\/)*[\w-]+\/?$',
+        default_value=r'^(?:\$CERNBOX|(?:/[^/\n]+)*/[^/\n]+)$',
         config=True,
         help='Regular expression pattern for requirements provided by a EOS folder.'
     )

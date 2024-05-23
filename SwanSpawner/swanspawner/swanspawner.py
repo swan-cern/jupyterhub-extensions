@@ -106,6 +106,20 @@ def define_SwanSpawner_from(base_class):
                 lcg, platform = '', 'x86_64-el9-gcc13-opt'
                 requirements = formdata[self.requirements][0]
                 requirements_type = formdata[self.requirements_type][0]
+                if requirements:
+                    if requirements.startswith("http"):
+                        # Extract http/domain/user/repo_name from repository URL, getting rid of the branches, tags, etc.
+                        repo_pattern = r'^(https?://[^/]+/[^/\s]+/[^/\s]+).*'
+                        match = re.match(repo_pattern, requirements)
+                        if match:
+                            requirements = match.group(1)
+                    else:
+                        # If the user wants to use CERNBOX_HOME, replace it with the user's CERNBOX_HOME path
+                        if requirements.startswith('$CERNBOX_HOME'):
+                            eos_path = self.eos_path_format.format(username=self.user.name)
+                            requirements = requirements.replace('$CERNBOX_HOME', eos_path.rstrip('/'))
+                        # Add requirements.txt to the given folder
+                        requirements = os.path.join(requirements, "requirements.txt")
 
             options = {}
             options[self.source_type]           = source_type
@@ -168,13 +182,13 @@ def define_SwanSpawner_from(base_class):
                 env['CERN_HTCONDOR'] = 'true'
 
             # Enable configuration for LCG and custom environments
-            if self.user_options[self.source_type] == "lcg":
+            if self.user_options[self.source_type] == self.customenv_special_type:
+                env['AUTOENV'] = "true"
+            else:
                 env['ROOT_LCG_VIEW_NAME']     = self.user_options[self.lcg_rel_field]
                 env['ROOT_LCG_VIEW_PLATFORM'] = self.user_options[self.platform_field]
                 env['USER_ENV_SCRIPT']        = self.user_options[self.user_script_env_field]
                 env['ROOT_LCG_VIEW_PATH']     = self.lcg_view_path
-            elif self.user_options[self.source_type] == "customenv":
-                env['AUTOENV'] = "true"
 
             return env
 

@@ -118,7 +118,7 @@ class SpawnHandler(JHSpawnHandler):
             eos_match = re.match(configs.eos_pattern, options[configs.requirements])
             git_match = re.match(configs.git_pattern, options[configs.requirements])
             if options[configs.requirements_type] == configs.eos_special_type and not eos_match:
-                raise ValueError(f"Invalid EOS folder for requirements: {options[configs.requirements]}")
+                raise ValueError(f"Invalid EOS path for requirements: {options[configs.requirements]}")
             if options[configs.requirements_type] == configs.git_special_type and not git_match:
                 raise ValueError(f"Invalid Git repository for requirements: {options[configs.requirements]}")
 
@@ -170,8 +170,8 @@ class SpawnHandler(JHSpawnHandler):
             self.set_login_cookie(user)
 
         if options[configs.source_type] == configs.customenv_special_type:
-            # Redirect to the customenvs page with the correct query parameters
-            project_folder = options[configs.requirements].split('/').pop()
+            # Redirect to the customenvs page with the correct query parameters (/eos/user/.../requirements.txt)
+            project_folder = options[configs.requirements].split('/')[-2]
             if options[configs.requirements].startswith('http'):
                 project_folder = git_match[2] if git_match else user.escaped_name
             
