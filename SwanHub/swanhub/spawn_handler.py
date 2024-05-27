@@ -55,12 +55,33 @@ class SpawnHandler(JHSpawnHandler):
             self.finish(form)
             return
 
-        try:
-            await super().get(for_user, server_name)
-        except web.HTTPError as e:
-            form = await self._render_form_wrapper(user, message=e.message)
-            self.finish(form)
-            return
+        if not self.request.query_arguments:
+            try:
+                await super().get(for_user, server_name)
+            except web.HTTPError as e:
+                form = await self._render_form_wrapper(user, message=e.message)
+                self.finish(form)
+                return
+        else:
+            query_options = {}
+            for key, byte_list in self.request.query_arguments.items():
+                query_options[key] = [bs.decode('utf8') for bs in byte_list]
+            self.request.body_arguments.update({
+                configs.source_type: query_options.get(configs.source_type, configs.lcg_special_type).encode(),
+                configs.repository: query_options.get(configs.repository, '').encode(),
+                configs.repository_type: query_options.get(configs.repository_type, '').encode(),
+                configs.customenv_type: query_options.get(configs.customenv_type, '').encode(),
+                configs.customenv_type_version: query_options.get(configs.customenv_type_version, '').encode(),
+                configs.lcg_rel_field: query_options.get(configs.lcg_rel_field, '').encode(),
+                configs.platform_field: query_options.get(configs.platform_field, configs.default_platform).encode(),
+                configs.spark_cluster_field: query_options.get(configs.spark_cluster_field, '').encode(),
+                configs.user_script_env_field: query_options.get(configs.user_script_env_field, '').encode(),
+                configs.condor_pool: query_options.get(configs.condor_pool, '').encode(),
+                configs.user_n_cores: query_options.get(configs.user_n_cores, '2').encode(),
+                configs.user_memory: query_options.get(configs.user_memory, '8Gi').encode(),
+                configs.notebook: query_options.get(configs.notebook, '').encode(),
+            })
+            return await self.post(user_name=for_user, server_name=server_name)
 
     @web.authenticated
     def post(self, user_name=None, server_name=''):
@@ -111,16 +132,16 @@ class SpawnHandler(JHSpawnHandler):
         try:
             options = await maybe_future(spawner.run_options_from_form(form_options))
 
-            if options[configs.source_type] == configs.customenv_special_type and not options[configs.requirements]:
+            if options.get(configs.source_type) == configs.customenv_special_type and not options.get(configs.repository):
                 raise ValueError("Requirements not provided")
 
-            # Dont allow the session to spawn if the requirements are not valid
-            eos_match = re.match(configs.eos_pattern, options[configs.requirements])
-            git_match = re.match(configs.git_pattern, options[configs.requirements])
-            if options[configs.requirements_type] == configs.eos_special_type and not eos_match:
-                raise ValueError(f"Invalid EOS path for requirements: {options[configs.requirements]}")
-            if options[configs.requirements_type] == configs.git_special_type and not git_match:
-                raise ValueError(f"Invalid Git repository for requirements: {options[configs.requirements]}")
+            # Dont allow the session to spawn if the repository are not valid
+            eos_match = re.match(configs.eos_pattern, options.get(configs.repository))
+            git_match = re.match(configs.git_pattern, options.get(configs.repository))
+            if options.get(configs.repository_type) == configs.eos_special_type and not eos_match:
+                raise ValueError(f"Invalid EOS path for requirements: {options.get(configs.repository)}")
+            if options.get(configs.repository_type) == configs.git_special_type and not git_match:
+                raise ValueError(f"Invalid Git repository for requirements: {options.get(configs.repository)}")
 
             await self.spawn_single_user(user, server_name=server_name, options=options)
 
@@ -169,16 +190,19 @@ class SpawnHandler(JHSpawnHandler):
         if current_user is user:
             self.set_login_cookie(user)
 
-        if options[configs.source_type] == configs.customenv_special_type:
-            # Redirect to the customenvs page with the correct query parameters (/eos/user/.../requirements.txt)
-            project_folder = options[configs.requirements].split('/')[-2]
-            if options[configs.requirements].startswith('http'):
+        if options.get(configs.source_type) == configs.customenv_special_type:
+            project_folder =  options.get(configs.repository).split('/')[-1]
+            if options.get(configs.repository).startswith('http'):
                 project_folder = git_match[2] if git_match else user.escaped_name
             
             # Add the query parameters to the URL
-            query_params = {"env": configs.env_name.format(project_folder=project_folder), "req": options[configs.requirements]}
-            if options[configs.customenv_type] == configs.accpy_special_type:
-                query_params[options[configs.customenv_type]] = options[configs.customenv_type_version]
+            query_params = {
+                "env": configs.env_name.format(project_folder=project_folder),
+                "repo": options.get(configs.repository),
+                configs.notebook: options.get(configs.notebook, ''),
+            }
+            if options.get(configs.customenv_type) == configs.accpy_special_type:
+                query_params[options.get(configs.customenv_type)] = options.get(configs.customenv_type_version)
 
             next_url = self.get_next_url(
                 user,
@@ -187,7 +211,7 @@ class SpawnHandler(JHSpawnHandler):
         else:
             next_url = self.get_next_url(
                 user,
-                default=url_path_join(self.hub.base_url, "spawn-pending", user.escaped_name, server_name),
+                default=url_path_join(self.hub.base_url, "spawn-pending", user.escaped_name, server_name, options.get(configs.notebook, '')),
             )
         self.redirect(next_url)
 
@@ -243,7 +267,7 @@ class SpawnHandler(JHSpawnHandler):
                 metrics.append((metric, (date, 1)))
 
         spawn_context_key = ".".join(
-            [options[configs.lcg_rel_field], options[configs.spark_cluster_field]])
+            [options.get(configs.lcg_rel_field), options.get(configs.spark_cluster_field)])
         if not spawn_exception:
             # Add spawn success (no exception) and duration to the log and send as metrics
             spawn_exc_class = "None"

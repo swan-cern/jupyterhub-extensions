@@ -7,12 +7,7 @@ import re, json
 import os
 import time
 from socket import gethostname
-from traitlets import (
-    Unicode,
-    Bool,
-    Dict,
-    Int
-)
+from traitlets import Unicode, Bool, Int
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -33,9 +28,9 @@ def define_SwanSpawner_from(base_class):
         
         customenv_type_version = 'customenv_type_version'
                 
-        requirements_type = 'requirements_type'
+        repository_type = 'repository_type'
 
-        requirements = 'requirements'
+        repository = 'repository'
 
         lcg_rel_field = 'LCG-rel'
 
@@ -55,6 +50,24 @@ def define_SwanSpawner_from(base_class):
             default_value='customenv',
             config=True,
             help='Special type for custom environments.'
+        )
+
+        eos_special_type = Unicode(
+            default_value='eos',
+            config=True,
+            help='Special type for repository provided by a EOS folder.'
+        )
+
+        git_special_type = Unicode(
+            default_value='git',
+            config=True,
+            help='Special repository type for Git repositories.'
+        )
+
+        default_platform = Unicode(
+            default_value='x86_64-el9-gcc13-opt',
+            config=True,
+            help='Default platform configuration for LCG views.'
         )
 
         options_form_config = Unicode(
@@ -101,32 +114,28 @@ def define_SwanSpawner_from(base_class):
             customenv_type, customenv_type_version = '', ''
             if len(aux_req) == 2:
                 customenv_type, customenv_type_version = aux_req
-            requirements, requirements_type = '', ''
+            repository, repository_type = '', ''
             if source_type == self.customenv_special_type:
-                lcg, platform = '', 'x86_64-el9-gcc13-opt'
-                requirements = formdata[self.requirements][0]
-                requirements_type = formdata[self.requirements_type][0]
-                if requirements:
-                    if requirements.startswith("http"):
-                        # Extract http/domain/user/repo_name from repository URL, getting rid of the branches, tags, etc.
-                        repo_pattern = r'^(https?://[^/]+/[^/\s]+/[^/\s]+).*'
-                        match = re.match(repo_pattern, requirements)
-                        if match:
-                            requirements = match.group(1)
-                    else:
-                        # If the user wants to use CERNBOX_HOME, replace it with the user's CERNBOX_HOME path
-                        if requirements.startswith('$CERNBOX_HOME'):
-                            eos_path = self.eos_path_format.format(username=self.user.name)
-                            requirements = requirements.replace('$CERNBOX_HOME', eos_path.rstrip('/'))
-                        # Add requirements.txt to the given folder
-                        requirements = os.path.join(requirements, "requirements.txt")
+                lcg, platform = '', self.default_platform
+                repository = formdata[self.repository][0]
+                repository_type = formdata[self.repository_type][0]
+                if repository.startswith("http"):
+                    # Extract http/domain/user/repo_name from repository URL, getting rid of the branches, tags, etc.
+                    repo_pattern = r'^(https?://[^/]+/[^/\s]+/[^/\s]+).*'
+                    match = re.match(repo_pattern, repository)
+                    if match:
+                        repository = match.group(1)
+                # If the user wants to use CERNBOX_HOME, replace it with the user's CERNBOX_HOME path
+                elif repository.startswith('$CERNBOX_HOME'):
+                    eos_path = self.eos_path_format.format(username=self.user.name)
+                    repository = repository.replace('$CERNBOX_HOME', eos_path.rstrip('/'))
 
             options = {}
             options[self.source_type]           = source_type
             options[self.customenv_type]        = customenv_type
             options[self.customenv_type_version] = customenv_type_version
-            options[self.requirements]          = requirements
-            options[self.requirements_type]     = requirements_type
+            options[self.repository]            = repository
+            options[self.repository_type]       = repository_type
             options[self.lcg_rel_field]         = lcg
             options[self.platform_field]        = platform
             options[self.user_script_env_field] = formdata[self.user_script_env_field][0]

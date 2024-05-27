@@ -48,8 +48,8 @@
     /*
      * Selects AlmaLinux 9 in the LCG plataform options
      */
-    function selectAlma9(id) {
-        var selector = document.getElementById(id);
+    function selectAlma9() {
+        var selector = document.getElementById('platformOptions');
         for (var i = 0; i < selector.options.length; i++) {
             if (selector.options[i].text.startsWith('AlmaLinux 9')) {
                 selector.options[i].selected = true;
@@ -59,12 +59,15 @@
     }
 
     /*
-    * Selects default LCG release (105)
+    * Selects default LCG release (first of recommended section)
     */
-   function selectDefaultLCG(id) {
-        var selector = document.getElementById(id);
+   function selectDefaultLCG() {
+        var selector = document.getElementById('lcgReleaseOptions');
+        var recommend_label = false;
         for (var i = 0; i < selector.options.length; i++) {
-            if (selector.options[i].value === 'LCG_105_swan') {
+            if (selector.options[i].text.includes("Recommended"))
+                recommend_label = true;
+            if (recommend_label === true && !selector.options[i].disabled) {
                 selector.options[i].selected = true;
                 break;
             }
@@ -235,10 +238,10 @@
     }
 
     /**
-     * Allows to adjust the width of the dropdown element based on the selected option
+     * Adjusts the width of the repository type dropdown element based on the selected option
      */
-    function adjustDropdownWidth() {
-        const selectElement = document.getElementById('requirements_dropdown');
+    function adjustRepositoryDropdown() {
+        const selectElement = document.getElementById('repository_type_dropdown');
         const selectedOptionText = selectElement.options[selectElement.selectedIndex].text;
         const tempElement = document.createElement('span');
         tempElement.style.visibility = 'hidden';
@@ -252,18 +255,18 @@
         
         selectElement.style.width = `${width + 50}px`;
 
-        const requirementsOption = document.getElementById('requirementsOption');
+        const repositoryOption = document.getElementById('repositoryOption');
         if (selectElement.value === 'eos') {
-            requirementsOption.placeholder = 'e.g. $CERNBOX_HOME/MySWAN';
+            repositoryOption.placeholder = 'e.g. $CERNBOX_HOME/MyFolder';
         } else if (selectElement.value === 'git') {
-            requirementsOption.placeholder= "e.g. https://gitlab.cern.ch/user/myrepo";
+            repositoryOption.placeholder= "e.g. https://gitlab.cern.ch/user/myrepo";
         }
     }
 
     /**
-     * Modifies the some elements according to the selected type of configuration (LCG or Custom Environments)
+     * Modifies the displayed form according to the selected type of configuration (LCG or Custom Environments)
      */
-    function toggle_forms() {
+    function toggle_form() {
         var lcgOption = document.getElementById('lcgOption');
         var customenvOption = document.getElementById('customenvOption');
         
@@ -277,11 +280,11 @@
             external_config.style.display = 'block';
             adjust_form();
             adjust_spark();
-        } else if (customenvOption.checked) {
-            selectDefaultLCG('lcgReleaseOptions');
+        } else { // if customenvOption.checked
+            selectDefaultLCG();
             adjust_form();
-            selectAlma9('platformOptions');
-            adjustDropdownWidth();
+            selectAlma9();
+            adjustRepositoryDropdown();
             software_config.style.display = 'none';
             customenv_config.style.display = 'block';
             external_config.style.display = 'none';
@@ -307,7 +310,7 @@
         }
     }
 
-    window.onload = toggle_forms;
+    window.onload = toggle_form;
 //-->
 </script>
 
@@ -328,9 +331,9 @@
             </div>
         </label>
         <br>
-        <input type="radio" id="lcgOption" name="source_type" value="lcg" checked onchange="toggle_forms();" style="width: auto; height: auto; display: inline-block;">
+        <input type="radio" id="lcgOption" name="source_type" value="lcg" checked onchange="toggle_form();" style="width: auto; height: auto; display: inline-block;">
         <label for="lcgOption" style="margin-right: 5%;">LCG</label>
-        <input type="radio" id="customenvOption" name="source_type" value="customenv" onchange="toggle_forms();" style="width: auto; height: auto; display: inline-block;">
+        <input type="radio" id="customenvOption" name="source_type" value="customenv" onchange="toggle_form();" style="width: auto; height: auto; display: inline-block;">
         <label for="customenvOption">Custom Environment</label>
         <br><br>
     </div>
@@ -370,20 +373,20 @@
 
     <!-- Custom environment configuration -->
     <div id="customenv_config" style="display: none;">
-        <div id="requirementsSection">
-            <label for="requirementsOption">Repository 
-                <a href="#" onclick="toggle_visibility('requirementsDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="requirementsDetails">
+        <div id="repositorySection">
+            <label for="repositoryOption">Repository 
+                <a href="#" onclick="toggle_visibility('repositoryDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="repositoryDetails">
                     <span class='nb'>Path to a folder stored in your <a target="_blank" href="https://cernbox.cern.ch/">EOS</a> (/eos/user/u/username), or a <a target="_blank" href="https://github.com/new/">GitHub</a>/<a target="_blank" href="https://gitlab.cern.ch/projects/new">CERN GitLab</a> repository containing a requirements.txt in its root path.</span>
                 </div>
             </label>
             <br>
             <div style="display: flex;">
-                <select id="requirements_dropdown" name="requirements_type" onchange="adjustDropdownWidth();" style="width: auto; display: inline-flex; border: 1px solid #afafaf; background-color: #efefef;">
+                <select id="repository_type_dropdown" name="repository_type" onchange="adjustRepositoryDropdown();" style="width: auto; display: inline-flex; border: 1px solid #afafaf; background-color: #efefef;">
                       <option value="git">Git</option>
                       <option value="eos">EOS</option>
                 </select>
-                <input type="text" id="requirementsOption" name="requirements" style="flex-grow: 1; margin-left: 0; border: 1px solid #afafaf;">
+                <input type="text" id="repositoryOption" name="repository" style="flex-grow: 1; margin-left: 0; border: 1px solid #afafaf;">
             </div>
         </div>
         <br>
