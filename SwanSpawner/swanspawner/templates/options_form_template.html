@@ -6,25 +6,6 @@
 
     var lcgFormConfig = {{ options_form_config }};
 
-    const customenv_types = [
-      {
-        "value": "python-python3",
-        "text": "Generic"
-      },
-      {
-        "value": "accpy-2023.06",
-        "text": "Acc-Py 2023.06"
-      },
-      {
-        "value": "accpy-2021.12",
-        "text": "Acc-Py 2021.12"
-      },
-      {
-        "value": "accpy-2020.11",
-        "text": "Acc-Py 2020.11"
-      }
-    ];
-
     var formInitialized = false;
 
     /**
@@ -103,7 +84,7 @@
             }
 
             // set LCG option in the rendered form - first LCG is default
-            var lcgFormOptions = lcgFormConfig['options'];
+            const lcgFormOptions = lcgFormConfig['options'];
             selectLCG.innerHTML = '';
             var firstLCGSelected = false;
             for( var i = 0 ; i < lcgFormOptions.length ; i++ ){
@@ -125,6 +106,33 @@
                 }
 
                 selectLCG.add(selectLCGOption);
+            }
+        
+            // set customenv type options for customenvs
+            const customenvTypes = lcgFormConfig['customenv_options'];
+            var selectCustomenv_type = document.getElementById('customenv_typeOptions');
+            selectCustomenv_type.innerHTML = '';
+            var firstCustomenvTypeSelected = false;
+
+            for( var i = 0 ; i < customenvTypes.length ; i++ ){
+                var customenv_type = customenvTypes[i];
+
+                var customenv_typeOption = document.createElement("option");
+                if (customenv_type.type === "label") {
+                    customenv_typeOption.disabled="disabled";
+                    customenv_typeOption.style="border-bottom:1px solid rgba(153,153,153,.3); margin:-10px 0 4px 0";
+                    customenv_typeOption.value=customenv_type.label.value;
+                    customenv_typeOption.text=customenv_type.label.text;
+                } else {
+                    if (!firstCustomenvTypeSelected) {
+                        firstCustomenvTypeSelected = true;
+                        customenv_typeOption.selected = true;
+                    }
+                    customenv_typeOption.value=customenv_type.builder.value;
+                    customenv_typeOption.text=customenv_type.builder.text;
+                }
+
+                selectCustomenv_type.add(customenv_typeOption);
             }
         }
 
@@ -219,22 +227,6 @@
             selectCondor.add(selectCondorOption);
         }
 
-        // adjust customenv type options for customenvs
-        var selectCustomenv_type = document.getElementById('customenv_typeOptions');
-        selectCustomenv_type.innerHTML = '';
-        
-        for( var i = 0 ; i < customenv_types.length ; i++ ){
-            var customenv_type = customenv_types[i];
-
-            var customenv_typeOption = document.createElement("option");
-            customenv_typeOption.value = customenv_type.value;
-            customenv_typeOption.text = customenv_type.text;
-            if (i === 0) {
-                customenv_typeOption.selected = true;
-            }
-
-            selectCustomenv_type.add(customenv_typeOption);
-        }
     }
 
     /**
