@@ -24,32 +24,6 @@
         throw `${formElement} Data not found`
     }
 
-    /*
-     * Selects AlmaLinux 9 in the LCG plataform options
-     */
-    function selectAlma9(id) {
-        var selector = document.getElementById(id);
-        for (var i = 0; i < selector.options.length; i++) {
-            if (selector.options[i].text.startsWith('AlmaLinux 9')) {
-                selector.options[i].selected = true;
-                break;
-            }
-        }
-    }
-
-    /*
-    * Selects default LCG release (105)
-    */
-   function selectDefaultLCG(id) {
-        var selector = document.getElementById(id);
-        for (var i = 0; i < selector.options.length; i++) {
-            if (selector.options[i].value === 'LCG_105_swan') {
-                selector.options[i].selected = true;
-                break;
-            }
-        }
-    }
-
     /**
      * Enable display of element if previously disabled, and disable if previously enabled
      */
@@ -246,9 +220,10 @@
         var external_config = document.getElementById('external_config');
         var software_config = document.getElementById('software_config');
         var autoenvOption = document.getElementById('autoenvOption');
+        var lcg_config = document.getElementById('lcg_config');
         
         if (lcgOption.checked) {
-            software_config.style.display = 'block';
+            lcg_config.style.display = 'block';
             customenv_config.style.display = 'none';
             external_config.style.display = 'block';
             adjust_form();
@@ -465,7 +440,7 @@
         <div id="customenv_typeSection">
             <label for="customenv_typeOptions">Custom environment type <a href="#" onclick="toggle_visibility('customenv_typeDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="customenv_typeDetails">
-                    <span class='nb'>Type of custom environment to create. See more in the <a target="_blank" href="https://confluence.cern.ch/display/ACCPY/Getting+started+with+Acc-Py">Acc-Py User guide</a></span>
+                    <span class='nb'>Type of custom environment to create (generic or community-specific).</a></span>
                 </div>
             </label>
             <select id="customenv_typeOptions" name="customenv_type"></select>
@@ -482,6 +457,7 @@
         <br>
     </div>
     
+    <!-- Resources configuration -->
     <div id="resources_config">
         <h2>Session resources</h2>
 

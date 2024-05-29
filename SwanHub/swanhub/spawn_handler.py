@@ -205,6 +205,7 @@ class SpawnHandler(JHSpawnHandler):
                 user,
                 default=url_path_join(self.hub.base_url, "spawn-pending", user.escaped_name, server_name),
             )
+
         self.redirect(next_url)
 
     async def _render_form_wrapper(self, for_user, message=''):
