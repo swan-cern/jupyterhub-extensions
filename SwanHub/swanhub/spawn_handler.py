@@ -56,31 +56,12 @@ class SpawnHandler(JHSpawnHandler):
             self.finish(form)
             return
 
-        if not self.request.query_arguments:
-            try:
-                await super().get(for_user, server_name)
-            except web.HTTPError as e:
-                form = await self._render_form_wrapper(user, message=e.message)
-                self.finish(form)
-                return
-        else:
-            query_options = {key: [value[0].encode("utf-8")] for key, value in parse_qs(urlparse(unquote(self.request.uri)).query).items()}
-            self.request.body_arguments = {
-                configs.source_type: query_options.get(configs.source_type, [bytes(configs.lcg_special_type.encode("utf-8"))]),
-                configs.repository: query_options.get(configs.repository, [b'']),
-                configs.repository_type: query_options.get(configs.repository_type, [b'']),
-                configs.customenv_type: query_options.get(configs.customenv_type, [b'']),
-                configs.customenv_type_version: query_options.get(configs.customenv_type_version, [b'']),
-                configs.lcg_rel_field: query_options.get(configs.lcg_rel_field, [b'']),
-                configs.platform_field: query_options.get(configs.platform_field, [bytes(configs.default_platform.encode("utf-8"))]),
-                configs.spark_cluster_field: query_options.get(configs.spark_cluster_field, [b'']),
-                configs.user_script_env_field: query_options.get(configs.user_script_env_field, [b'']),
-                configs.condor_pool: query_options.get(configs.condor_pool, [b'']),
-                configs.user_n_cores: query_options.get(configs.user_n_cores, [b'2']),
-                configs.user_memory: query_options.get(configs.user_memory, [b'8']),
-                configs.notebook: query_options.get(configs.notebook, [b'']),
-            }
-            return await self.post(user_name=for_user, server_name=server_name)
+        try:
+            await super().get(for_user, server_name)
+        except web.HTTPError as e:
+            form = await self._render_form_wrapper(user, message=e.message)
+            self.finish(form)
+            return
 
     @web.authenticated
     def post(self, user_name=None, server_name=''):
@@ -198,7 +179,6 @@ class SpawnHandler(JHSpawnHandler):
             query_params = {
                 "env": configs.env_name.format(project_folder=project_folder),
                 "repo": options.get(configs.repository),
-                configs.notebook: options.get(configs.notebook, ''),
             }
             if options.get(configs.customenv_type) == configs.accpy_special_type:
                 query_params[options.get(configs.customenv_type)] = options.get(configs.customenv_type_version)
@@ -210,7 +190,7 @@ class SpawnHandler(JHSpawnHandler):
         else:
             next_url = self.get_next_url(
                 user,
-                default=url_path_join(self.hub.base_url, "spawn-pending", user.escaped_name, server_name, options.get(configs.notebook, '')),
+                default=url_path_join(self.hub.base_url, "spawn-pending", user.escaped_name, server_name),
             )
         self.redirect(next_url)
 

@@ -32,8 +32,6 @@ def define_SwanSpawner_from(base_class):
 
         repository = 'repository'
         
-        notebook = 'notebook'
-
         lcg_rel_field = 'LCG-rel'
 
         platform_field = 'platform'
@@ -121,7 +119,6 @@ def define_SwanSpawner_from(base_class):
             if len(aux_req) == 2:
                 customenv_type, customenv_type_version = aux_req
             repository, repository_type = '', ''
-            notebook = ''
             if source_type == self.customenv_special_type:
                 lcg, platform = '', self.default_platform
                 repository = formdata[self.repository][0]
@@ -135,10 +132,6 @@ def define_SwanSpawner_from(base_class):
                 # If the user wants to use CERNBOX_HOME, replace it with the user's CERNBOX_HOME path
                 elif repository.startswith('$CERNBOX_HOME'):
                     repository = self.replace_eos_home(repository)
-            if self.notebook in formdata:
-                notebook = formdata[self.notebook][0]
-                if notebook.startswith('$CERNBOX_HOME'):
-                    notebook = self.replace_eos_home(notebook)
 
             options = {}
             options[self.source_type]           = source_type
@@ -146,7 +139,6 @@ def define_SwanSpawner_from(base_class):
             options[self.customenv_type_version] = customenv_type_version
             options[self.repository]            = repository
             options[self.repository_type]       = repository_type
-            options[self.notebook]              = notebook
             options[self.lcg_rel_field]         = lcg
             options[self.platform_field]        = platform
             options[self.user_script_env_field] = formdata[self.user_script_env_field][0]

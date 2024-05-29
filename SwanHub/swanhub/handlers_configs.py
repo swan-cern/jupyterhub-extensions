@@ -93,12 +93,6 @@ class SpawnHandlersConfigs(SingletonConfigurable):
         help='Default platform configuration for LCG views.'
     )
 
-    notebook = Unicode(
-        default_value='notebook',
-        config=True,
-        help='Name of the notebook file to launch with its arguments'
-    )
-
     local_home = Bool(
         default_value=False,
         config=True,
