@@ -15,7 +15,7 @@
         var lcgData;
 
         // Data is taken from from lcgFormConfig global variable
-        var lcgFormOptions = lcgFormConfig['options'];
+        var lcgFormOptions = lcgFormConfig['lcg_options'];
         for (key in lcgFormOptions) {
             lcgData = lcgFormOptions[key];
             if (lcgData.type === "selection" && lcgData.lcg.value === lcgValue) {
@@ -84,7 +84,7 @@
             }
 
             // set LCG option in the rendered form - first LCG is default
-            const lcgFormOptions = lcgFormConfig['options'];
+            const lcgFormOptions = lcgFormConfig['lcg_options'];
             selectLCG.innerHTML = '';
             var firstLCGSelected = false;
             for( var i = 0 ; i < lcgFormOptions.length ; i++ ){

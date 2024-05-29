@@ -152,11 +152,11 @@ class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
             options_form_config_data = json.load(json_file)
 
         username = self.user.name
-        platform = self.user_options.get(self.platform_field,options_form_config_data["options"][1]['platforms'][0]['value'])
-        lcg_rel = self.user_options.get(self.lcg_rel_field,options_form_config_data["options"][1]["lcg"]["value"])
-        cluster = self.user_options.get(self.spark_cluster_field,options_form_config_data["options"][1]['clusters'][0]['value'])
-        cpu_quota = self.user_options.get(self.user_n_cores,int(options_form_config_data["options"][1]['cores'][0]['value']))
-        mem_limit = self.user_options.get(self.user_memory,options_form_config_data["options"][1]['memory'][0]['value'] + 'G')
+        platform = self.user_options.get(self.platform_field,options_form_config_data["lcg_options"][1]['platforms'][0]['value'])
+        lcg_rel = self.user_options.get(self.lcg_rel_field,options_form_config_data["lcg_options"][1]["lcg"]["value"])
+        cluster = self.user_options.get(self.spark_cluster_field,options_form_config_data["lcg_options"][1]['clusters'][0]['value'])
+        cpu_quota = self.user_options.get(self.user_n_cores,int(options_form_config_data["lcg_options"][1]['cores'][0]['value']))
+        mem_limit = self.user_options.get(self.user_memory,options_form_config_data["lcg_options"][1]['memory'][0]['value'] + 'G')
 
         try:
             start_time_configure_user = time.time()

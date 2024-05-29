@@ -16,6 +16,7 @@ import datetime
 import calendar
 import pickle
 import struct
+from urllib.parse import urlparse, parse_qs, unquote
 from socket import (
     socket,
     AF_INET,
@@ -63,24 +64,22 @@ class SpawnHandler(JHSpawnHandler):
                 self.finish(form)
                 return
         else:
-            query_options = {}
-            for key, byte_list in self.request.query_arguments.items():
-                query_options[key] = [bs.decode('utf8') for bs in byte_list]
-            self.request.body_arguments.update({
-                configs.source_type: query_options.get(configs.source_type, configs.lcg_special_type).encode(),
-                configs.repository: query_options.get(configs.repository, '').encode(),
-                configs.repository_type: query_options.get(configs.repository_type, '').encode(),
-                configs.customenv_type: query_options.get(configs.customenv_type, '').encode(),
-                configs.customenv_type_version: query_options.get(configs.customenv_type_version, '').encode(),
-                configs.lcg_rel_field: query_options.get(configs.lcg_rel_field, '').encode(),
-                configs.platform_field: query_options.get(configs.platform_field, configs.default_platform).encode(),
-                configs.spark_cluster_field: query_options.get(configs.spark_cluster_field, '').encode(),
-                configs.user_script_env_field: query_options.get(configs.user_script_env_field, '').encode(),
-                configs.condor_pool: query_options.get(configs.condor_pool, '').encode(),
-                configs.user_n_cores: query_options.get(configs.user_n_cores, '2').encode(),
-                configs.user_memory: query_options.get(configs.user_memory, '8Gi').encode(),
-                configs.notebook: query_options.get(configs.notebook, '').encode(),
-            })
+            query_options = {key: [value[0].encode("utf-8")] for key, value in parse_qs(urlparse(unquote(self.request.uri)).query).items()}
+            self.request.body_arguments = {
+                configs.source_type: query_options.get(configs.source_type, [bytes(configs.lcg_special_type.encode("utf-8"))]),
+                configs.repository: query_options.get(configs.repository, [b'']),
+                configs.repository_type: query_options.get(configs.repository_type, [b'']),
+                configs.customenv_type: query_options.get(configs.customenv_type, [b'']),
+                configs.customenv_type_version: query_options.get(configs.customenv_type_version, [b'']),
+                configs.lcg_rel_field: query_options.get(configs.lcg_rel_field, [b'']),
+                configs.platform_field: query_options.get(configs.platform_field, [bytes(configs.default_platform.encode("utf-8"))]),
+                configs.spark_cluster_field: query_options.get(configs.spark_cluster_field, [b'']),
+                configs.user_script_env_field: query_options.get(configs.user_script_env_field, [b'']),
+                configs.condor_pool: query_options.get(configs.condor_pool, [b'']),
+                configs.user_n_cores: query_options.get(configs.user_n_cores, [b'2']),
+                configs.user_memory: query_options.get(configs.user_memory, [b'8']),
+                configs.notebook: query_options.get(configs.notebook, [b'']),
+            }
             return await self.post(user_name=for_user, server_name=server_name)
 
     @web.authenticated

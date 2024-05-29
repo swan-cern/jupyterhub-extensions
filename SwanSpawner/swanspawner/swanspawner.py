@@ -31,6 +31,8 @@ def define_SwanSpawner_from(base_class):
         repository_type = 'repository_type'
 
         repository = 'repository'
+        
+        notebook = 'notebook'
 
         lcg_rel_field = 'LCG-rel'
 
@@ -105,6 +107,10 @@ def define_SwanSpawner_from(base_class):
             if not self.options_form and self.options_form_config:
                 # if options_form not provided, use templated options form based on configuration file
                 self.options_form = self._render_templated_options_form
+        
+        def replace_eos_home(self, repo_path: str):            
+            eos_path = self.eos_path_format.format(username=self.user.name)
+            return repo_path.replace('$CERNBOX_HOME', eos_path.rstrip('/'))
 
         def options_from_form(self, formdata):
             source_type = formdata[self.source_type][0]
@@ -115,6 +121,7 @@ def define_SwanSpawner_from(base_class):
             if len(aux_req) == 2:
                 customenv_type, customenv_type_version = aux_req
             repository, repository_type = '', ''
+            notebook = ''
             if source_type == self.customenv_special_type:
                 lcg, platform = '', self.default_platform
                 repository = formdata[self.repository][0]
@@ -127,8 +134,11 @@ def define_SwanSpawner_from(base_class):
                         repository = match.group(1)
                 # If the user wants to use CERNBOX_HOME, replace it with the user's CERNBOX_HOME path
                 elif repository.startswith('$CERNBOX_HOME'):
-                    eos_path = self.eos_path_format.format(username=self.user.name)
-                    repository = repository.replace('$CERNBOX_HOME', eos_path.rstrip('/'))
+                    repository = self.replace_eos_home(repository)
+            if self.notebook in formdata:
+                notebook = formdata[self.notebook][0]
+                if notebook.startswith('$CERNBOX_HOME'):
+                    notebook = self.replace_eos_home(notebook)
 
             options = {}
             options[self.source_type]           = source_type
@@ -136,6 +146,7 @@ def define_SwanSpawner_from(base_class):
             options[self.customenv_type_version] = customenv_type_version
             options[self.repository]            = repository
             options[self.repository_type]       = repository_type
+            options[self.notebook]              = notebook
             options[self.lcg_rel_field]         = lcg
             options[self.platform_field]        = platform
             options[self.user_script_env_field] = formdata[self.user_script_env_field][0]
