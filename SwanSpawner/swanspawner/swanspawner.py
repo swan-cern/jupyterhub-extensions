@@ -32,6 +32,8 @@ def define_SwanSpawner_from(base_class):
 
         repository = 'repository'
         
+        project_folder = 'project_folder'
+        
         lcg_rel_field = 'LCG-rel'
 
         platform_field = 'platform'
@@ -46,30 +48,24 @@ def define_SwanSpawner_from(base_class):
 
         condor_pool = 'condor-pool'
 
-        customenv_special_type = Unicode(
-            default_value='customenv',
+        customenv_special_type = 'customenv'
+
+        eos_special_type = 'eos'
+
+        default_platform = 'x86_64-el9-gcc13-opt'
+
+        eos_pattern = Unicode(
+            default_value=r'^(?:\$CERNBOX|(?:/[^/\n]+)*/[^/\n]+)?$',
             config=True,
-            help='Special type for custom environments.'
+            help='Regular expression pattern for the repository provided by a EOS folder.'
         )
 
-        eos_special_type = Unicode(
-            default_value='eos',
+        git_pattern = Unicode(
+            default_value=r'https?://(?:github\.com|gitlab\.cern\.ch)/([^/\s]+)/([^/\s]+)/?',
             config=True,
-            help='Special type for repository provided by a EOS folder.'
+            help='Regular expression pattern for the repository provided by a GitLab or GitHub repository.'
         )
-
-        git_special_type = Unicode(
-            default_value='git',
-            config=True,
-            help='Special repository type for Git repositories.'
-        )
-
-        default_platform = Unicode(
-            default_value='x86_64-el9-gcc13-opt',
-            config=True,
-            help='Default platform configuration for LCG views.'
-        )
-
+        
         options_form_config = Unicode(
             config=True,
             help='Path to configuration file for options_form rendering.'
@@ -105,7 +101,7 @@ def define_SwanSpawner_from(base_class):
             if not self.options_form and self.options_form_config:
                 # if options_form not provided, use templated options form based on configuration file
                 self.options_form = self._render_templated_options_form
-        
+
         def replace_eos_home(self, repo_path: str):            
             eos_path = self.eos_path_format.format(username=self.user.name)
             return repo_path.replace('$CERNBOX_HOME', eos_path.rstrip('/'))
@@ -114,30 +110,40 @@ def define_SwanSpawner_from(base_class):
             source_type = formdata[self.source_type][0]
             lcg = formdata[self.lcg_rel_field][0]
             platform = formdata[self.platform_field][0]
-            aux_req = formdata[self.customenv_type][0].lower().split('-')
-            customenv_type, customenv_type_version = '', ''
-            if len(aux_req) == 2:
-                customenv_type, customenv_type_version = aux_req
+            aux_type = formdata[self.customenv_type][0].lower().split('-')
+            customenv_type, customenv_type_version = aux_type if len(aux_type) == 2 else '', ''
             repository, repository_type = '', ''
+            project_folder = self.user.name
+
             if source_type == self.customenv_special_type:
                 lcg, platform = '', self.default_platform
                 repository = formdata[self.repository][0]
                 repository_type = formdata[self.repository_type][0]
-                if repository.startswith("http"):
-                    # Extract http/domain/user/repo_name from repository URL, getting rid of the branches, tags, etc.
-                    repo_pattern = r'^(https?://[^/]+/[^/\s]+/[^/\s]+).*'
-                    match = re.match(repo_pattern, repository)
-                    if match:
-                        repository = match.group(1)
-                # If the user wants to use CERNBOX_HOME, replace it with the user's CERNBOX_HOME path
-                elif repository.startswith('$CERNBOX_HOME'):
+
+                # Do not allow the session to spawn if the repository is not valid
+                if self.repository_type == self.eos_special_type:
+                    # Get the last folder of the repository by default
                     repository = self.replace_eos_home(repository)
+                    project_folder =  repository.split('/')[-1]
+
+                    eos_match = re.match(self.eos_pattern, self.repository)
+                    if not eos_match:
+                        raise ValueError(f"Invalid EOS path for requirements: {self.repository}")
+
+                else: # git option
+                    git_match = re.match(self.git_pattern, self.repository)
+                    if not git_match:
+                        raise ValueError(f"Invalid Git repository for requirements: {self.repository}")
+
+                    repository = git_match.group(0)
+                    project_folder = git_match.group(2)
 
             options = {}
             options[self.source_type]           = source_type
             options[self.customenv_type]        = customenv_type
             options[self.customenv_type_version] = customenv_type_version
             options[self.repository]            = repository
+            options[self.project_folder]        = project_folder
             options[self.repository_type]       = repository_type
             options[self.lcg_rel_field]         = lcg
             options[self.platform_field]        = platform
@@ -166,7 +172,17 @@ def define_SwanSpawner_from(base_class):
 
             #FIXME remove userrid and username and just use jovyan 
             #FIXME clean JPY env variables
-            if self.lcg_rel_field in self.user_options:
+            if self.lcg_rel_field not in self.user_options and self.source_type != self.customenv_special_type:
+                # session spawned via the API
+                env.update(dict(
+                    USER                   = "jovyan",
+                    HOME                   = "/home/jovyan",
+                    NB_USER                = 'jovyan',
+                    USER_ID                = 1000,
+                    NB_UID                 = 1000,
+                    SERVER_HOSTNAME        = os.uname().nodename,
+                ))
+            else:
                 # session spawned via the form
                 env.update(dict(
                     SOURCE_TYPE            = self.user_options[self.source_type],
@@ -177,16 +193,6 @@ def define_SwanSpawner_from(base_class):
                     HOME                   = homepath,
                     EOS_PATH_FORMAT        = self.eos_path_format,
                     SERVER_HOSTNAME        = os.uname().nodename
-                ))
-            else:
-                # session spawned via the API
-                env.update(dict(
-                    USER                   = "jovyan",
-                    HOME                   = "/home/jovyan",
-                    NB_USER                = 'jovyan',
-                    USER_ID                = 1000,
-                    NB_UID                 = 1000,
-                    SERVER_HOSTNAME        = os.uname().nodename,
                 ))
 
             # Enable configuration for CERN HTCondor pool

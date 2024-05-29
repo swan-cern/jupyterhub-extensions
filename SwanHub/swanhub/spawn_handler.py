@@ -109,19 +109,12 @@ class SpawnHandler(JHSpawnHandler):
 
         start_time_spawn = time.time()
 
+        options = {}
         try:
             options = await maybe_future(spawner.run_options_from_form(form_options))
 
             if options.get(configs.source_type) == configs.customenv_special_type and not options.get(configs.repository):
-                raise ValueError("Requirements not provided")
-
-            # Dont allow the session to spawn if the repository are not valid
-            eos_match = re.match(configs.eos_pattern, options.get(configs.repository))
-            git_match = re.match(configs.git_pattern, options.get(configs.repository))
-            if options.get(configs.repository_type) == configs.eos_special_type and not eos_match:
-                raise ValueError(f"Invalid EOS path for requirements: {options.get(configs.repository)}")
-            if options.get(configs.repository_type) == configs.git_special_type and not git_match:
-                raise ValueError(f"Invalid Git repository for requirements: {options.get(configs.repository)}")
+                raise ValueError("Repository not provided")
 
             await self.spawn_single_user(user, server_name=server_name, options=options)
 
@@ -170,28 +163,26 @@ class SpawnHandler(JHSpawnHandler):
         if current_user is user:
             self.set_login_cookie(user)
 
-        if options.get(configs.source_type) == configs.customenv_special_type:
-            project_folder =  options.get(configs.repository).split('/')[-1]
-            if options.get(configs.repository).startswith('http'):
-                project_folder = git_match[2] if git_match else user.escaped_name
-            
+        if options.get(configs.source_type) == configs.customenv_special_type:            
             # Add the query parameters to the URL
             query_params = {
-                "env": configs.env_name.format(project_folder=project_folder),
+                "env": configs.env_name.format(project_folder=options.get(configs.project_folder)), # {reponame}_env or {lastfolder}_env
                 "repo": options.get(configs.repository),
             }
             if options.get(configs.customenv_type) == configs.accpy_special_type:
                 query_params[options.get(configs.customenv_type)] = options.get(configs.customenv_type_version)
 
+            # Execution SwanCustomEnvs extension with the corresponding query arguments
             next_url = self.get_next_url(
                 user,
                 default=url_concat(url_path_join("user", user.escaped_name, "customenvs", server_name), query_params),
             )
-        else:
+        else: # LCG release
             next_url = self.get_next_url(
                 user,
                 default=url_path_join(self.hub.base_url, "spawn-pending", user.escaped_name, server_name),
             )
+
         self.redirect(next_url)
 
     async def _render_form_wrapper(self, for_user, message=''):
@@ -246,7 +237,7 @@ class SpawnHandler(JHSpawnHandler):
                 metrics.append((metric, (date, 1)))
 
         spawn_context_key = ".".join(
-            [options.get(configs.lcg_rel_field), options.get(configs.spark_cluster_field)])
+            [options.get(configs.lcg_rel_field, "CustomEnv"), options.get(configs.spark_cluster_field, "NoSpark")])
         if not spawn_exception:
             # Add spawn success (no exception) and duration to the log and send as metrics
             spawn_exc_class = "None"

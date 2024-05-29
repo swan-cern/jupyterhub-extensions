@@ -26,35 +26,6 @@
         throw "LCG Data not found"
     }
 
-    /*
-     * Selects AlmaLinux 9 in the LCG plataform options
-     */
-    function selectAlma9() {
-        var selector = document.getElementById('platformOptions');
-        for (var i = 0; i < selector.options.length; i++) {
-            if (selector.options[i].text.startsWith('AlmaLinux 9')) {
-                selector.options[i].selected = true;
-                break;
-            }
-        }
-    }
-
-    /*
-    * Selects default LCG release (first of recommended section)
-    */
-   function selectDefaultLCG() {
-        var selector = document.getElementById('lcgReleaseOptions');
-        var recommend_label = false;
-        for (var i = 0; i < selector.options.length; i++) {
-            if (selector.options[i].text.includes("Recommended"))
-                recommend_label = true;
-            if (recommend_label === true && !selector.options[i].disabled) {
-                selector.options[i].selected = true;
-                break;
-            }
-        }
-    }
-
     /**
      * Enable display of element if previously disabled, and disable if previously enabled
      */
@@ -232,7 +203,7 @@
     /**
      * Adjusts the width of the repository type dropdown element based on the selected option
      */
-    function adjustRepositoryDropdown() {
+    function adjust_repository_dropdown() {
         const selectElement = document.getElementById('repository_type_dropdown');
         const selectedOptionText = selectElement.options[selectElement.selectedIndex].text;
         const tempElement = document.createElement('span');
@@ -264,20 +235,17 @@
         
         var customenv_config = document.getElementById('customenv_config');
         var external_config = document.getElementById('external_config');
-        var software_config = document.getElementById('software_config');
+        var lcg_config = document.getElementById('lcg_config');
         
         if (lcgOption.checked) {
-            software_config.style.display = 'block';
+            lcg_config.style.display = 'block';
             customenv_config.style.display = 'none';
             external_config.style.display = 'block';
             adjust_form();
             adjust_spark();
-        } else { // if customenvOption.checked
-            selectDefaultLCG();
-            adjust_form();
-            selectAlma9();
-            adjustRepositoryDropdown();
-            software_config.style.display = 'none';
+        } else {
+            adjust_repository_dropdown();
+            lcg_config.style.display = 'none';
             customenv_config.style.display = 'block';
             external_config.style.display = 'none';
         } 
@@ -315,11 +283,12 @@
     </label>
     <br><br>
 
+    <!-- Source Type selection -->
     <div id="source_typeSection">
         <h2>Software</h2>
         <label>Source <a href="#" onclick="toggle_visibility('sourceDetails');"><span class='nbs'>more...</span></a>
             <div style="display:none;" id="sourceDetails">
-                <span class='nb'>Source type for your container.</span>
+                <span class='nb'>Software source: curated stack (LCG) or custom environment.</span>
             </div>
         </label>
         <br>
@@ -330,11 +299,12 @@
         <br><br>
     </div>
     
-    <div id="software_config">
-        <div id="lcgSection">
+    <!-- LCG configuration -->
+    <div id="lcg_config">
+        <div id="lcgReleaseSection">
             <label for="lcgReleaseOptions">Software stack <a href="#" onclick="toggle_visibility('lcgReleaseDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="lcgReleaseDetails">
-                    <span class='nb'>Software stack to associate to the container. See the <a target="_blank" href="http://lcginfo.cern.ch/">LCG package info</a> page.</span>
+                    <span class='nb'>LCG release to use as software source. See the <a target="_blank" href="http://lcginfo.cern.ch/">LCG releases package info</a> page.</span>
                 </div>
             </label>
             <select id="lcgReleaseOptions" name="LCG-rel" onchange="adjust_form();">
@@ -342,10 +312,10 @@
         </div>
         <br>
         
-        <div id="plataformSection">
+        <div id="platformSection">
             <label for="platformOptions">Platform <a href="#" onclick="toggle_visibility('platformDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="platformDetails">
-                    <span class='nb'>Combination of compiler version and flags.</span>
+                    <span class='nb'>Operating system and compiler version.</span>
                 </div>
             </label>
             <select id="platformOptions" name="platform" onchange="adjust_spark();"></select>
@@ -369,12 +339,12 @@
             <label for="repositoryOption">Repository 
                 <a href="#" onclick="toggle_visibility('repositoryDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="repositoryDetails">
-                    <span class='nb'>Path to a folder stored in your <a target="_blank" href="https://cernbox.cern.ch/">EOS</a> (/eos/user/u/username), or a <a target="_blank" href="https://github.com/new/">GitHub</a>/<a target="_blank" href="https://gitlab.cern.ch/projects/new">CERN GitLab</a> repository containing a requirements.txt in its root path.</span>
+                    <span class='nb'>Repository containing a requirements.txt file. It can be a path on EOS or the URL of a public git repository.</span>
                 </div>
             </label>
             <br>
             <div style="display: flex;">
-                <select id="repository_type_dropdown" name="repository_type" onchange="adjustRepositoryDropdown();" style="width: auto; display: inline-flex; border: 1px solid #afafaf; background-color: #efefef;">
+                <select id="repository_type_dropdown" name="repository_type" onchange="adjust_repository_dropdown();" style="width: auto; display: inline-flex; border: 1px solid #afafaf; background-color: #efefef;">
                       <option value="git">Git</option>
                       <option value="eos">EOS</option>
                 </select>
@@ -386,7 +356,7 @@
         <div id="customenv_typeSection">
             <label for="customenv_typeOptions">Type <a href="#" onclick="toggle_visibility('customenv_typeDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="customenv_typeDetails">
-                    <span class='nb'>Type of custom environment to create. See more in the <a target="_blank" href="https://confluence.cern.ch/display/ACCPY/Getting+started+with+Acc-Py">Acc-Py User guide</a></span>
+                    <span class='nb'>Type of custom environment to create (generic or community-specific).</a></span>
                 </div>
             </label>
             <select id="customenv_typeOptions" name="customenv_type"></select>
@@ -394,6 +364,7 @@
         <br>
     </div>
     
+    <!-- Resources configuration -->
     <div id="resources_config">
         <h2>Session resources</h2>
 

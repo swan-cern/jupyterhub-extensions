@@ -25,72 +25,24 @@ class SpawnHandlersConfigs(SingletonConfigurable):
 
     repository = 'repository'
 
+    project_folder = 'project_folder'
+
     lcg_rel_field = 'LCG-rel'
 
     platform_field = 'platform'
 
     user_script_env_field = 'scriptenv'
 
-    user_n_cores = 'ncores'
-
-    user_memory = 'memory'
-
     spark_cluster_field = 'spark-cluster'
 
-    condor_pool = 'condor-pool'
+    customenv_special_type = 'customenv'
 
-    eos_pattern = Unicode(
-        default_value=r'^(?:\$CERNBOX|(?:/[^/\n]+)*/[^/\n]+)?$',
-        config=True,
-        help='Regular expression pattern for the repository provided by a EOS folder.'
-    )
-
-    eos_special_type = Unicode(
-        default_value='eos',
-        config=True,
-        help='Special type for the repository provided by a EOS folder.'
-    )
-
-    git_pattern = Unicode(
-        default_value=r'https?://(?:github\.com|gitlab\.cern\.ch)/([^/\s]+)/([^/\s]+)/?',
-        config=True,
-        help='Regular expression pattern for the repository provided by a GitLab or GitHub repository.'
-    )
-
-    git_special_type = Unicode(
-        default_value='git',
-        config=True,
-        help='Special repository type for Git repositories.'
-    )
-
-    lcg_special_type = Unicode(
-        default_value='lcg',
-        config=True,
-        help='Special type for default sourcing.'
-    )
-
-    customenv_special_type = Unicode(
-        default_value='customenv',
-        config=True,
-        help='Special type for sourcing the environment.'
-    )
-
-    accpy_special_type = Unicode(
-        default_value='accpy',
-        config=True,
-        help='Special type for custom environments.'
-    )
+    accpy_special_type = 'accpy'
 
     env_name = Unicode(
         default_value='{project_folder}_env',
         config=True,
         help='Name format for custom environment launched by the user.'
-    )
-
-    default_platform = Unicode(
-        default_value='x86_64-el9-gcc13-opt',
-        config=True,
-        help='Default platform configuration for LCG views.'
     )
 
     local_home = Bool(
