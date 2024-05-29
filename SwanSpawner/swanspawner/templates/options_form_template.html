@@ -144,7 +144,7 @@
         for( var i = 0 ; i < lcgData.clusters.length ; i++ ){
             var lcgCluster = lcgData.clusters[i];
 
-            if (lcgCluster.value === "k8s" && lcgCluster.value === "hadoop-qa") {
+            if (lcgCluster.value === "k8s" || lcgCluster.value === "hadoop-qa") {
                 continue;
             }
 
