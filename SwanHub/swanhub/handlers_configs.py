@@ -31,6 +31,8 @@ class SpawnHandlersConfigs(SingletonConfigurable):
 
     repository = 'repository'
 
+    project_folder = 'project_folder'
+
     lcg_rel_field = 'LCG-rel'
 
     platform_field = 'platform'

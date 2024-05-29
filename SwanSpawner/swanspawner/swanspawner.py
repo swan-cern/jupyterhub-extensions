@@ -33,7 +33,6 @@ def define_SwanSpawner_from(base_class):
         repository_type = 'repository_type'
 
         repository = 'repository'
-
         lcg_rel_field = 'LCG-rel'
 
         platform_field = 'platform'
