@@ -24,9 +24,9 @@ def define_SwanSpawner_from(base_class):
 
         source_type = 'source_type'
 
-        customenv_type = 'customenv_type'
+        builder = 'builder'
         
-        customenv_type_version = 'customenv_type_version'
+        builder_version = 'builder_version'
                 
         repository_type = 'repository_type'
 
@@ -51,8 +51,6 @@ def define_SwanSpawner_from(base_class):
         customenv_special_type = 'customenv'
 
         eos_special_type = 'eos'
-
-        default_platform = 'x86_64-el9-gcc13-opt'
 
         eos_pattern = Unicode(
             default_value=r'^(?:\$CERNBOX|(?:/[^/\n]+)*/[^/\n]+)?$',
@@ -102,7 +100,8 @@ def define_SwanSpawner_from(base_class):
                 # if options_form not provided, use templated options form based on configuration file
                 self.options_form = self._render_templated_options_form
 
-        def replace_eos_home(self, repo_path: str):            
+        def replace_cernbox_home(self, repo_path: str):
+            """Replace $CERNBOX_HOME with the actual path in EOS"""
             eos_path = self.eos_path_format.format(username=self.user.name)
             return repo_path.replace('$CERNBOX_HOME', eos_path.rstrip('/'))
 
@@ -110,38 +109,39 @@ def define_SwanSpawner_from(base_class):
             source_type = formdata[self.source_type][0]
             lcg = formdata[self.lcg_rel_field][0]
             platform = formdata[self.platform_field][0]
-            aux_type = formdata[self.customenv_type][0].lower().split('-')
-            customenv_type, customenv_type_version = aux_type if len(aux_type) == 2 else '', ''
+            builder_data = formdata[self.builder][0].lower().split('-')
+            builder, builder_version = builder_data if len(builder_data) == 2 else '', ''
             repository, repository_type = '', ''
             project_folder = self.user.name
 
             if source_type == self.customenv_special_type:
-                lcg, platform = '', self.default_platform
+                lcg, platform = '', ''
                 repository = formdata[self.repository][0]
                 repository_type = formdata[self.repository_type][0]
 
                 # Do not allow the session to spawn if the repository is not valid
-                if self.repository_type == self.eos_special_type:
+                if repository_type == self.eos_special_type:
                     # Get the last folder of the repository by default
-                    repository = self.replace_eos_home(repository)
+                    repository = self.replace_cernbox_home(repository)
                     project_folder =  repository.split('/')[-1]
 
-                    eos_match = re.match(self.eos_pattern, self.repository)
+                    eos_match = re.match(self.eos_pattern, repository)
                     if not eos_match:
-                        raise ValueError(f"Invalid EOS path for requirements: {self.repository}")
-
+                        raise ValueError(f"Invalid EOS repository: {repository}")
                 else: # git option
-                    git_match = re.match(self.git_pattern, self.repository)
+                    git_match = re.match(self.git_pattern, repository)
+                    print("repository: ", repository)
+                    print("git_match: ", git_match)
                     if not git_match:
-                        raise ValueError(f"Invalid Git repository for requirements: {self.repository}")
+                        raise ValueError(f"Invalid Git repository: {repository}")
 
                     repository = git_match.group(0)
                     project_folder = git_match.group(2)
 
             options = {}
             options[self.source_type]           = source_type
-            options[self.customenv_type]        = customenv_type
-            options[self.customenv_type_version] = customenv_type_version
+            options[self.builder]        = builder
+            options[self.builder_version] = builder_version
             options[self.repository]            = repository
             options[self.project_folder]        = project_folder
             options[self.repository_type]       = repository_type
@@ -172,17 +172,7 @@ def define_SwanSpawner_from(base_class):
 
             #FIXME remove userrid and username and just use jovyan 
             #FIXME clean JPY env variables
-            if self.lcg_rel_field not in self.user_options and self.source_type != self.customenv_special_type:
-                # session spawned via the API
-                env.update(dict(
-                    USER                   = "jovyan",
-                    HOME                   = "/home/jovyan",
-                    NB_USER                = 'jovyan',
-                    USER_ID                = 1000,
-                    NB_UID                 = 1000,
-                    SERVER_HOSTNAME        = os.uname().nodename,
-                ))
-            else:
+            if self.lcg_rel_field in self.user_options or self.source_type == self.customenv_special_type:
                 # session spawned via the form
                 env.update(dict(
                     SOURCE_TYPE            = self.user_options[self.source_type],
@@ -194,15 +184,23 @@ def define_SwanSpawner_from(base_class):
                     EOS_PATH_FORMAT        = self.eos_path_format,
                     SERVER_HOSTNAME        = os.uname().nodename
                 ))
+            else:
+                # session spawned via the API
+                env.update(dict(
+                    USER                   = "jovyan",
+                    HOME                   = "/home/jovyan",
+                    NB_USER                = 'jovyan',
+                    USER_ID                = 1000,
+                    NB_UID                 = 1000,
+                    SERVER_HOSTNAME        = os.uname().nodename,
+                ))
 
             # Enable configuration for CERN HTCondor pool
             if self.user_options[self.condor_pool] != 'none':
                 env['CERN_HTCONDOR'] = 'true'
 
             # Enable configuration for LCG and custom environments
-            if self.user_options[self.source_type] == self.customenv_special_type:
-                env['AUTOENV'] = "true"
-            else:
+            if self.user_options[self.source_type] != self.customenv_special_type:
                 env['ROOT_LCG_VIEW_NAME']     = self.user_options[self.lcg_rel_field]
                 env['ROOT_LCG_VIEW_PLATFORM'] = self.user_options[self.platform_field]
                 env['USER_ENV_SCRIPT']        = self.user_options[self.user_script_env_field]

@@ -5,7 +5,6 @@
 
 import time
 import os
-import re
 from jupyterhub.handlers.pages import SpawnHandler as JHSpawnHandler
 from jupyterhub.utils import url_path_join, maybe_future
 from jupyterhub.scopes import needs_scope
@@ -16,7 +15,6 @@ import datetime
 import calendar
 import pickle
 import struct
-from urllib.parse import urlparse, parse_qs, unquote
 from socket import (
     socket,
     AF_INET,
@@ -169,8 +167,8 @@ class SpawnHandler(JHSpawnHandler):
                 "env": configs.env_name.format(project_folder=options.get(configs.project_folder)), # {reponame}_env or {lastfolder}_env
                 "repo": options.get(configs.repository),
             }
-            if options.get(configs.customenv_type) == configs.accpy_special_type:
-                query_params[options.get(configs.customenv_type)] = options.get(configs.customenv_type_version)
+            if options.get(configs.builder) == configs.accpy_special_type:
+                query_params[options.get(configs.builder)] = options.get(configs.builder_version)
 
             # Execution SwanCustomEnvs extension with the corresponding query arguments
             next_url = self.get_next_url(

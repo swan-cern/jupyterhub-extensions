@@ -80,30 +80,30 @@
             }
         
             // set customenv type options for customenvs
-            const customenvTypes = lcgFormConfig['customenv_options'];
-            var selectCustomenv_type = document.getElementById('customenv_typeOptions');
-            selectCustomenv_type.innerHTML = '';
-            var firstCustomenvTypeSelected = false;
+            const builders = lcgFormConfig['customenv_options'];
+            var selectBuilder = document.getElementById('builderOptions');
+            selectBuilder.innerHTML = '';
+            var firstBuilderSelected = false;
 
-            for( var i = 0 ; i < customenvTypes.length ; i++ ){
-                var customenv_type = customenvTypes[i];
+            for( var i = 0 ; i < builders.length ; i++ ){
+                var builder = builders[i];
 
-                var customenv_typeOption = document.createElement("option");
-                if (customenv_type.type === "label") {
-                    customenv_typeOption.disabled="disabled";
-                    customenv_typeOption.style="border-bottom:1px solid rgba(153,153,153,.3); margin:-10px 0 4px 0";
-                    customenv_typeOption.value=customenv_type.label.value;
-                    customenv_typeOption.text=customenv_type.label.text;
+                var builderOption = document.createElement("option");
+                if (builder.type === "label") {
+                    builderOption.disabled="disabled";
+                    builderOption.style="border-bottom:1px solid rgba(153,153,153,.3); margin:-10px 0 4px 0";
+                    builderOption.value=builder.label.value;
+                    builderOption.text=builder.label.text;
                 } else {
-                    if (!firstCustomenvTypeSelected) {
-                        firstCustomenvTypeSelected = true;
-                        customenv_typeOption.selected = true;
+                    if (!firstBuilderSelected) {
+                        firstBuilderSelected = true;
+                        builderOption.selected = true;
                     }
-                    customenv_typeOption.value=customenv_type.builder.value;
-                    customenv_typeOption.text=customenv_type.builder.text;
+                    builderOption.value=builder.builder.value;
+                    builderOption.text=builder.builder.text;
                 }
 
-                selectCustomenv_type.add(customenv_typeOption);
+                selectBuilder.add(builderOption);
             }
         }
 
@@ -353,13 +353,13 @@
         </div>
         <br>
         
-        <div id="customenv_typeSection">
-            <label for="customenv_typeOptions">Type <a href="#" onclick="toggle_visibility('customenv_typeDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="customenv_typeDetails">
-                    <span class='nb'>Type of custom environment to create (generic or community-specific).</a></span>
+        <div id="builderSection">
+            <label for="builderOptions">Builder <a href="#" onclick="toggle_visibility('builderDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="builderDetails">
+                    <span class='nb'>Program responsible for building the custom environment (generic or community-specific).</a></span>
                 </div>
             </label>
-            <select id="customenv_typeOptions" name="customenv_type"></select>
+            <select id="builderOptions" name="builder"></select>
         </div>
         <br>
     </div>
