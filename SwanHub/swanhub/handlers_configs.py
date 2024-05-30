@@ -17,7 +17,7 @@ class SpawnHandlersConfigs(SingletonConfigurable):
     
     source_type = 'source_type'
 
-    customenv_type = 'customenv_type'
+    builder = 'builder'
     
     customenv_type_version = 'customenv_type_version'
 
