@@ -5,7 +5,6 @@
 
 import time
 import os
-import re
 from jupyterhub.handlers.pages import SpawnHandler as JHSpawnHandler
 from jupyterhub.utils import url_path_join, maybe_future
 from jupyterhub.scopes import needs_scope
