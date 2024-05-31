@@ -110,10 +110,6 @@ class SpawnHandler(JHSpawnHandler):
         options = {}
         try:
             options = await maybe_future(spawner.run_options_from_form(form_options))
-
-            if options.get(configs.source_type) == configs.customenv_special_type and not options.get(configs.repository):
-                raise ValueError("Repository not provided")
-
             await self.spawn_single_user(user, server_name=server_name, options=options)
 
             # if spawn future is already done it is success,

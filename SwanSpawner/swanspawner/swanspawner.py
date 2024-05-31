@@ -119,6 +119,9 @@ def define_SwanSpawner_from(base_class):
                 repository = formdata[self.repository][0]
                 repository_type = formdata[self.repository_type][0]
 
+                if not repository:
+                    raise ValueError("Repository not provided")
+
                 # Do not allow the session to spawn if the repository is not valid
                 if repository_type == self.eos_special_type:
                     # Get the last folder of the repository by default
@@ -138,8 +141,8 @@ def define_SwanSpawner_from(base_class):
 
             options = {}
             options[self.source_type]           = source_type
-            options[self.builder]        = builder
-            options[self.builder_version] = builder_version
+            options[self.builder]               = builder
+            options[self.builder_version]       = builder_version
             options[self.repository]            = repository
             options[self.project_folder]        = project_folder
             options[self.repository_type]       = repository_type
