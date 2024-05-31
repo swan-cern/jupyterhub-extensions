@@ -110,7 +110,7 @@ def define_SwanSpawner_from(base_class):
             lcg = formdata[self.lcg_rel_field][0]
             platform = formdata[self.platform_field][0]
             builder_data = formdata[self.builder][0].lower().split('-')
-            builder, builder_version = builder_data if len(builder_data) == 2 else '', ''
+            builder, builder_version = (builder_data if len(builder_data) == 2 else '', '')
             repository, repository_type = '', ''
             project_folder = self.user.name
 
