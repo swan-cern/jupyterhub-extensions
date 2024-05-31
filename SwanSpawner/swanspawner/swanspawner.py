@@ -25,15 +25,15 @@ def define_SwanSpawner_from(base_class):
         source_type = 'source_type'
 
         builder = 'builder'
-        
+
         builder_version = 'builder_version'
-                
+
         repository_type = 'repository_type'
 
         repository = 'repository'
-        
+
         project_folder = 'project_folder'
-        
+
         lcg_rel_field = 'LCG-rel'
 
         platform_field = 'platform'
