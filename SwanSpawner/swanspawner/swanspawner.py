@@ -130,8 +130,6 @@ def define_SwanSpawner_from(base_class):
                         raise ValueError(f"Invalid EOS repository: {repository}")
                 else: # git option
                     git_match = re.match(self.git_pattern, repository)
-                    print("repository: ", repository)
-                    print("git_match: ", git_match)
                     if not git_match:
                         raise ValueError(f"Invalid Git repository: {repository}")
 
