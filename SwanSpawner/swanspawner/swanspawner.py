@@ -97,6 +97,7 @@ def define_SwanSpawner_from(base_class):
         def options_from_form(self, formdata):
             # Builders are specified in builder-builderversion format
             builder, builder_version = formdata[self.builder][0].lower().split('-')
+            notebook = formdata[self.notebook][0] if self.notebook in formdata else ''
 
             options = {}
             options[self.software_source]       = formdata[self.software_source][0]
