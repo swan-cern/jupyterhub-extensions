@@ -4,26 +4,24 @@
 <script type="text/javascript">
 <!--
 
-    var lcgFormConfig = {{ options_form_config }};
+    var formConfig = {{ options_form_config }};
 
     var formInitialized = false;
 
     /**
-     * Get LCG data dictionary for given lcgValue.
+     * Get Form data dictionary for given selectedValue.
      */
-    function findLcgData(lcgValue) {
-        var lcgData;
-
-        // Data is taken from from lcgFormConfig global variable
-        var lcgFormOptions = lcgFormConfig['lcg_options'];
-        for (key in lcgFormOptions) {
-            lcgData = lcgFormOptions[key];
-            if (lcgData.type === "selection" && lcgData.lcg.value === lcgValue) {
-                return lcgData;
+    function findFormData(form, formElement, value) {
+        // Data is taken from from formConfig global variable
+        var formOptions = formConfig[form];
+        for (key in formOptions) {
+            const formData = formOptions[key];
+            if (formData.type === "selection" && formData[formElement].value === value) {
+                return formData;
             }
         }
 
-        throw "LCG Data not found"
+        throw `${formElement} Data not found`
     }
 
     /**
@@ -41,7 +39,27 @@
      * Renders a form based on config file
      */
     function adjust_form() {
-        var selectLCG = document.getElementById('lcgReleaseOptions');
+        const sourceOptions = document.getElementsByName('source_type');
+        let selectedSource = null;
+        for (let i = 0; i < sourceOptions.length; i++) {
+            if (sourceOptions[i].checked) {
+                selectedSource = sourceOptions[i].value;
+                break;
+            }
+        }
+
+        var sourceConfig = {
+            lcg: {
+                optionsElement: document.getElementById("lcgReleaseOptions"),
+                sourceForm: "lcg_options",
+                formElement: "lcg",
+            },
+            customenv: {
+                optionsElement: document.getElementById("builderOptions"),
+                sourceForm: "customenv_options",
+                formElement: "builder",
+            }
+        };
 
         // if form has not been yet initialized, initialize
         if (!formInitialized) {
@@ -49,159 +67,76 @@
 
             // set proper header for the whole form based on config
             var optionsHeader = document.getElementById('optionsHeader');
-            var header = lcgFormConfig['header'];
+            var header = formConfig['header'];
             if (header) {
                 optionsHeader.innerHTML = header;
             }
 
-            // set LCG option in the rendered form - first LCG is default
-            const lcgFormOptions = lcgFormConfig['lcg_options'];
-            selectLCG.innerHTML = '';
-            var firstLCGSelected = false;
-            for( var i = 0 ; i < lcgFormOptions.length ; i++ ){
-                var lcgFormEntry = lcgFormOptions[i];
+            for (var source in sourceConfig) {
+                const currentSource = sourceConfig[source];
+                const formOptions = formConfig[currentSource.sourceForm];
+                currentSource.optionsElement.innerHTML = '';
+                var firstFormOptionselected = false;
 
-                var selectLCGOption = document.createElement("option");
-                if (lcgFormEntry.type === "label") {
-                    selectLCGOption.disabled="disabled";
-                    selectLCGOption.style="border-bottom:1px solid rgba(153,153,153,.3); margin:-10px 0 4px 0";
-                    selectLCGOption.value=lcgFormEntry.label.value;
-                    selectLCGOption.text=lcgFormEntry.label.text;
-                } else {
-                    if (!firstLCGSelected) {
-                        firstLCGSelected = true;
-                        selectLCGOption.selected = true;
+                for( var i = 0 ; i < formOptions.length ; i++ ){
+                    var formEntry = formOptions[i];
+                    var formOption = document.createElement("option");
+
+                    if (formEntry.type === "label") {
+                        formOption.disabled = "disabled";
+                        formOption.style = "border-bottom:1px solid rgba(153,153,153,.3); margin:-10px 0 4px 0";
+                        formOption.value = formEntry.label.value;
+                        formOption.text = formEntry.label.text;
+                    } else {
+                        if (!firstFormOptionselected) {
+                            firstFormOptionselected = true;
+                            formOption.selected = true;
+                        }
+                        formOption.value = formEntry[currentSource.formElement].value;
+                        formOption.text = formEntry[currentSource.formElement].text;
                     }
-                    selectLCGOption.value=lcgFormEntry.lcg.value;
-                    selectLCGOption.text=lcgFormEntry.lcg.text;
+
+                    currentSource.optionsElement.add(formOption);
+                }
+            }
+        }
+
+        // get currently selected source and extract its configuration (formData)
+        const selectedConfig = sourceConfig[selectedSource];
+        var selectedValue = selectedConfig.optionsElement.value;
+        var formData = findFormData(selectedConfig.sourceForm, selectedConfig.formElement, selectedValue);
+
+        var available_configs = {
+            'lcg': [
+                {elementName: 'platformOptions', formKey: "platforms"}, 
+                {elementName: 'coresOptions', formKey: "cores"}, 
+                {elementName: 'memoryOptions', formKey: "memory"}, 
+                {elementName: 'clusterOptions', formKey: "clusters"}, 
+                {elementName: 'condorOptions', formKey: "condor"}
+            ],
+            'customenv': [
+                {elementName: 'coresOptions', formKey: "cores"},
+                {elementName: 'memoryOptions', formKey: "memory"}
+            ]
+        };
+
+        available_configs[selectedSource].forEach(function(config) {
+            var configElement = document.getElementById(config.elementName);
+            configElement.innerHTML = '';
+
+            for( var i = 0 ; i < formData[config.formKey].length ; i++ ){
+                var formOption = formData[config.formKey][i];
+
+                var selectOption = document.createElement("option");
+                selectOption.value = formOption.value;
+                selectOption.text = formOption.text;
+                if (i === 0) {
+                    selectOption.selected = true;
                 }
 
-                selectLCG.add(selectLCGOption);
+                configElement.add(selectOption);
             }
-        
-            // set customenv type options for customenvs
-            const builders = lcgFormConfig['customenv_options'];
-            var selectBuilder = document.getElementById('builderOptions');
-            selectBuilder.innerHTML = '';
-            var firstBuilderSelected = false;
-
-            for( var i = 0 ; i < builders.length ; i++ ){
-                var builder = builders[i];
-
-                var builderOption = document.createElement("option");
-                if (builder.type === "label") {
-                    builderOption.disabled="disabled";
-                    builderOption.style="border-bottom:1px solid rgba(153,153,153,.3); margin:-10px 0 4px 0";
-                    builderOption.value=builder.label.value;
-                    builderOption.text=builder.label.text;
-                } else {
-                    if (!firstBuilderSelected) {
-                        firstBuilderSelected = true;
-                        builderOption.selected = true;
-                    }
-                    builderOption.value=builder.builder.value;
-                    builderOption.text=builder.builder.text;
-                }
-
-                selectBuilder.add(builderOption);
-            }
-        }
-
-        // get currently selected LCG and extract that lcg configuration (lcgData)
-        var lcgValue = selectLCG.value;
-        var lcgData = findLcgData(lcgValue);
-
-        // adjust platforms option for lcg
-        var selectPlatform = document.getElementById('platformOptions');
-        selectPlatform.innerHTML = '';
-
-        for( var i = 0 ; i < lcgData.platforms.length ; i++ ){
-            var lcgPlatform = lcgData.platforms[i];
-
-            var selectPlatformOption = document.createElement("option");
-            selectPlatformOption.value = lcgPlatform.value;
-            selectPlatformOption.text = lcgPlatform.text;
-            if (i === 0) {
-                selectPlatformOption.selected = true;
-            }
-
-            selectPlatform.add(selectPlatformOption);
-        }
-
-        // adjust cores option for lcg
-        var selectCores = document.getElementById('coresOptions');
-        selectCores.innerHTML = '';
-
-        for( var i = 0 ; i < lcgData.cores.length ; i++ ){
-            var lcgCores = lcgData.cores[i];
-
-            var selectCoresOption = document.createElement("option");
-            selectCoresOption.value = lcgCores.value;
-            selectCoresOption.text = lcgCores.text;
-            if (i === 0) {
-                selectCoresOption.selected = true;
-            }
-
-            selectCores.add(selectCoresOption);
-        }
-
-        // adjust memory option for lcg
-        var selectMemory = document.getElementById('memoryOptions');
-        selectMemory.innerHTML = '';
-
-        for( var i = 0 ; i < lcgData.memory.length ; i++ ){
-            var lcgMemory = lcgData.memory[i];
-
-            var selectMemoryOption = document.createElement("option");
-            selectMemoryOption.value = lcgMemory.value;
-            selectMemoryOption.text = lcgMemory.text;
-            if (i === 0) {
-                selectMemoryOption.selected = true;
-            }
-
-            selectMemory.add(selectMemoryOption);
-        }
-
-        // adjust clusters option for lcg
-        var selectCluster = document.getElementById('clusterOptions');
-        selectCluster.innerHTML = '';
-        // Make sure Spark cluster options are enabled on LCG release change
-        selectCluster.removeAttribute('disabled');
-
-        for( var i = 0 ; i < lcgData.clusters.length ; i++ ){
-            var lcgCluster = lcgData.clusters[i];
-
-            if (lcgCluster.value === "k8s" || lcgCluster.value === "hadoop-qa") {
-                continue;
-            }
-
-            var selectClusterOption = document.createElement("option");
-            selectClusterOption.value = lcgCluster.value;
-            selectClusterOption.text = lcgCluster.text;
-            if (i === 0) {
-                selectClusterOption.selected = true;
-            }
-
-            selectCluster.add(selectClusterOption);
-        }
-
-        // adjust condor option for lcg
-        var selectCondor = document.getElementById('condorOptions');
-        selectCondor.innerHTML = '';
-
-        for( var i = 0 ; i < lcgData.condor.length ; i++ ){
-            var lcgCondor = lcgData.condor[i];
-
-            var selectCondorOption = document.createElement("option");
-            selectCondorOption.value = lcgCondor.value;
-            selectCondorOption.text = lcgCondor.text;
-            if (i === 0) {
-                selectCondorOption.selected = true;
-            }
-
-            selectCondor.add(selectCondorOption);
-        }
-
+        });
     }
 
     /**
@@ -235,17 +170,16 @@
      */
     function toggle_form() {
         var lcgOption = document.getElementById('lcgOption');
-        var customenvOption = document.getElementById('customenvOption');
-        
+
         var customenv_config = document.getElementById('customenv_config');
         var external_config = document.getElementById('external_config');
         var lcg_config = document.getElementById('lcg_config');
-        
+
+        adjust_form();
         if (lcgOption.checked) {
             lcg_config.style.display = 'block';
             customenv_config.style.display = 'none';
             external_config.style.display = 'block';
-            adjust_form();
             adjust_spark();
         } else {
             adjust_repository_dropdown();
