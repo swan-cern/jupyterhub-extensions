@@ -200,7 +200,7 @@ def define_SwanSpawner_from(base_class):
             if self.user_options[self.condor_pool] != 'none':
                 env['CERN_HTCONDOR'] = 'true'
 
-            # Enable configuration for LCG and custom environments
+            # Set LCG-related variables
             if self.user_options[self.source_type] != self.customenv_special_type:
                 env['ROOT_LCG_VIEW_NAME']     = self.user_options[self.lcg_rel_field]
                 env['ROOT_LCG_VIEW_PLATFORM'] = self.user_options[self.platform_field]
