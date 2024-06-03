@@ -32,6 +32,8 @@ def define_SwanSpawner_from(base_class):
 
         repository = 'repository'
 
+        notebook = 'notebook'
+
         project_folder = 'project_folder'
 
         lcg_rel_field = 'LCG-rel'
@@ -113,6 +115,7 @@ def define_SwanSpawner_from(base_class):
             project_folder = self.user.name
             # Builders are specified in builder-builderversion format
             builder, builder_version = formdata[self.builder][0].lower().split('-')
+            notebook = formdata[self.notebook][0] if self.notebook in formdata else ''
 
             if source_type == self.customenv_special_type:
                 lcg_rel, platform = '', ''
@@ -139,6 +142,9 @@ def define_SwanSpawner_from(base_class):
                     repository = git_match.group(0)
                     project_folder = git_match.group(2)
 
+            if notebook:
+                notebook = self.replace_cernbox_home(notebook)
+
             options = {}
             options[self.source_type]           = source_type
             options[self.builder]               = builder
@@ -146,6 +152,7 @@ def define_SwanSpawner_from(base_class):
             options[self.repository]            = repository
             options[self.project_folder]        = project_folder
             options[self.repository_type]       = repository_type
+            options[self.notebook]              = notebook
             options[self.lcg_rel_field]         = lcg_rel
             options[self.platform_field]        = platform
             options[self.user_script_env_field] = formdata[self.user_script_env_field][0]

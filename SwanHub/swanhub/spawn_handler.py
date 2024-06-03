@@ -15,6 +15,7 @@ import datetime
 import calendar
 import pickle
 import struct
+from urllib.parse import parse_qs, urlparse, unquote
 from socket import (
     socket,
     AF_INET,
@@ -54,12 +55,30 @@ class SpawnHandler(JHSpawnHandler):
             self.finish(form)
             return
 
-        try:
-            await super().get(for_user, server_name)
-        except web.HTTPError as e:
-            form = await self._render_form_wrapper(user, message=e.message)
-            self.finish(form)
-            return
+        if not self.request.query_arguments:
+            try:
+                await super().get(for_user, server_name)
+            except web.HTTPError as e:
+                form = await self._render_form_wrapper(user, message=e.message)
+                self.finish(form)
+                return
+        else:
+            query_options = {key: [value[0].encode("utf-8")] for key, value in parse_qs(urlparse(unquote(self.request.uri)).query).items()}
+            self.request.body_arguments = {
+                configs.source_type: query_options.get(configs.source_type, [b'']),
+                configs.repository: query_options.get(configs.repository, [b'']),
+                configs.repository_type: query_options.get(configs.repository_type, [b'']),
+                configs.builder: query_options.get(configs.builder, [b'']),
+                configs.lcg_rel_field: query_options.get(configs.lcg_rel_field, [b'']),
+                configs.platform_field: query_options.get(configs.platform_field, [b'']),
+                configs.spark_cluster_field: query_options.get(configs.spark_cluster_field, [b'']),
+                configs.user_script_env_field: query_options.get(configs.user_script_env_field, [b'']),
+                configs.condor_pool: query_options.get(configs.condor_pool, [b'']),
+                configs.user_n_cores: query_options.get(configs.user_n_cores, [b'2']),
+                configs.user_memory: query_options.get(configs.user_memory, [b'8']),
+                configs.notebook: query_options.get(configs.notebook, [b'']),
+            }
+            return await self.post(user_name=for_user, server_name=server_name)
 
     @web.authenticated
     def post(self, user_name=None, server_name=''):
@@ -162,6 +181,7 @@ class SpawnHandler(JHSpawnHandler):
             query_params = {
                 "env": configs.env_name.format(project_folder=options.get(configs.project_folder)), # {reponame}_env or {lastfolder}_env
                 "repo": options.get(configs.repository),
+                "notebook": options.get(configs.notebook, ''),
             }
             if options.get(configs.builder) == configs.accpy_special_type:
                 query_params[options.get(configs.builder)] = options.get(configs.builder_version)

@@ -27,13 +27,21 @@ class SpawnHandlersConfigs(SingletonConfigurable):
 
     project_folder = 'project_folder'
 
+    notebook = 'notebook'
+
     lcg_rel_field = 'LCG-rel'
 
     platform_field = 'platform'
 
     user_script_env_field = 'scriptenv'
 
+    user_n_cores = 'ncores'
+
+    user_memory = 'memory'
+
     spark_cluster_field = 'spark-cluster'
+
+    condor_pool = 'condor-pool'
 
     customenv_special_type = 'customenv'
 
