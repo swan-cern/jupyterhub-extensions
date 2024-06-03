@@ -53,7 +53,7 @@ def define_SwanSpawner_from(base_class):
         eos_special_type = 'eos'
 
         eos_pattern = Unicode(
-            default_value=r'^(?:\$CERNBOX|(?:/[^/\n]+)*/[^/\n]+)?$',
+            default_value=r'^(?:\$CERNBOX_HOME|/eos(?:/[^/\n]+)*/?)?$',
             config=True,
             help='Regular expression pattern for the repository provided by a EOS folder.'
         )
@@ -107,15 +107,15 @@ def define_SwanSpawner_from(base_class):
 
         def options_from_form(self, formdata):
             source_type = formdata[self.source_type][0]
-            lcg = formdata[self.lcg_rel_field][0]
+            lcg_rel = formdata[self.lcg_rel_field][0]
             platform = formdata[self.platform_field][0]
-            builder_data = formdata[self.builder][0].lower().split('-')
-            builder, builder_version = (builder_data if len(builder_data) == 2 else '', '')
             repository, repository_type = '', ''
             project_folder = self.user.name
+            # Builders are specified in builder-builderversion format
+            builder, builder_version = formdata[self.builder][0].lower().split('-')
 
             if source_type == self.customenv_special_type:
-                lcg, platform = '', ''
+                lcg_rel, platform = '', ''
                 repository = formdata[self.repository][0]
                 repository_type = formdata[self.repository_type][0]
 
@@ -146,7 +146,7 @@ def define_SwanSpawner_from(base_class):
             options[self.repository]            = repository
             options[self.project_folder]        = project_folder
             options[self.repository_type]       = repository_type
-            options[self.lcg_rel_field]         = lcg
+            options[self.lcg_rel_field]         = lcg_rel
             options[self.platform_field]        = platform
             options[self.user_script_env_field] = formdata[self.user_script_env_field][0]
             options[self.spark_cluster_field]   = formdata[self.spark_cluster_field][0] if self.spark_cluster_field in formdata.keys() else 'none'
@@ -155,7 +155,7 @@ def define_SwanSpawner_from(base_class):
             options[self.user_memory]           = formdata[self.user_memory][0] + 'G'
 
             self.offload = options[self.spark_cluster_field] != 'none'
-            
+
             return options
 
         def get_env(self):

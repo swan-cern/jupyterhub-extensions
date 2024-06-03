@@ -157,7 +157,7 @@ class SpawnHandler(JHSpawnHandler):
         if current_user is user:
             self.set_login_cookie(user)
 
-        if options.get(configs.source_type) == configs.customenv_special_type:            
+        if options.get(configs.source_type) == configs.customenv_special_type:
             # Add the query parameters to the URL
             query_params = {
                 "env": configs.env_name.format(project_folder=options.get(configs.project_folder)), # {reponame}_env or {lastfolder}_env
@@ -231,7 +231,7 @@ class SpawnHandler(JHSpawnHandler):
                 metrics.append((metric, (date, 1)))
 
         spawn_context_key = ".".join(
-            [options.get(configs.lcg_rel_field, "CustomEnv"), options.get(configs.spark_cluster_field, "NoSpark")])
+            [options.get(configs.lcg_rel_field, "CustomEnv"), options.get(configs.spark_cluster_field, "")])
         if not spawn_exception:
             # Add spawn success (no exception) and duration to the log and send as metrics
             spawn_exc_class = "None"
