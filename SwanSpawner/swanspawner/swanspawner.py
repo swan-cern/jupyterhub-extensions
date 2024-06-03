@@ -99,6 +99,7 @@ def define_SwanSpawner_from(base_class):
             options[self.software_source]       = formdata[self.software_source][0]
             options[self.user_n_cores]          = int(formdata[self.user_n_cores][0])
             options[self.user_memory]           = formdata[self.user_memory][0] + 'G'
+            options[self.notebook]              = formdata[self.notebook][0] if self.notebook in formdata else ''
             if options[self.software_source] == self.customenv_special_type:
                 options[self.builder]               = builder
                 options[self.builder_version]       = builder_version
