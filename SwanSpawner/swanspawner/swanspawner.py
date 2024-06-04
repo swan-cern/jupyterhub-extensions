@@ -7,6 +7,7 @@ import re, json
 import os
 import time
 from socket import gethostname
+from urllib.parse import unquote
 from traitlets import Unicode, Bool, Int
 
 from jinja2 import Environment, FileSystemLoader
