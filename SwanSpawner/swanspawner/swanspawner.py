@@ -7,6 +7,7 @@ import re, json
 import os
 import time
 from socket import gethostname
+from urllib.parse import unquote
 from traitlets import Unicode, Bool, Int
 
 from jinja2 import Environment, FileSystemLoader
@@ -50,16 +51,18 @@ def define_SwanSpawner_from(base_class):
 
         customenv_special_type = 'customenv'
 
+        lcg_special_type = 'lcg'
+
         eos_special_type = 'eos'
 
         eos_pattern = Unicode(
-            default_value=r'^(?:\$CERNBOX_HOME|/eos(?:/[^/\n]+)*/?)?$',
+            default_value=r'^(?:\$CERNBOX_HOME|/eos)(?:/[^<>\|\\:()&;,/\n]+)*/?$',
             config=True,
             help='Regular expression pattern for the repository provided by a EOS folder.'
         )
 
         git_pattern = Unicode(
-            default_value=r'https?://(?:github\.com|gitlab\.cern\.ch)/([^/\s]+)/([^/\s]+)/?',
+            default_value=r'https?://(?:github\.com|gitlab\.cern\.ch)/([a-zA-Z0-9_-]+)/([a-zA-Z0-9_-]+)/?',
             config=True,
             help='Regular expression pattern for the repository provided by a GitLab or GitHub repository.'
         )
@@ -132,7 +135,8 @@ def define_SwanSpawner_from(base_class):
                     if not eos_match:
                         raise ValueError(f"Invalid EOS repository: {repository}")
                 else: # git option
-                    git_match = re.match(self.git_pattern, repository)
+                    # URL Decode repository to avoid injection attacks through encoded characters
+                    git_match = re.match(self.git_pattern, unquote(repository))
                     if not git_match:
                         raise ValueError(f"Invalid Git repository: {repository}")
 
@@ -140,19 +144,21 @@ def define_SwanSpawner_from(base_class):
                     project_folder = git_match.group(2)
 
             options = {}
-            options[self.source_type]           = source_type
-            options[self.builder]               = builder
-            options[self.builder_version]       = builder_version
-            options[self.repository]            = repository
-            options[self.project_folder]        = project_folder
-            options[self.repository_type]       = repository_type
-            options[self.lcg_rel_field]         = lcg_rel
-            options[self.platform_field]        = platform
-            options[self.user_script_env_field] = formdata[self.user_script_env_field][0]
-            options[self.spark_cluster_field]   = formdata[self.spark_cluster_field][0] if self.spark_cluster_field in formdata.keys() else 'none'
-            options[self.condor_pool]           = formdata[self.condor_pool][0]
-            options[self.user_n_cores]          = int(formdata[self.user_n_cores][0])
-            options[self.user_memory]           = formdata[self.user_memory][0] + 'G'
+            options[self.source_type]               = source_type
+            options[self.user_n_cores]              = int(formdata[self.user_n_cores][0])
+            options[self.user_memory]               = formdata[self.user_memory][0] + 'G'
+            if source_type == self.customenv_special_type:
+                options[self.builder]               = builder
+                options[self.builder_version]       = builder_version
+                options[self.repository]            = repository
+                options[self.project_folder]        = project_folder
+                options[self.repository_type]       = repository_type
+            else:
+                options[self.lcg_rel_field]         = lcg_rel
+                options[self.platform_field]        = platform
+                options[self.user_script_env_field] = formdata[self.user_script_env_field][0]
+                options[self.spark_cluster_field]   = formdata[self.spark_cluster_field][0] if self.spark_cluster_field in formdata.keys() else 'none'
+                options[self.condor_pool]           = formdata[self.condor_pool][0]
 
             self.offload = options[self.spark_cluster_field] != 'none'
 
@@ -173,7 +179,7 @@ def define_SwanSpawner_from(base_class):
 
             #FIXME remove userrid and username and just use jovyan 
             #FIXME clean JPY env variables
-            if self.lcg_rel_field in self.user_options or self.source_type == self.customenv_special_type:
+            if self.lcg_rel_field in self.user_options:
                 # session spawned via the form
                 env.update(dict(
                     SOURCE_TYPE            = self.user_options[self.source_type],
@@ -185,6 +191,13 @@ def define_SwanSpawner_from(base_class):
                     EOS_PATH_FORMAT        = self.eos_path_format,
                     SERVER_HOSTNAME        = os.uname().nodename
                 ))
+
+                # Set LCG-related variables
+                if self.user_options[self.source_type] == self.lcg_special_type:
+                    env['ROOT_LCG_VIEW_NAME']     = self.user_options[self.lcg_rel_field]
+                    env['ROOT_LCG_VIEW_PLATFORM'] = self.user_options[self.platform_field]
+                    env['USER_ENV_SCRIPT']        = self.user_options[self.user_script_env_field]
+                    env['ROOT_LCG_VIEW_PATH']     = self.lcg_view_path
             else:
                 # session spawned via the API
                 env.update(dict(
@@ -199,13 +212,6 @@ def define_SwanSpawner_from(base_class):
             # Enable configuration for CERN HTCondor pool
             if self.user_options[self.condor_pool] != 'none':
                 env['CERN_HTCONDOR'] = 'true'
-
-            # Set LCG-related variables
-            if self.user_options[self.source_type] != self.customenv_special_type:
-                env['ROOT_LCG_VIEW_NAME']     = self.user_options[self.lcg_rel_field]
-                env['ROOT_LCG_VIEW_PLATFORM'] = self.user_options[self.platform_field]
-                env['USER_ENV_SCRIPT']        = self.user_options[self.user_script_env_field]
-                env['ROOT_LCG_VIEW_PATH']     = self.lcg_view_path
 
             return env
 
