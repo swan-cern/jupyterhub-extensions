@@ -150,21 +150,20 @@ def define_SwanSpawner_from(base_class):
                 notebook = self.replace_cernbox_home(notebook)
 
             options = {}
-            options[self.source_type]               = source_type
-            options[self.user_n_cores]              = int(formdata[self.user_n_cores][0])
-            options[self.user_memory]               = formdata[self.user_memory][0] + 'G'
+            options[self.source_type]           = source_type
+            options[self.user_n_cores]          = int(formdata[self.user_n_cores][0])
+            options[self.user_memory]           = formdata[self.user_memory][0] + 'G'
+            options[self.lcg_rel_field]         = lcg_rel
+            options[self.platform_field]        = platform
+            options[self.user_script_env_field] = formdata[self.user_script_env_field][0]
+            options[self.spark_cluster_field]   = formdata[self.spark_cluster_field][0] if self.spark_cluster_field in formdata.keys() else 'none'
+            options[self.condor_pool]           = formdata[self.condor_pool][0]
             if source_type == self.customenv_special_type:
                 options[self.builder]               = builder
                 options[self.builder_version]       = builder_version
                 options[self.repository]            = repository
                 options[self.project_folder]        = project_folder
                 options[self.repository_type]       = repository_type
-            else:
-                options[self.lcg_rel_field]         = lcg_rel
-                options[self.platform_field]        = platform
-                options[self.user_script_env_field] = formdata[self.user_script_env_field][0]
-                options[self.spark_cluster_field]   = formdata[self.spark_cluster_field][0] if self.spark_cluster_field in formdata.keys() else 'none'
-                options[self.condor_pool]           = formdata[self.condor_pool][0]
 
             self.offload = options[self.spark_cluster_field] != 'none'
 
