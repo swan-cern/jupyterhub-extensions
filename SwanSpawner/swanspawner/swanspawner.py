@@ -58,7 +58,7 @@ def define_SwanSpawner_from(base_class):
         eos_special_type = 'eos'
 
         eos_pattern = Unicode(
-            default_value=r'^(?:\$CERNBOX_HOME|/eos)(?:/[^<>\|\\:()&;,/\n]+)*/?$',
+            default_value=r'^(?:\$CERNBOX_HOME|/eos/user/[a-zA-Z]/[^<>\|\\:()&;,/\n]+)(?:/[^<>\|\\:()&;,/\n]+)*/?$',
             config=True,
             help='Regular expression pattern for the repository provided by a EOS folder.'
         )
@@ -184,35 +184,23 @@ def define_SwanSpawner_from(base_class):
 
             #FIXME remove userrid and username and just use jovyan 
             #FIXME clean JPY env variables
-            if self.lcg_rel_field in self.user_options:
-                # session spawned via the form
-                env.update(dict(
-                    SOURCE_TYPE            = self.user_options[self.source_type],
-                    USER                   = username,
-                    NB_USER                = username,
-                    USER_ID                = self.user_uid,
-                    NB_UID                 = self.user_uid,
-                    HOME                   = homepath,
-                    EOS_PATH_FORMAT        = self.eos_path_format,
-                    SERVER_HOSTNAME        = os.uname().nodename
-                ))
+            env.update(dict(
+                SOURCE_TYPE            = self.user_options[self.source_type],
+                USER                   = username,
+                NB_USER                = username,
+                USER_ID                = self.user_uid,
+                NB_UID                 = self.user_uid,
+                HOME                   = homepath,
+                EOS_PATH_FORMAT        = self.eos_path_format,
+                SERVER_HOSTNAME        = os.uname().nodename
+            ))
 
-                # Set LCG-related variables
-                if self.user_options[self.source_type] == self.lcg_special_type:
-                    env['ROOT_LCG_VIEW_NAME']     = self.user_options[self.lcg_rel_field]
-                    env['ROOT_LCG_VIEW_PLATFORM'] = self.user_options[self.platform_field]
-                    env['USER_ENV_SCRIPT']        = self.user_options[self.user_script_env_field]
-                    env['ROOT_LCG_VIEW_PATH']     = self.lcg_view_path
-            else:
-                # session spawned via the API
-                env.update(dict(
-                    USER                   = "jovyan",
-                    HOME                   = "/home/jovyan",
-                    NB_USER                = 'jovyan',
-                    USER_ID                = 1000,
-                    NB_UID                 = 1000,
-                    SERVER_HOSTNAME        = os.uname().nodename,
-                ))
+            # Set LCG-related variables
+            if self.user_options[self.source_type] == self.lcg_special_type:
+                env['ROOT_LCG_VIEW_NAME']     = self.user_options[self.lcg_rel_field]
+                env['ROOT_LCG_VIEW_PLATFORM'] = self.user_options[self.platform_field]
+                env['USER_ENV_SCRIPT']        = self.user_options[self.user_script_env_field]
+                env['ROOT_LCG_VIEW_PATH']     = self.lcg_view_path
 
             # Enable configuration for CERN HTCondor pool
             if self.user_options[self.condor_pool] != 'none':

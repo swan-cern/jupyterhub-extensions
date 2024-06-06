@@ -156,7 +156,6 @@ class SpawnHandler(JHSpawnHandler):
                     user, options, time.time() - start_time_spawn)
 
         except Exception as e:
-
             self._log_spawn_metrics(
                 user, options, time.time() - start_time_spawn, e)
 
@@ -251,7 +250,7 @@ class SpawnHandler(JHSpawnHandler):
                 metrics.append((metric, (date, 1)))
 
         spawn_context_key = ".".join(
-            [options.get(configs.lcg_rel_field, "CustomEnv"), options.get(configs.spark_cluster_field, "")])
+            [options.get(configs.lcg_rel_field, "CustomEnv"), options.get(configs.spark_cluster_field, "none")])
         if not spawn_exception:
             # Add spawn success (no exception) and duration to the log and send as metrics
             spawn_exc_class = "None"
