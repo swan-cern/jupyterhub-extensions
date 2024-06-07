@@ -25,8 +25,6 @@ class SpawnHandlersConfigs(SingletonConfigurable):
 
     repository = 'repository'
 
-    project_folder = 'project_folder'
-
     notebook = 'notebook'
 
     lcg_rel_field = 'LCG-rel'
@@ -46,12 +44,6 @@ class SpawnHandlersConfigs(SingletonConfigurable):
     customenv_special_type = 'customenv'
 
     accpy_special_type = 'accpy'
-
-    env_name = Unicode(
-        default_value='{project_folder}_env',
-        config=True,
-        help='Name format for custom environment launched by the user.'
-    )
 
     local_home = Bool(
         default_value=False,
