@@ -105,10 +105,10 @@ def define_SwanSpawner_from(base_class):
                                                    )
 
             if options[self.software_source] == self.customenv_special_type:
-                options[self.builder]               = builder
-                options[self.builder_version]       = builder_version
-                options[self.repository]            = formdata[self.repository][0]
-                options[self.repo_type]       = formdata[self.repo_type][0]
+                options[self.builder]           = builder
+                options[self.builder_version]   = builder_version
+                options[self.repository]        = formdata[self.repository][0]
+                options[self.repo_type]         = formdata[self.repo_type][0]
 
                 if not options[self.repository]:
                     raise ValueError("No Repository specified")
