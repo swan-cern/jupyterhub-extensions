@@ -159,7 +159,6 @@ class SpawnHandler(JHSpawnHandler):
         if options.get(configs.source_type) == configs.customenv_special_type:
             # Add the query parameters to the URL
             query_params = {
-                "env": configs.env_name.format(project_folder=options.get(configs.project_folder)), # {reponame}_env or {lastfolder}_env
                 "repo": options.get(configs.repository),
             }
             if options.get(configs.builder) == configs.accpy_special_type:

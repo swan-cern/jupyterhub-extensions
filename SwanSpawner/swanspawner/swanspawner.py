@@ -33,8 +33,6 @@ def define_SwanSpawner_from(base_class):
 
         repository = 'repository'
 
-        project_folder = 'project_folder'
-
         lcg_rel_field = 'LCG-rel'
 
         platform_field = 'platform'
@@ -56,7 +54,7 @@ def define_SwanSpawner_from(base_class):
         eos_special_type = 'eos'
 
         eos_pattern = Unicode(
-            default_value=r'^(?:\$CERNBOX_HOME|/eos/user/[a-zA-Z]/[^<>\|\\:()&;,/\n]+)(?:/[^<>\|\\:()&;,/\n]+)*/?$',
+            default_value=r'^/eos/user/[a-z]/[^<>\|\\:()&;,\n]+(/[^<>\|\\:()&;,\n]+)+/?$',
             config=True,
             help='Regular expression pattern for the repository provided by a EOS folder.'
         )
@@ -113,7 +111,6 @@ def define_SwanSpawner_from(base_class):
             lcg_rel = formdata[self.lcg_rel_field][0]
             platform = formdata[self.platform_field][0]
             repository, repository_type = '', ''
-            project_folder = self.user.name
             # Builders are specified in builder-builderversion format
             builder, builder_version = formdata[self.builder][0].lower().split('-')
 
@@ -129,7 +126,6 @@ def define_SwanSpawner_from(base_class):
                 if repository_type == self.eos_special_type:
                     # Get the last folder of the repository by default
                     repository = self.replace_cernbox_home(repository)
-                    project_folder =  repository.split('/')[-1]
 
                     eos_match = re.match(self.eos_pattern, repository)
                     if not eos_match:
@@ -141,7 +137,6 @@ def define_SwanSpawner_from(base_class):
                         raise ValueError(f"Invalid Git repository: {repository}")
 
                     repository = git_match.group(0)
-                    project_folder = git_match.group(2)
 
             options = {}
             options[self.source_type]           = source_type
@@ -156,7 +151,6 @@ def define_SwanSpawner_from(base_class):
                 options[self.builder]               = builder
                 options[self.builder_version]       = builder_version
                 options[self.repository]            = repository
-                options[self.project_folder]        = project_folder
                 options[self.repository_type]       = repository_type
 
             self.offload = options[self.spark_cluster_field] != 'none'
