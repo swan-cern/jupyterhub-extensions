@@ -56,7 +56,7 @@ def define_SwanSpawner_from(base_class):
         eos_special_type = 'eos'
 
         eos_pattern = Unicode(
-            default_value=r'^/eos/user/[a-z]/[^<>\|\\:()&;,\n]+(/[^<>\|\\:()&;,\n]+)+/?$',
+            default_value=r'^/eos/user/[a-z](/[^<>\|\\:()&;,\n]+)+/?$',
             config=True,
             help='Regular expression pattern for the repository provided by a EOS folder.'
         )
@@ -127,8 +127,10 @@ def define_SwanSpawner_from(base_class):
 
                 # Do not allow the session to spawn if the repository is not valid
                 if repository_type == self.eos_special_type:
+                    print(f"Repository: {repository}")
                     # Get the last folder of the repository by default
                     repository = self.replace_cernbox_home(repository)
+                    print(f"Repository2: {repository}")
 
                     eos_match = re.match(self.eos_pattern, repository)
                     if not eos_match:
