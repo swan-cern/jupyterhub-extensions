@@ -156,7 +156,7 @@ class SpawnHandler(JHSpawnHandler):
         if current_user is user:
             self.set_login_cookie(user)
 
-        if options.get(configs.source_type) == configs.customenv_special_type:
+        if options.get(configs.software_source) == configs.customenv_special_type:
             # Add the query parameters to the URL
             query_params = {
                 "repo": options.get(configs.repository),
