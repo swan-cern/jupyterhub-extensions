@@ -23,7 +23,7 @@ def define_SwanSpawner_from(base_class):
 
     class SwanSpawner(base_class):
 
-        source_type = 'source_type'
+        software_source = 'software_source'
 
         software_source = 'software_source'
 
