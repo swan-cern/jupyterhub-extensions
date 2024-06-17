@@ -14,8 +14,8 @@ class SpawnHandlersConfigs(SingletonConfigurable):
     """
         Singleton class where all the configurations are stored
     """
-    
-    source_type = 'source_type'
+
+    software_source = 'software_source'
 
     builder = 'builder'
     
