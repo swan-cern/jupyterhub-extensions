@@ -173,7 +173,7 @@ def define_SwanSpawner_from(base_class):
             #FIXME remove userrid and username and just use jovyan 
             #FIXME clean JPY env variables
             env.update(dict(
-                SOFTWARE_SOURCE            = self.user_options[self.software_source],
+                SOFTWARE_SOURCE        = self.user_options[self.software_source],
                 USER                   = username,
                 NB_USER                = username,
                 USER_ID                = self.user_uid,
