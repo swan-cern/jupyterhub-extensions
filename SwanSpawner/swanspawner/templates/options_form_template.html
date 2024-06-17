@@ -39,7 +39,7 @@
      * Renders a form based on config file
      */
     function adjust_form() {
-        const sourceOptions = document.getElementsByName('source_type');
+        const sourceOptions = document.getElementsByName('software_source');
         let selectedSource = null;
         for (let i = 0; i < sourceOptions.length; i++) {
             if (sourceOptions[i].checked) {
@@ -243,7 +243,7 @@
     <br><br>
 
     <!-- Source Type selection -->
-    <div id="source_typeSection">
+    <div id="software_sourceSection">
         <h2>Software</h2>
         <label>Source <a href="#" onclick="toggle_visibility('sourceDetails');"><span class='nbs'>more...</span></a>
             <div style="display:none;" id="sourceDetails">
@@ -251,9 +251,9 @@
             </div>
         </label>
         <br>
-        <input type="radio" id="lcgOption" name="source_type" value="lcg" checked onchange="toggle_form();" style="width: auto; height: auto; display: inline-block;">
+        <input type="radio" id="lcgOption" name="software_source" value="lcg" checked onchange="toggle_form();" style="width: auto; height: auto; display: inline-block;">
         <label for="lcgOption" style="margin-right: 5%;">LCG</label>
-        <input type="radio" id="customenvOption" name="source_type" value="customenv" onchange="toggle_form();" style="width: auto; height: auto; display: inline-block;">
+        <input type="radio" id="customenvOption" name="software_source" value="customenv" onchange="toggle_form();" style="width: auto; height: auto; display: inline-block;">
         <label for="customenvOption">Custom Environment</label>
         <br><br>
     </div>
