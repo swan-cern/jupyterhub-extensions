@@ -139,7 +139,7 @@ def define_SwanSpawner_from(base_class):
                     repository = git_match.group(0)
 
             options = {}
-            options[self.software_source]           = software_source
+            options[self.software_source]       = software_source
             options[self.user_n_cores]          = int(formdata[self.user_n_cores][0])
             options[self.user_memory]           = formdata[self.user_memory][0] + 'G'
             options[self.lcg_rel_field]         = lcg_rel
