@@ -1,418 +1,258 @@
-<style> .nb{ font-weight:normal } </style>
-<style> .nbs{ font-weight:normal; font-size:small } </style>
-<style> .news{ font-weight:normal; background-color:yellow } </style>
-<script type="text/javascript">
-<!--
+# Author: Danilo Piparo, Enric Tejedor, Diogo Castro 2015
+# Copyright CERN
 
-    var formConfig = {{ options_form_config }};
+"""CERN Specific Spawner class"""
 
-    var formInitialized = false;
+import re, json
+import os
+import time
+from socket import gethostname
+from traitlets import Unicode, Bool, Int
 
-    /**
-     * Get Form data dictionary for given selectedValue.
-     */
-    function findFormData(form, formElement, value) {
-        // Data is taken from formConfig global variable
-        var formOptions = formConfig[form];
-        for (key in formOptions) {
-            const formData = formOptions[key];
-            if (formData.type === "selection" && formData[formElement].value === value) {
-                return formData;
-            }
-        }
+from jinja2 import Environment, FileSystemLoader
 
-        throw `${formElement} Data not found`
-    }
+def define_SwanSpawner_from(base_class):
+    """
+        The Spawner need to inherit from a proper upstream Spawner (i.e Docker or Kube).
+        But since our personalization, added on top of those, is exactly the same for all,
+        by allowing a dynamic inheritance we can re-use the same code on all cases.
+        This function returns our SwanSpawner, inheriting from a class (upstream Spawner)
+        given as parameter.
+    """
 
-    /**
-     * Enable display of element if previously disabled, and disable if previously enabled
-     */
-    function toggle_visibility(id) {
-        var e = document.getElementById(id);
-        if(e.style.display == 'block')
-            e.style.display = 'none';
-        else
-            e.style.display = 'block';
-    }
+    class SwanSpawner(base_class):
 
-    /**
-     * Enable display of element if previously disabled, and disable if previously enabled
-     */
-    function validate_repository_input() {
-        var repoInput = document.getElementById('repositoryOption');
-        const repoPattern = new RegExp(repoInput.pattern);
+        software_source = 'software_source'
 
-        if (repoInput.value && !repoPattern.test(repoInput.value)) {
-            repoInput.style.backgroundColor = '#ffcccc';
-        } else {
-            repoInput.style.backgroundColor = '#ffffff';
-        }
-    }
+        builder = 'builder'
 
-    /**
-     * Renders a form based on config file
-     */
-    function adjust_form() {
-        const sourceOptions = document.getElementsByName('software_source');
-        let selectedSource = null;
-        for (let i = 0; i < sourceOptions.length; i++) {
-            if (sourceOptions[i].checked) {
-                selectedSource = sourceOptions[i].value;
-                break;
-            }
-        }
+        builder_version = 'builder_version'
 
-        var sourceConfig = {
-            lcg: {
-                optionsElement: document.getElementById("lcgReleaseOptions"),
-                sourceForm: "lcg_options",
-                formElement: "lcg",
-            },
-            customenv: {
-                optionsElement: document.getElementById("builderOptions"),
-                sourceForm: "customenv_options",
-                formElement: "builder",
-            }
-        };
+        repo_type = 'repo_type'
 
-        // if form has not been yet initialized, initialize
-        if (!formInitialized) {
-            formInitialized = true;
+        repository = 'repository'
 
-            // set proper header for the whole form based on config
-            var optionsHeader = document.getElementById('optionsHeader');
-            var header = formConfig['header'];
-            if (header) {
-                optionsHeader.innerHTML = header;
-            }
+        lcg_rel_field = 'LCG-rel'
 
-            // Loop through all source types and populate the main dropdown options (lcg -> lcg_release, customenv -> builder)
-            for (var source in sourceConfig) {
-                const currentSource = sourceConfig[source];
-                const formOptions = formConfig[currentSource.sourceForm];
-                currentSource.optionsElement.innerHTML = '';
-                var firstFormOptionselected = false;
+        platform_field = 'platform'
 
-                for( var i = 0 ; i < formOptions.length ; i++ ){
-                    var formEntry = formOptions[i];
-                    var formOption = document.createElement("option");
+        user_script_env_field = 'scriptenv'
 
-                    if (formEntry.type === "label") {
-                        formOption.disabled = "disabled";
-                        formOption.style = "border-bottom:1px solid rgba(153,153,153,.3); margin:-10px 0 4px 0";
-                        formOption.value = formEntry.label.value;
-                        formOption.text = formEntry.label.text;
-                    } else {
-                        if (!firstFormOptionselected) {
-                            firstFormOptionselected = true;
-                            formOption.selected = true;
-                        }
-                        formOption.value = formEntry[currentSource.formElement].value;
-                        formOption.text = formEntry[currentSource.formElement].text;
-                    }
+        user_n_cores = 'ncores'
 
-                    currentSource.optionsElement.add(formOption);
-                }
-            }
-        }
+        user_memory = 'memory'
 
-        // get currently selected source and extract its configuration (formData)
-        const selectedConfig = sourceConfig[selectedSource];
-        var selectedValue = selectedConfig.optionsElement.value;
-        var formData = findFormData(selectedConfig.sourceForm, selectedConfig.formElement, selectedValue);
+        use_jupyterlab_field = 'use-jupyterlab'
 
-        var available_configs = {
-            'lcg': [
-                {elementName: 'platformOptions', formKey: 'platforms'}, 
-                {elementName: 'coresOptions', formKey: 'cores'}, 
-                {elementName: 'memoryOptions', formKey: 'memory'}, 
-                {elementName: 'clusterOptions', formKey: 'clusters'}, 
-                {elementName: 'condorOptions', formKey: 'condor'}
-            ],
-            'customenv': [
-                {elementName: 'coresOptions', formKey: 'cores'},
-                {elementName: 'memoryOptions', formKey: 'memory'}
-            ]
-        };
+        spark_cluster_field = 'spark-cluster'
 
-        // Populate the form according to main dropdown selection
-        available_configs[selectedSource].forEach(function(config) {
-            var configElement = document.getElementById(config.elementName);
-            configElement.innerHTML = '';
+        condor_pool = 'condor-pool'
 
-            for( var i = 0 ; i < formData[config.formKey].length ; i++ ){
-                var formOption = formData[config.formKey][i];
+        customenv_special_type = 'customenv'
 
-                var selectOption = document.createElement("option");
-                selectOption.value = formOption.value;
-                selectOption.text = formOption.text;
-                if (i === 0) {
-                    selectOption.selected = true;
-                }
+        lcg_special_type = 'lcg'
 
-                configElement.add(selectOption);
-            }
-        });
+        eos_special_type = 'eos'
 
-        adjust_options();
-    }
+        options_form_config = Unicode(
+            config=True,
+            help='Path to configuration file for options_form rendering.'
+        )
 
-    /**
-     * Modifies the selection of Spark clusters and enables users to choose
-     * to use the JupyterLab interface depending on the chosen platform
-     */
-     function adjust_options() {
-        var platformOptions = document.getElementById('platformOptions');
-        var clusterOptions  = document.getElementById('clusterOptions');
-        var jupyterLabOption = document.getElementById("use-jupyterlab");
+        lcg_view_path = Unicode(
+            default_value='/cvmfs/sft.cern.ch/lcg/views',
+            config=True,
+            help='Path where LCG views are stored in CVMFS.'
+        )
 
-        /**
-         * Store the chosen platform in a hidden form field, as disabled fields
-         * are not sent in the request
-         */ 
-        var hiddenPlatformOptions = document.getElementById('hiddenPlatformOptions');
+        local_home = Bool(
+            default_value=False,
+            config=True,
+            help="If True, a physical directory on the host will be the scratch space, otherwise EOS."
+        )
 
-        var isAlma = platformOptions.selectedOptions[0].text.startsWith('AlmaLinux 9');
-        var isNXCALS = clusterOptions.selectedOptions[0].text.startsWith('BE NXCALS (NXCals)');
+        eos_path_format = Unicode(
+            default_value='/eos/user/{username[0]}/{username}/',
+            config=True,
+            help='Path format of the users home folder in EOS.'
+        )
 
-        if (isAlma) {
-            /* On Alma9, make sure cluster selection is enabled and that users can
-            select the JupyterLab interface */
-            clusterOptions.removeAttribute('disabled');
-            jupyterLabOption.removeAttribute('disabled');
-        } else {
-            if (!isNXCALS) {
-                clusterOptions.setAttribute('disabled', '');
-                clusterOptions.selectedIndex = 0;
-            }
+        extended_timeout = Int(
+            default_value=120,
+            config=True,
+            help="Extended timeout for users using environment script"
+        )
 
-            jupyterLabOption.setAttribute('disabled', '');
-        }
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            self.this_host = gethostname().split('.')[0]
+            if not self.options_form and self.options_form_config:
+                # if options_form not provided, use templated options form based on configuration file
+                self.options_form = self._render_templated_options_form
 
-        hiddenPlatformOptions.value = platformOptions.value;
-    }
+        def options_from_form(self, formdata):
+            # Builders are specified in builder-builderversion format
+            builder, builder_version = formdata[self.builder][0].lower().split('-')
 
-    function adjust_platforms() {
-        var platformOptions = document.getElementById('platformOptions');
-        var jupyterLabOption = document.getElementById('use-jupyterlab');
+            options = {}
+            options[self.software_source]       = formdata[self.software_source][0]
+            options[self.user_n_cores]          = int(formdata[self.user_n_cores][0])
+            options[self.user_memory]           = formdata[self.user_memory][0] + 'G'
+            options[self.use_jupyterlab_field]  = formdata.get(self.use_jupyterlab_field, 'unchecked')[0]
+            if options[self.software_source] == self.customenv_special_type:
+                options[self.builder]         = builder
+                options[self.builder_version] = builder_version
+                options[self.repository]      = formdata[self.repository][0]
+                options[self.repo_type]       = formdata[self.repo_type][0]
 
-        if (jupyterLabOption.checked) {
-            platformOptions.setAttribute('disabled', '');
-        } else {
-            platformOptions.removeAttribute('disabled');
-        }
-    }
+                if not options[self.repository]:
+                    raise ValueError("No Repository specified")
+            else:
+                options[self.lcg_rel_field]         = formdata[self.lcg_rel_field][0]
+                options[self.platform_field]        = formdata[self.platform_field][0]
+                options[self.user_script_env_field] = formdata[self.user_script_env_field][0]
+                options[self.spark_cluster_field]   = formdata[self.spark_cluster_field][0]
+                options[self.condor_pool]           = formdata[self.condor_pool][0]
 
-    /**
-     * Adjusts the width of the repository type dropdown element based on the selected option
-     */
-    function adjust_repository_dropdown() {
-        const selectElement = document.getElementById('repo_type_dropdown');
-        const selectedOptionText = selectElement.options[selectElement.selectedIndex].text;
-        const tempElement = document.createElement('span');
-        tempElement.style.visibility = 'hidden';
-        tempElement.style.whiteSpace = 'nowrap';
-        tempElement.style.fontSize = window.getComputedStyle(selectElement).fontSize;
-        tempElement.innerHTML = selectedOptionText;
+                self.offload = options[self.spark_cluster_field] != 'none'
 
-        document.body.appendChild(tempElement);
-        const width = tempElement.offsetWidth;
-        document.body.removeChild(tempElement);
+            return options
 
-        selectElement.style.width = `${width + 50}px`;
+        def get_env(self):
+            """ Set base environmental variables for swan jupyter docker image """
+            env = super().get_env()
 
-        const repositoryOption = document.getElementById('repositoryOption');
-        if (selectElement.value === 'eos') {
-            repositoryOption.placeholder = 'e.g. $CERNBOX_HOME/MyFolder';
-            // Regular expression pattern for the repository provided by a EOS folder.
-            repositoryOption.pattern = '^(\\\$CERNBOX_HOME(\\/[^<>\|\\\\:()&;,\n]+)*\\/?|\\/eos\\/user\\/[a-z](\\/[^<>\|\\\\:()&;,\n]+)+\\/?)$';
-        } else if (selectElement.value === 'git') {
-            repositoryOption.placeholder= "e.g. https://gitlab.cern.ch/user/myrepo";
-            // Regular expression pattern for the repository provided by a GitLab or GitHub repository.
-            repositoryOption.pattern = '^https?:\\/\\/(?:github\\.com|gitlab\\.cern\\.ch)\\/([a-zA-Z0-9_-]+)\\/([a-zA-Z0-9_-]+)\\/?$';
-        }
-    }
+            username = self.user.name
+            if self.local_home:
+                homepath = "/scratch/%s" %(username)
+            else:
+                homepath = self.eos_path_format.format(username = username)
 
-    /**
-     * Modifies the displayed form according to the selected type of configuration (LCG or Custom Environments)
-     */
-    function toggle_form() {
-        var lcgOption = document.getElementById('lcgOption');
+            if not hasattr(self, 'user_uid'):
+                raise Exception('Authenticator needs to set user uid (in pre_spawn_start)')
 
-        var customenv_config = document.getElementById('customenv_config');
-        var external_res_config = document.getElementById('external_res_config');
-        var lcg_config = document.getElementById('lcg_config');
+            #FIXME remove userrid and username and just use jovyan 
+            #FIXME clean JPY env variables
+            env.update(dict(
+                USER                   = username,
+                NB_USER                = username,
+                USER_ID                = self.user_uid,
+                NB_UID                 = self.user_uid,
+                HOME                   = homepath,
+                EOS_PATH_FORMAT        = self.eos_path_format,
+                SERVER_HOSTNAME        = os.uname().nodename
+            ))
 
-        adjust_form();
-        if (lcgOption.checked) {
-            lcg_config.style.display = 'block';
-            customenv_config.style.display = 'none';
-            external_res_config.style.display = 'block';
-            adjust_spark();
-        } else {
-            adjust_repository_dropdown();
-            lcg_config.style.display = 'none';
-            customenv_config.style.display = 'block';
-            external_res_config.style.display = 'none';
-        } 
-    }
+            # Set LCG-related variables
+            if self.user_options[self.software_source] == self.lcg_special_type:
+                env['ROOT_LCG_VIEW_NAME']     = self.user_options[self.lcg_rel_field]
+                env['ROOT_LCG_VIEW_PLATFORM'] = self.user_options[self.platform_field]
+                env['USER_ENV_SCRIPT']        = self.user_options[self.user_script_env_field]
+                env['ROOT_LCG_VIEW_PATH']     = self.lcg_view_path
 
-    window.onload = toggle_form;
-//-->
-</script>
+            # Enable JupyterLab interface
+            if self.user_options[self.use_jupyterlab_field] == 'checked':
+                env.update(dict(
+                    SWAN_USE_JUPYTERLAB = 'true'
+                ))
 
-<div>
-    <label for="placeholder">
-    <span class='nb' id="optionsHeader">Specify the configuration parameters for the SWAN container that will be created for you.</span>
-    </label>
-    <label for="alma9">
-    <span class='news' id="alma9">Try out our new experimental interface based on <b>JupyterLab</b> and let us know your feedback!</span>
-    </label>
-    <br><br>
-    <label> User Interface <a href="#" onclick="toggle_visibility('userInterfaceDetails');"><span class='nbs'>more...</span></a></label>
-    <div style="display:none;" id="userInterfaceDetails">
-        <span class='nb'>JupyterLab is the latest web-based interactive development environment for notebooks, code and data. More information <a target="_blank" href="https://jupyterlab.readthedocs.io/en/stable/user/interface.html">here</a>.</span>
-    </div>
-    <div style="display: flex; align-items: center">
-        <input
-          id="use-jupyterlab"
-          type="checkbox"
-          name="use-jupyterlab"
-          value="checked"
-          style="display: inline; width: initial; margin: 0 8px 0 0"
-          onchange="adjust_platforms();"
-        />
-        <span> Try the new JupyterLab interface (experimental)</span>
-    </div>
-    <br>
+            # Enable configuration for CERN HTCondor pool
+            if self.user_options.get(self.condor_pool, 'none') != 'none':
+                env['CERN_HTCONDOR'] = 'true'
 
-    <!-- Source Type selection -->
-    <div id="software_sourceSection">
-        <h2>Software</h2>
-        <label>Source <a href="#" onclick="toggle_visibility('sourceDetails');"><span class='nbs'>more...</span></a>
-            <div style="display:none;" id="sourceDetails">
-                <span class='nb'>Software source: curated stack (LCG) or custom environment.</span>
-            </div>
-        </label>
-        <br>
-        <input type="radio" id="lcgOption" name="software_source" value="lcg" checked onchange="toggle_form();" style="width: auto; height: auto; display: inline-block;">
-        <label for="lcgOption" style="margin-right: 5%;">LCG</label>
-        <input type="radio" id="customenvOption" name="software_source" value="customenv" onchange="toggle_form();" style="width: auto; height: auto; display: inline-block;">
-        <label for="customenvOption">Custom Environment</label>
-        <br><br>
-    </div>
-    
-    <!-- LCG configuration -->
-    <div id="lcg_config">
-        <div id="lcgReleaseSection">
-            <label for="lcgReleaseOptions">Software stack <a href="#" onclick="toggle_visibility('lcgReleaseDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="lcgReleaseDetails">
-                    <span class='nb'>The software stack to associate to the container. See the <a target="_blank" href="http://lcginfo.cern.ch/">LCG package info</a> page.</span>
-                </div>
-            </label>
-            <select id="lcgReleaseOptions" name="LCG-rel" onchange="adjust_form();"></select>
-        </div>
-        <br>
-        
-        <div id="platformSection">
-            <label for="platformOptions">Platform <a href="#" onclick="toggle_visibility('platformDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="platformDetails">
-                    <span class='nb'>The combination of compiler version and flags.</span>
-                </div>
-            </label>
-            <select id="platformOptions" name="platform" onchange="adjust_options();"></select>
-            <input type="hidden" id="hiddenPlatformOptions" name="platform">
-        </div>
-        <br>
-        
-        <div id="scriptenvSection">
-            <label for="scriptenvOption">Environment script <a href="#" onclick="toggle_visibility('scriptenvDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="scriptenvDetails">
-                    <span class='nb'>User-provided bash script to define custom environment variables. The variable CERNBOX_HOME is resolved to the proper /eos/user/u/username directory.</span>
-                </div>
-            </label>
-            <input type="text" id="scriptenvOption" name="scriptenv" placeholder="e.g. $CERNBOX_HOME/MySWAN/myscript.sh">
-        </div>
-        <br>
-    </div>
+            return env
 
-    <!-- Custom environment configuration -->
-    <div id="customenv_config" style="display: none;">
-        <div id="repositorySection">
-            <label for="repositoryOption">Repository 
-                <a href="#" onclick="toggle_visibility('repositoryDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="repositoryDetails">
-                    <span class='nb'>Repository containing a requirements.txt file. It can be a path on EOS or the URL of a public git repository.</span>
-                </div>
-            </label>
-            <br>
-            <div style="display: flex;">
-                <select id="repo_type_dropdown" name="repo_type" onchange="adjust_repository_dropdown();" style="width: auto; display: inline-flex; border: 1px solid #afafaf; background-color: #efefef;">
-                    <option value="eos">EOS</option>
-                    <option value="git">Git</option>
-                </select>
-                <input type="text" id="repositoryOption" name="repository" style="flex-grow: 1; margin-left: 0; border: 1px solid #afafaf;" oninput="validate_repository_input();">
-            </div>
-        </div>
-        <br>
-        
-        <div id="builderSection">
-            <label for="builderOptions">Builder <a href="#" onclick="toggle_visibility('builderDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="builderDetails">
-                    <span class='nb'>Program responsible for building the custom environment (generic or community-specific).</a></span>
-                </div>
-            </label>
-            <select id="builderOptions" name="builder"></select>
-        </div>
-        <br>
-    </div>
-    
-    <!-- Resources configuration -->
-    <div id="resources_config">
-        <h2>Session resources</h2>
+        async def stop(self, now=False):
+            """ Overwrite default spawner to report stop of the container """
 
-        <div id="coresSection">
-            <label for="coresOptions">Number of cores <a href="#" onclick="toggle_visibility('ncoresDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="ncoresDetails">
-                    <span class='nb'>Amount of cores allocated to the container.</span>
-                </div>
-            </label>
-            <select id="coresOptions" name="ncores"></select>
-        </div>
-        <br>
+            if self._spawn_future and not self._spawn_future.done():
+                # Return 124 (timeout) exit code as container got stopped by jupyterhub before successful spawn
+                container_exit_code = "124"
+            else:
+                # Return 0 exit code as container got stopped after spawning correctly
+                container_exit_code = "0"
 
-        <div id="memorySection">
-            <label for="memoryOptions">Memory <a href="#" onclick="toggle_visibility('memoryDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="memoryDetails">
-                    <span class='nb'>Amount of memory allocated to the container.</span>
-                </div>
-            </label>
-            <select id="memoryOptions" name="memory"></select>
-        </div>
-        <br>
-    </div>
+            stop_result = await super().stop(now)
 
-    <!-- External computing resources -->
-    <div id="external_res_config" style="display: block;">
-        <h2>External computing resources</h2>
-        
-        <div id="clusterSection">
-            <label for="clusterOptions">Spark cluster <a href="#" onclick="toggle_visibility('sparkClusterDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="sparkClusterDetails">
-                    <span class='nb'>Name of the Spark cluster to connect to from notebooks. See the <a target="_blank" href="https://hadoop-user-guide.web.cern.ch/">Hadoop User guide</a> and the <a target="_blank" href="https://sparktraining.web.cern.ch/">Spark training course</a></span>
-                </div>
-            </label>
-            <select id="clusterOptions" name="spark-cluster"></select>
-        </div>
-        <br>
+            self.log_metric(
+                self.user.name,
+                self.this_host,
+                ".".join(["exit_container_code"]),
+                container_exit_code
+            )
 
-        <div id="condorSection">
-            <label for="condorOptions">HTCondor pool <a href="#" onclick="toggle_visibility('condorDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="condorDetails">
-                    <span class='nb'>Name of the HTCondor pool to use.</span>
-                </div>
-            </label>
-            <select id="condorOptions" name="condor-pool"></select>
-        </div>
-    </div>
-</div>
+            return stop_result
+
+        async def poll(self):
+            """ Overwrite default poll to get status of container """
+            container_exit_code = await super().poll()
+
+            # None if single - user process is running.
+            # Integer exit code status, if it is not running and not stopped by JupyterHub.
+            if container_exit_code is not None:
+                exit_return_code = str(container_exit_code)
+                if exit_return_code.isdigit():
+                    value_cleaned = exit_return_code
+                else:
+                    result = re.search('ExitCode=(\d+)', exit_return_code)
+                    if not result:
+                        raise Exception("unknown exit code format for this Spawner")
+                    value_cleaned = result.group(1)
+
+                self.log_metric(
+                    self.user.name,
+                    self.this_host,
+                    ".".join(["exit_container_code"]),
+                    value_cleaned
+                )
+
+            return container_exit_code
+
+        async def start(self):
+            """
+            Start the container
+            """
+
+            start_time_start_container = time.time()
+            
+            #if the user script exists, we allow extended timeout
+            if self.user_options.get(self.user_script_env_field, '').strip() != '':
+                self.start_timeout = self.extended_timeout
+
+            # start configured container
+            startup = await super().start()
+
+            self.log_metric(
+                self.user.name,
+                self.this_host,
+                ".".join(["start_container_duration_sec"]),
+                time.time() - start_time_start_container
+            )
+
+            return startup
+
+        def log_metric(self, user, host, metric, value):
+            """ Function allowing for logging formatted metrics """
+            self.log.info("user: %s, host: %s, metric: %s, value: %s" % (user, host, metric, value))
+
+        def _render_templated_options_form(self, spawner):
+            """
+            Render a form from a template based on options_form_config json config file
+            """
+            templates_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
+            env = Environment(loader=FileSystemLoader(templates_dir))
+            template = env.get_template('options_form_template.html')
+
+            try:
+                with open(self.options_form_config) as json_file:
+                    options_form_config = json.load(json_file)
+
+                return template.render(options_form_config=options_form_config)
+            except Exception as ex:
+                self.log.error("Could not initialize form: %s", ex, exc_info=True)
+                raise RuntimeError(
+                    """
+                    Could not initialize form, invalid format
+                    """)
+
+    return SwanSpawner
