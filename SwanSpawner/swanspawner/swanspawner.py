@@ -55,7 +55,7 @@ def define_SwanSpawner_from(base_class):
         lcg_special_type = 'lcg'
 
         eos_special_type = 'eos'
-
+        
         options_form_config = Unicode(
             config=True,
             help='Path to configuration file for options_form rendering.'
