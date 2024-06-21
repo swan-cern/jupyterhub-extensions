@@ -12,7 +12,6 @@ from traitlets import (
     Unicode,
     Bool,
     Int,
-    Dict
 )
 
 from socket import (
@@ -97,12 +96,6 @@ class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
             self.extra_host_config['port_bindings'] = {}
             self.extra_create_kwargs['ports'] = []
 
-            if self.lcg_rel_field not in self.user_options:
-                # session spawned via the API, in binder start notebook with jovyan user
-                self.extra_create_kwargs['working_dir'] = "/home/jovyan"
-                self.extra_create_kwargs['user'] = 'jovyan'
-                self.extra_create_kwargs['command'] = ["jupyterhub-singleuser","--ip=0.0.0.0","--NotebookApp.default_url=/lab"]
-
             # Avoid overriding the default container output port, defined by the Spawner
             if not self.use_internal_ip:
                 self.extra_host_config['port_bindings'][self.port] = (self.host_ip,)
@@ -146,17 +139,17 @@ class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
         """Perform the operations necessary for mounting
         EOS, GPU support, authenticating HDFS and authenticating spark clusters.
         """
-        
+
         # default values when spawned via API (e.g binder)
         with open(self.options_form_config) as json_file:
             options_form_config_data = json.load(json_file)
 
         username = self.user.name
-        platform = self.user_options.get(self.platform_field,options_form_config_data["lcg_options"][1]['platforms'][0]['value'])
-        lcg_rel = self.user_options.get(self.lcg_rel_field,options_form_config_data["lcg_options"][1]["lcg"]["value"])
-        cluster = self.user_options.get(self.spark_cluster_field,options_form_config_data["lcg_options"][1]['clusters'][0]['value'])
-        cpu_quota = self.user_options.get(self.user_n_cores,int(options_form_config_data["lcg_options"][1]['cores'][0]['value']))
-        mem_limit = self.user_options.get(self.user_memory,options_form_config_data["lcg_options"][1]['memory'][0]['value'] + 'G')
+        platform = self.user_options.get(self.platform_field, options_form_config_data['lcg_options'][1]['platforms'][1]['value']) # Default: Alma9 (x86_64-el9-gcc13-opt)
+        lcg_rel = self.user_options.get(self.lcg_rel_field, options_form_config_data['lcg_options'][1]['lcg']['value']) # Default: LCG_105a_swan
+        cluster = self.user_options.get(self.spark_cluster_field, options_form_config_data['lcg_options'][1]['clusters'][0]['value']) # Default: none
+        cpu_quota = self.user_options.get(self.user_n_cores, int(options_form_config_data['lcg_options'][1]['cores'][0]['value'])) # Default: 2
+        mem_limit = self.user_options.get(self.user_memory, options_form_config_data['lcg_options'][1]['memory'][0]['value'] + 'G') # Default: 8G
 
         try:
             start_time_configure_user = time.time()

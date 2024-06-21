@@ -7,7 +7,6 @@ import re, json
 import os
 import time
 from socket import gethostname
-from urllib.parse import unquote
 from traitlets import Unicode, Bool, Int
 
 from jinja2 import Environment, FileSystemLoader
@@ -52,18 +51,6 @@ def define_SwanSpawner_from(base_class):
         lcg_special_type = 'lcg'
 
         eos_special_type = 'eos'
-
-        eos_pattern = Unicode(
-            default_value=r'^/eos/user/[a-z](/[^<>\|\\:()&;,\n]+)+/?$',
-            config=True,
-            help='Regular expression pattern for the repository provided by a EOS folder.'
-        )
-
-        git_pattern = Unicode(
-            default_value=r'https?://(?:github\.com|gitlab\.cern\.ch)/([a-zA-Z0-9_-]+)/([a-zA-Z0-9_-]+)/?',
-            config=True,
-            help='Regular expression pattern for the repository provided by a GitLab or GitHub repository.'
-        )
         
         options_form_config = Unicode(
             config=True,
@@ -101,59 +88,30 @@ def define_SwanSpawner_from(base_class):
                 # if options_form not provided, use templated options form based on configuration file
                 self.options_form = self._render_templated_options_form
 
-        def replace_cernbox_home(self, repo_path: str):
-            """Replace $CERNBOX_HOME with the actual path in EOS"""
-            eos_path = self.eos_path_format.format(username=self.user.name)
-            return repo_path.replace('$CERNBOX_HOME', eos_path.rstrip('/'))
-
         def options_from_form(self, formdata):
-            software_source = formdata[self.software_source][0]
-            lcg_rel = formdata[self.lcg_rel_field][0]
-            platform = formdata[self.platform_field][0]
-            repository, repository_type = '', ''
             # Builders are specified in builder-builderversion format
             builder, builder_version = formdata[self.builder][0].lower().split('-')
 
-            if software_source == self.customenv_special_type:
-                lcg_rel, platform = '', ''
-                repository = formdata[self.repository][0]
-                repository_type = formdata[self.repository_type][0]
-
-                if not repository:
-                    raise ValueError("Repository not provided")
-
-                # Do not allow the session to spawn if the repository is not valid
-                if repository_type == self.eos_special_type:
-                    # Get the last folder of the repository by default
-                    repository = self.replace_cernbox_home(repository)
-
-                    eos_match = re.match(self.eos_pattern, repository)
-                    if not eos_match:
-                        raise ValueError(f"Invalid EOS repository: {repository}")
-                else: # git option
-                    # URL Decode repository to avoid injection attacks through encoded characters
-                    git_match = re.match(self.git_pattern, unquote(repository))
-                    if not git_match:
-                        raise ValueError(f"Invalid Git repository: {repository}")
-
-                    repository = git_match.group(0)
-
             options = {}
-            options[self.software_source]       = software_source
+            options[self.software_source]       = formdata[self.software_source][0]
             options[self.user_n_cores]          = int(formdata[self.user_n_cores][0])
             options[self.user_memory]           = formdata[self.user_memory][0] + 'G'
-            options[self.lcg_rel_field]         = lcg_rel
-            options[self.platform_field]        = platform
-            options[self.user_script_env_field] = formdata[self.user_script_env_field][0]
-            options[self.spark_cluster_field]   = formdata[self.spark_cluster_field][0] if self.spark_cluster_field in formdata.keys() else 'none'
-            options[self.condor_pool]           = formdata[self.condor_pool][0]
-            if software_source == self.customenv_special_type:
+            if options[self.software_source] == self.customenv_special_type:
                 options[self.builder]               = builder
                 options[self.builder_version]       = builder_version
-                options[self.repository]            = repository
-                options[self.repository_type]       = repository_type
+                options[self.repository]            = formdata[self.repository][0]
+                options[self.repository_type]       = formdata[self.repository_type][0]
 
-            self.offload = options[self.spark_cluster_field] != 'none'
+                if not options[self.repository]:
+                    raise ValueError("No Repository specified")
+            else:
+                options[self.lcg_rel_field]         = formdata[self.lcg_rel_field][0]
+                options[self.platform_field]        = formdata[self.platform_field][0]
+                options[self.user_script_env_field] = formdata[self.user_script_env_field][0]
+                options[self.spark_cluster_field]   = formdata[self.spark_cluster_field][0]
+                options[self.condor_pool]           = formdata[self.condor_pool][0]
+
+                self.offload = options[self.spark_cluster_field] != 'none'
 
             return options
 
@@ -191,7 +149,7 @@ def define_SwanSpawner_from(base_class):
                 env['ROOT_LCG_VIEW_PATH']     = self.lcg_view_path
 
             # Enable configuration for CERN HTCondor pool
-            if self.user_options[self.condor_pool] != 'none':
+            if self.user_options.get(self.condor_pool, 'none') != 'none':
                 env['CERN_HTCONDOR'] = 'true'
 
             return env
@@ -250,7 +208,7 @@ def define_SwanSpawner_from(base_class):
             start_time_start_container = time.time()
             
             #if the user script exists, we allow extended timeout
-            if self.user_options[self.user_script_env_field].strip()!='':
+            if self.user_options.get(self.user_script_env_field, '').strip() != '':
                 self.start_timeout = self.extended_timeout
 
             # start configured container
