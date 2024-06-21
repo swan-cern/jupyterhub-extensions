@@ -209,41 +209,22 @@
         } 
     }
 
+    
     /**
      * Modifies the selection of Spark clusters depending on the chosen platform
      */
     function adjust_spark() {
         var platformOptions = document.getElementById('platformOptions');
-
-        function removeCluster(cluster) {
-            var clusterOptions  = document.getElementById('clusterOptions');
-            for (var i = 0; i < clusterOptions.options.length; i++) {
-                if (clusterOptions.options[i].value === cluster) {
-                    clusterOptions.remove(i);
-                    break;
-                }
-            }
-        }
-
-        function addCluster(clusterValue, clusterName) {
-            var selectClusterOption = document.createElement("option");
-            selectClusterOption.value = clusterValue;
-            selectClusterOption.text = clusterName;
-            clusterOptions.add(selectClusterOption);
-        }
+        var clusterOptions  = document.getElementById('clusterOptions');
 
         var isAlma = platformOptions.selectedOptions[0].text.startsWith('AlmaLinux 9');
 
         if (isAlma) {
+            // On Alma9, make sure cluster selection is enabled
+            clusterOptions.removeAttribute('disabled');
+        } else {
+            clusterOptions.setAttribute('disabled', '');
             clusterOptions.selectedIndex = 0;
-            removeCluster("analytix")
-            addCluster("k8s", "Cloud Containers (K8s)")
-            addCluster("hadoop-qa", "QA")
-        }
-        else {
-            addCluster("analytix", "General Purpose (Analytix)")
-            removeCluster("k8s")
-            removeCluster("hadoop-qa")
         }
     }
 
