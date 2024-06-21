@@ -97,6 +97,3 @@ ENV/
 
 # Mac os
 .DS_Store
-
-# Docker
-Dockerfile

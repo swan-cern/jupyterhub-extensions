@@ -36,6 +36,20 @@
     }
 
     /**
+     * Enable display of element if previously disabled, and disable if previously enabled
+     */
+    function validate_repository_input() {
+        var repoInput = document.getElementById('repositoryOption');
+        const repoPattern = new RegExp(repoInput.pattern);
+
+        if (repoInput.value && !repoPattern.test(repoInput.value)) {
+            repoInput.style.backgroundColor = '#ffcccc';
+        } else {
+            repoInput.style.backgroundColor = '#ffffff';
+        }
+    }
+
+    /**
      * Renders a form based on config file
      */
     function adjust_form() {
@@ -109,15 +123,15 @@
 
         var available_configs = {
             'lcg': [
-                {elementName: 'platformOptions', formKey: "platforms"}, 
-                {elementName: 'coresOptions', formKey: "cores"}, 
-                {elementName: 'memoryOptions', formKey: "memory"}, 
-                {elementName: 'clusterOptions', formKey: "clusters"}, 
-                {elementName: 'condorOptions', formKey: "condor"}
+                {elementName: 'platformOptions', formKey: 'platforms'}, 
+                {elementName: 'coresOptions', formKey: 'cores'}, 
+                {elementName: 'memoryOptions', formKey: 'memory'}, 
+                {elementName: 'clusterOptions', formKey: 'clusters'}, 
+                {elementName: 'condorOptions', formKey: 'condor'}
             ],
             'customenv': [
-                {elementName: 'coresOptions', formKey: "cores"},
-                {elementName: 'memoryOptions', formKey: "memory"}
+                {elementName: 'coresOptions', formKey: 'cores'},
+                {elementName: 'memoryOptions', formKey: 'memory'}
             ]
         };
 
@@ -152,18 +166,22 @@
         tempElement.style.whiteSpace = 'nowrap';
         tempElement.style.fontSize = window.getComputedStyle(selectElement).fontSize;
         tempElement.innerHTML = selectedOptionText;
-        
+
         document.body.appendChild(tempElement);
         const width = tempElement.offsetWidth;
         document.body.removeChild(tempElement);
-        
+
         selectElement.style.width = `${width + 50}px`;
 
         const repositoryOption = document.getElementById('repositoryOption');
         if (selectElement.value === 'eos') {
             repositoryOption.placeholder = 'e.g. $CERNBOX_HOME/MyFolder';
+            // Regular expression pattern for the repository provided by a EOS folder.
+            repositoryOption.pattern = '^(\\\$CERNBOX_HOME(\\/[^<>\|\\\\:()&;,\n]+)*\\/?|\\/eos\\/user\\/[a-z](\\/[^<>\|\\\\:()&;,\n]+)+\\/?)$';
         } else if (selectElement.value === 'git') {
             repositoryOption.placeholder= "e.g. https://gitlab.cern.ch/user/myrepo";
+            // Regular expression pattern for the repository provided by a GitLab or GitHub repository.
+            repositoryOption.pattern = '^https?:\\/\\/(?:github\\.com|gitlab\\.cern\\.ch)\\/([a-zA-Z0-9_-]+)\\/([a-zA-Z0-9_-]+)\\/?$';
         }
     }
 
@@ -307,7 +325,7 @@
                     <option value="eos">EOS</option>
                     <option value="git">Git</option>
                 </select>
-                <input type="text" id="repositoryOption" name="repository" style="flex-grow: 1; margin-left: 0; border: 1px solid #afafaf;">
+                <input type="text" id="repositoryOption" name="repository" style="flex-grow: 1; margin-left: 0; border: 1px solid #afafaf;" oninput="validate_repository_input();">
             </div>
         </div>
         <br>
