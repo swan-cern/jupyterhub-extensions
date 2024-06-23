@@ -180,6 +180,7 @@ class SpawnHandler(JHSpawnHandler):
             query_params = {
                 "repo": options.get(configs.repository),
                 "notebook": options.get(configs.notebook, ''),
+                "repo_type": options.get(configs.repository_type),
             }
             if options.get(configs.builder) == configs.accpy_special_type:
                 query_params[options.get(configs.builder)] = options.get(configs.builder_version)
