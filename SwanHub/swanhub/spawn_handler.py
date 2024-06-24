@@ -67,7 +67,7 @@ class SpawnHandler(JHSpawnHandler):
             self.request.body_arguments = {
                 configs.source_type: query_options.get(configs.source_type, [b'']),
                 configs.repository: query_options.get(configs.repository, [b'']),
-                configs.repository_type: query_options.get(configs.repository_type, [b'']),
+                configs.repo_type: query_options.get(configs.repo_type, [b'']),
                 configs.builder: query_options.get(configs.builder, [b'']),
                 configs.lcg_rel_field: query_options.get(configs.lcg_rel_field, [b'']),
                 configs.platform_field: query_options.get(configs.platform_field, [b'']),
@@ -179,8 +179,7 @@ class SpawnHandler(JHSpawnHandler):
             # Add the query parameters to the URL
             query_params = {
                 "repo": options.get(configs.repository),
-                "notebook": options.get(configs.notebook, ''),
-                "repo_type": options.get(configs.repository_type),
+                "repo_type": options.get(configs.repo_type),
                 "notebook": options.get(configs.notebook, ''),
             }
             if options.get(configs.builder) == configs.accpy_special_type:
