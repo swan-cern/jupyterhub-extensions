@@ -186,10 +186,7 @@ class SpawnHandler(JHSpawnHandler):
                 query_params[options.get(configs.builder)] = options.get(configs.builder_version)
 
             # Execution SwanCustomEnvs extension with the corresponding query arguments
-            next_url = self.get_next_url(
-                user,
-                default=url_concat(url_path_join("user", user.escaped_name, "customenvs", server_name), query_params),
-            )
+            next_url = url_concat(url_path_join("user", user.escaped_name, "customenvs", server_name), query_params)
         else: # LCG release
             next_url = self.get_next_url(
                 user,
