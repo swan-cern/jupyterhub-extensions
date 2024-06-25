@@ -65,7 +65,7 @@ class SpawnHandler(JHSpawnHandler):
         else:
             query_options = {key: [value[0].encode("utf-8")] for key, value in parse_qs(urlparse(unquote(self.request.uri)).query).items()}
             self.request.body_arguments = {
-                configs.source_type: query_options.get(configs.source_type, [b'']),
+                configs.software_source: query_options.get(configs.software_source, [b'']),
                 configs.repository: query_options.get(configs.repository, [b'']),
                 configs.repo_type: query_options.get(configs.repo_type, [b'']),
                 configs.builder: query_options.get(configs.builder, [b'']),
