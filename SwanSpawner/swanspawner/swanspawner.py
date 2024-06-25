@@ -42,6 +42,8 @@ def define_SwanSpawner_from(base_class):
 
         user_memory = 'memory'
 
+        use_jupyterlab_field = 'use-jupyterlab'
+
         spark_cluster_field = 'spark-cluster'
 
         condor_pool = 'condor-pool'
@@ -96,6 +98,7 @@ def define_SwanSpawner_from(base_class):
             options[self.software_source]       = formdata[self.software_source][0]
             options[self.user_n_cores]          = int(formdata[self.user_n_cores][0])
             options[self.user_memory]           = formdata[self.user_memory][0] + 'G'
+            options[self.use_jupyterlab_field]  = formdata.get(self.use_jupyterlab_field, 'unchecked')[0]
             if options[self.software_source] == self.customenv_special_type:
                 options[self.builder]               = builder
                 options[self.builder_version]       = builder_version
@@ -146,6 +149,12 @@ def define_SwanSpawner_from(base_class):
                 env['ROOT_LCG_VIEW_PLATFORM'] = self.user_options[self.platform_field]
                 env['USER_ENV_SCRIPT']        = self.user_options[self.user_script_env_field]
                 env['ROOT_LCG_VIEW_PATH']     = self.lcg_view_path
+
+            # Enable JupyterLab interface
+            if self.user_options[self.use_jupyterlab_field] == 'checked':
+                env.update(dict(
+                    SWAN_USE_JUPYTERLAB = 'true'
+                ))
 
             # Enable configuration for CERN HTCondor pool
             if self.user_options.get(self.condor_pool, 'none') != 'none':
