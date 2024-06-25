@@ -210,20 +210,44 @@
     }
 
     /**
-     * Modifies the selection of Spark clusters depending on the chosen platform
+     * Modifies the selection of Spark clusters and enables users to choose
+     * to use the JupyterLab interface depending on the chosen platform
      */
-    function adjust_spark() {
+    function adjust_options() {
         var platformOptions = document.getElementById('platformOptions');
         var clusterOptions  = document.getElementById('clusterOptions');
+        var jupyterLabOption = document.getElementById("use-jupyterlab");
+
+        /**
+         * Store the chosen platform in a hidden form field, as disabled fields
+         * are not sent in the request
+         */ 
+        var hiddenPlatformOptions = document.getElementById('hiddenPlatformOptions');
 
         var isAlma = platformOptions.selectedOptions[0].text.startsWith('AlmaLinux 9');
 
         if (isAlma) {
-            // On Alma9, make sure cluster selection is enabled
+            /* On Alma9, make sure cluster selection is enabled and that users can
+            select the JupyterLab interface */
             clusterOptions.removeAttribute('disabled');
+            jupyterLabOption.removeAttribute('disabled');
         } else {
             clusterOptions.setAttribute('disabled', '');
             clusterOptions.selectedIndex = 0;
+            jupyterLabOption.setAttribute('disabled', '');
+        }
+
+        hiddenPlatformOptions.value = platformOptions.value;
+    }
+
+    function adjust_platforms() {
+        var platformOptions = document.getElementById('platformOptions');
+        var jupyterLabOption = document.getElementById('use-jupyterlab');
+
+        if (jupyterLabOption.checked) {
+            platformOptions.setAttribute('disabled', '');
+        } else {
+            platformOptions.removeAttribute('disabled');
         }
     }
 
@@ -236,7 +260,7 @@
     <span class='nb' id="optionsHeader">Specify the configuration parameters for the SWAN container that will be created for you.</span>
     </label>
     <label for="alma9">
-    <span class='news' id="alma9">Try out our new experimental interface based on <b>JupyterLab</b>!</span>
+    <span class='news' id="alma9">Try out our new experimental interface based on <b>JupyterLab</b> and let us know your feedback!</span>
     </label>
     <br><br>
 
@@ -254,6 +278,25 @@
         <input type="radio" id="customenvOption" name="software_source" value="customenv" onchange="toggle_form();" style="width: auto; height: auto; display: inline-block;">
         <label for="customenvOption">Custom Environment</label>
         <br><br>
+    <label> User Interface <a href="#" onclick="toggle_visibility('userInterfaceDetails');"><span class='nbs'>more...</span></a></label>
+    <div style="display:none;" id="userInterfaceDetails">
+        <span class='nb'>JupyterLab is the latest web-based interactive development environment for notebooks, code and data. More information <a target="_blank" href="https://jupyterlab.readthedocs.io/en/stable/user/interface.html">here</a>.</span>
+    </div>
+    <div style="display: flex; align-items: center">
+      <input
+        id="use-jupyterlab"
+        type="checkbox"
+        name="use-jupyterlab"
+        value="checked"
+        style="display: inline; width: initial; margin: 0 8px 0 0"
+        onchange="adjust_platforms();"
+      />
+      <span> Try the new JupyterLab interface (experimental)</span>
+    </div>
+    <br>
+    <label for="lcgReleaseOptions">Software stack <a href="#" onclick="toggle_visibility('lcgReleaseDetails');"><span class='nbs'>more...</span></a>
+    <div style="display:none;" id="lcgReleaseDetails">
+       <span class='nb'>The software stack to associate to the container. See the <a target="_blank" href="http://lcginfo.cern.ch/">LCG package info</a> page.</span>
     </div>
     
     <!-- LCG configuration -->
@@ -319,6 +362,13 @@
             <select id="builderOptions" name="builder"></select>
         </div>
         <br>
+    </label>
+    <select id="platformOptions" onchange="adjust_options();"></select>
+    <input type="hidden" id="hiddenPlatformOptions" name="platform">
+    <br>
+    <label for="scriptenvOption">Environment script <a href="#" onclick="toggle_visibility('scriptenvDetails');"><span class='nbs'>more...</span></a>
+    <div style="display:none;" id="scriptenvDetails">
+       <span class='nb'>User-provided bash script to define custom environment variables. The variable CERNBOX_HOME is resolved to the proper /eos/user/u/username directory.</span>
     </div>
     
     <!-- Resources configuration -->
