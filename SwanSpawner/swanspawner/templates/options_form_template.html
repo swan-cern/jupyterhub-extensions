@@ -190,6 +190,7 @@
         var hiddenPlatformOptions = document.getElementById('hiddenPlatformOptions');
 
         var isAlma = platformOptions.selectedOptions[0].text.startsWith('AlmaLinux 9');
+        var isNXCALS = clusterOptions.selectedOptions[0].text.startsWith('BE NXCALS (NXCals)');
 
         if (isAlma) {
             /* On Alma9, make sure cluster selection is enabled and that users can
@@ -197,8 +198,11 @@
             clusterOptions.removeAttribute('disabled');
             jupyterLabOption.removeAttribute('disabled');
         } else {
-            clusterOptions.setAttribute('disabled', '');
-            clusterOptions.selectedIndex = 0;
+            if (!isNXCALS) {
+                clusterOptions.setAttribute('disabled', '');
+                clusterOptions.selectedIndex = 0;
+            }
+
             jupyterLabOption.setAttribute('disabled', '');
         }
 
