@@ -175,10 +175,6 @@ class SpawnHandler(JHSpawnHandler):
         if current_user is user:
             self.set_login_cookie(user)
 
-        if options.get(configs.notebook):
-            options[configs.notebook] = options[configs.notebook].replace("$CERNBOX_HOME/", "")
-            options[configs.notebook] = options[configs.notebook].replace(spawner.eos_path_format.format(username=user.escaped_name), "")
-
         if options.get(configs.software_source) == configs.customenv_special_type:
             # Add the query parameters to the URL
             query_params = {

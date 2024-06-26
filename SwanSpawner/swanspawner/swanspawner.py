@@ -99,7 +99,11 @@ def define_SwanSpawner_from(base_class):
             options[self.software_source]       = formdata[self.software_source][0]
             options[self.user_n_cores]          = int(formdata[self.user_n_cores][0])
             options[self.user_memory]           = formdata[self.user_memory][0] + 'G'
-            options[self.notebook]              = formdata.get(self.notebook, [''])[0]
+            options[self.notebook]              = (formdata.get(self.notebook, [''])[0]
+                                                   .replace("$CERNBOX_HOME/", "")
+                                                   .replace(self.eos_path_format.format(username=self.user.name), "")
+                                                   )
+
             if options[self.software_source] == self.customenv_special_type:
                 options[self.builder]               = builder
                 options[self.builder_version]       = builder_version
