@@ -109,7 +109,11 @@ def define_SwanSpawner_from(base_class):
                                                    )
 
             options[self.use_jupyterlab_field]  = formdata.get(self.use_jupyterlab_field, 'unchecked')[0]
-            options[self.notebook]              = formdata.get(self.notebook, [''])[0]
+            options[self.notebook]              = (formdata.get(self.notebook, [''])[0]
+                                                   .replace("$CERNBOX_HOME/", "")
+                                                   .replace(self.eos_path_format.format(username=self.user.name), "")
+                                                   )
+
             if options[self.software_source] == self.customenv_special_type:
                 options[self.builder]           = builder
                 options[self.builder_version]   = builder_version
