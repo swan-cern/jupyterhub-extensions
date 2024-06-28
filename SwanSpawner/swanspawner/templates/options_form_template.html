@@ -153,6 +153,54 @@
                 configElement.add(selectOption);
             }
         });
+
+        adjust_options();
+    }
+
+    /**
+     * Modifies the selection of Spark clusters and enables users to choose
+     * to use the JupyterLab interface depending on the chosen platform
+     */
+     function adjust_options() {
+        var platformOptions = document.getElementById('platformOptions');
+        var clusterOptions  = document.getElementById('clusterOptions');
+        var jupyterLabOption = document.getElementById("use-jupyterlab");
+
+        /**
+         * Store the chosen platform in a hidden form field, as disabled fields
+         * are not sent in the request
+         */ 
+        var hiddenPlatformOptions = document.getElementById('hiddenPlatformOptions');
+
+        var isAlma = platformOptions.selectedOptions[0].text.startsWith('AlmaLinux 9');
+        var isNXCALS = clusterOptions.selectedOptions[0].text.startsWith('BE NXCALS (NXCals)');
+
+        if (isAlma) {
+            /* On Alma9, make sure cluster selection is enabled and that users can
+            select the JupyterLab interface */
+            clusterOptions.removeAttribute('disabled');
+            jupyterLabOption.removeAttribute('disabled');
+        } else {
+            if (!isNXCALS) {
+                clusterOptions.setAttribute('disabled', '');
+                clusterOptions.selectedIndex = 0;
+            }
+
+            jupyterLabOption.setAttribute('disabled', '');
+        }
+
+        hiddenPlatformOptions.value = platformOptions.value;
+    }
+
+    function adjust_platforms() {
+        var platformOptions = document.getElementById('platformOptions');
+        var jupyterLabOption = document.getElementById('use-jupyterlab');
+
+        if (jupyterLabOption.checked) {
+            platformOptions.setAttribute('disabled', '');
+        } else {
+            platformOptions.removeAttribute('disabled');
+        }
     }
 
     /**
@@ -209,80 +257,6 @@
         } 
     }
 
-    /**
-     * Modifies the some elements according to the selected type of configuration (LCG or Custom Environments)
-     */
-    function toggle_forms() {
-        var lcgOption = document.getElementById('lcgOption');
-        var customenvOption = document.getElementById('customenvOption');
-        
-        var customenv_config = document.getElementById('customenv_config');
-        var external_config = document.getElementById('external_config');
-        var software_config = document.getElementById('software_config');
-        var autoenvOption = document.getElementById('autoenvOption');
-        var lcg_config = document.getElementById('lcg_config');
-
-        adjust_form();
-        if (lcgOption.checked) {
-            lcg_config.style.display = 'block';
-            customenv_config.style.display = 'none';
-            external_res_config.style.display = 'block';
-            adjust_spark();
-        } else if (customenvOption.checked) {
-            selectDefaultLCG('lcgReleaseOptions');
-            adjust_form();
-            selectAlma9('platformOptions');
-            software_config.style.display = 'none';
-            customenv_config.style.display = 'block';
-            external_res_config.style.display = 'none';
-        } 
-    }
-
-    /**
-     * Modifies the selection of Spark clusters depending on the chosen platform
-     */
-    function adjust_options() {
-        var platformOptions = document.getElementById('platformOptions');
-        var clusterOptions  = document.getElementById('clusterOptions');
-        var jupyterLabOption = document.getElementById("use-jupyterlab");
-
-        /**
-         * Store the chosen platform in a hidden form field, as disabled fields
-         * are not sent in the request
-         */ 
-        var hiddenPlatformOptions = document.getElementById('hiddenPlatformOptions');
-
-        var isAlma = platformOptions.selectedOptions[0].text.startsWith('AlmaLinux 9');
-        var isNXCALS = clusterOptions.selectedOptions[0].text.startsWith('BE NXCALS (NXCals)');
-
-        if (isAlma) {
-            /* On Alma9, make sure cluster selection is enabled and that users can
-            select the JupyterLab interface */
-            clusterOptions.removeAttribute('disabled');
-            jupyterLabOption.removeAttribute('disabled');
-        } else {
-            if (!isNXCALS) {
-                clusterOptions.setAttribute('disabled', '');
-                clusterOptions.selectedIndex = 0;
-            }
-
-            jupyterLabOption.setAttribute('disabled', '');
-        }
-
-        hiddenPlatformOptions.value = platformOptions.value;
-    }
-
-    function adjust_platforms() {
-        var platformOptions = document.getElementById('platformOptions');
-        var jupyterLabOption = document.getElementById('use-jupyterlab');
-
-        if (jupyterLabOption.checked) {
-            platformOptions.setAttribute('disabled', '');
-        } else {
-            platformOptions.removeAttribute('disabled');
-        }
-    }
-
     window.onload = toggle_form;
 //-->
 </script>
@@ -295,6 +269,22 @@
     <span class='news' id="alma9">Try out our new experimental interface based on <b>JupyterLab</b> and let us know your feedback!</span>
     </label>
     <br><br>
+    <label> User Interface <a href="#" onclick="toggle_visibility('userInterfaceDetails');"><span class='nbs'>more...</span></a></label>
+    <div style="display:none;" id="userInterfaceDetails">
+        <span class='nb'>JupyterLab is the latest web-based interactive development environment for notebooks, code and data. More information <a target="_blank" href="https://jupyterlab.readthedocs.io/en/stable/user/interface.html">here</a>.</span>
+    </div>
+    <div style="display: flex; align-items: center">
+        <input
+          id="use-jupyterlab"
+          type="checkbox"
+          name="use-jupyterlab"
+          value="checked"
+          style="display: inline; width: initial; margin: 0 8px 0 0"
+          onchange="adjust_platforms();"
+        />
+        <span> Try the new JupyterLab interface (experimental)</span>
+    </div>
+    <br>
 
     <!-- Source Type selection -->
     <div id="software_sourceSection">
@@ -310,25 +300,6 @@
         <input type="radio" id="customenvOption" name="software_source" value="customenv" onchange="toggle_form();" style="width: auto; height: auto; display: inline-block;">
         <label for="customenvOption">Custom Environment</label>
         <br><br>
-    <label> User Interface <a href="#" onclick="toggle_visibility('userInterfaceDetails');"><span class='nbs'>more...</span></a></label>
-    <div style="display:none;" id="userInterfaceDetails">
-        <span class='nb'>JupyterLab is the latest web-based interactive development environment for notebooks, code and data. More information <a target="_blank" href="https://jupyterlab.readthedocs.io/en/stable/user/interface.html">here</a>.</span>
-    </div>
-    <div style="display: flex; align-items: center">
-      <input
-        id="use-jupyterlab"
-        type="checkbox"
-        name="use-jupyterlab"
-        value="checked"
-        style="display: inline; width: initial; margin: 0 8px 0 0"
-        onchange="adjust_platforms();"
-      />
-      <span> Try the new JupyterLab interface (experimental)</span>
-    </div>
-    <br>
-    <label for="lcgReleaseOptions">Software stack <a href="#" onclick="toggle_visibility('lcgReleaseDetails');"><span class='nbs'>more...</span></a>
-    <div style="display:none;" id="lcgReleaseDetails">
-       <span class='nb'>The software stack to associate to the container. See the <a target="_blank" href="http://lcginfo.cern.ch/">LCG package info</a> page.</span>
     </div>
     
     <!-- LCG configuration -->
@@ -336,21 +307,21 @@
         <div id="lcgReleaseSection">
             <label for="lcgReleaseOptions">Software stack <a href="#" onclick="toggle_visibility('lcgReleaseDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="lcgReleaseDetails">
-                    <span class='nb'>LCG release to use as software source. See the <a target="_blank" href="http://lcginfo.cern.ch/">LCG releases package info</a> page.</span>
+                    <span class='nb'>The software stack to associate to the container. See the <a target="_blank" href="http://lcginfo.cern.ch/">LCG package info</a> page.</span>
                 </div>
             </label>
-            <select id="lcgReleaseOptions" name="LCG-rel" onchange="adjust_form();">
-            </select>
+            <select id="lcgReleaseOptions" name="LCG-rel" onchange="adjust_form();"></select>
         </div>
         <br>
         
         <div id="platformSection">
             <label for="platformOptions">Platform <a href="#" onclick="toggle_visibility('platformDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="platformDetails">
-                    <span class='nb'>Operating system and compiler version.</span>
+                    <span class='nb'>The combination of compiler version and flags.</span>
                 </div>
             </label>
-            <select id="platformOptions" name="platform" onchange="adjust_spark();"></select>
+            <select id="platformOptions" name="platform" onchange="adjust_options();"></select>
+            <input type="hidden" id="hiddenPlatformOptions" name="platform">
         </div>
         <br>
         
@@ -394,18 +365,6 @@
             <select id="builderOptions" name="builder"></select>
         </div>
         <br>
-    </label>
-    <select id="platformOptions" onchange="adjust_options();"></select>
-    <input type="hidden" id="hiddenPlatformOptions" name="platform">
-    <br>
-    
-    <div id="plataformSection">
-        <label for="platformOptions">Platform <a href="#" onclick="toggle_visibility('platformDetails');"><span class='nbs'>more...</span></a>
-            <div style="display:none;" id="platformDetails">
-                <span class='nb'>The combination of compiler version and flags.</span>
-            </div>
-        </label>
-        <select id="platformOptions" name="platform" onchange="adjust_spark();"></select>
     </div>
     
     <!-- Resources configuration -->
@@ -428,55 +387,6 @@
                     <span class='nb'>Amount of memory allocated to the container.</span>
                 </div>
             </label>
-            <br>
-            <select id="requirements_dropdown" name="requirements_type" style="width: auto; height: auto; display: inline-block; border: 1px solid #ccc; background-color: #f7f7f7;">
-                  <option value="git">Git</option>
-                  <option value="cernbox">CERNBox</option>
-            </select>
-            <input type="text" id="requirementsOption" name="requirements" placeholder="e.g. https://gitlab.cern.ch/user/env1" style="width: max-content; height: auto; display: inline-block;">
-        </div>
-        <br>
-        
-        <div id="customenv_typeSection">
-            <label for="customenv_typeOptions">Custom environment type <a href="#" onclick="toggle_visibility('customenv_typeDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="customenv_typeDetails">
-                    <span class='nb'>Type of custom environment to create (generic or community-specific).</a></span>
-                </div>
-            </label>
-            <select id="builderOptions" name="builder"></select>
-        </div>
-        <br>
-        <div id="autoenvSection">
-            <input type="checkbox" id="autoenvOption" name="autoenv" checked style="width: auto; height: auto; display: inline-block;">
-            <label for="autoenvOption" style="margin-right: 5%;">Automatically activation <a href="#" onclick="toggle_visibility('autoenvDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="autoenvDetails">
-                    <span class='nb'>Automatically activates the environment when opening the terminal.</span>
-                </div>
-            </label>
-        </div>
-        <br>
-    </div>
-    
-    <!-- Resources configuration -->
-    <div id="resources_config">
-        <h2>Session resources</h2>
-
-        <div id="coresSection">
-            <label for="coresOptions">Number of cores <a href="#" onclick="toggle_visibility('ncoresDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="ncoresDetails">
-                    <span class='nb'>Number of cores to associate to the container.</span>
-                </div>
-            </label>
-            <select id="coresOptions" name="ncores"></select>
-        </div>
-        <br>
-
-        <div id="memorySection">
-            <label for="memoryOptions">Memory <a href="#" onclick="toggle_visibility('memoryDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="memoryDetails">
-                    <span class='nb'>Amount of Memory allocated to the container.</span>
-                </div>
-            </label>
             <select id="memoryOptions" name="memory"></select>
         </div>
         <br>
@@ -487,8 +397,8 @@
         <h2>External computing resources</h2>
         
         <div id="clusterSection">
-            <label for="clusterOptions">Spark cluster <a href="#" onclick="toggle_visibility('clusterDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="clusterDetails">
+            <label for="clusterOptions">Spark cluster <a href="#" onclick="toggle_visibility('sparkClusterDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="sparkClusterDetails">
                     <span class='nb'>Name of the Spark cluster to connect to from notebooks. See the <a target="_blank" href="https://hadoop-user-guide.web.cern.ch/">Hadoop User guide</a> and the <a target="_blank" href="https://sparktraining.web.cern.ch/">Spark training course</a></span>
                 </div>
             </label>

@@ -19,19 +19,11 @@ class SpawnHandlersConfigs(SingletonConfigurable):
 
     builder = 'builder'
     
-    customenv_type_version = 'customenv_type_version'
-
-    software_source = 'software_source'
-
-    builder = 'builder'
-    
     builder_version = 'builder_version'
             
     repository_type = 'repository_type'
 
     repository = 'repository'
-
-    project_folder = 'project_folder'
 
     lcg_rel_field = 'LCG-rel'
 

@@ -24,8 +24,6 @@ def define_SwanSpawner_from(base_class):
 
         software_source = 'software_source'
 
-        software_source = 'software_source'
-
         builder = 'builder'
 
         builder_version = 'builder_version'
@@ -33,6 +31,7 @@ def define_SwanSpawner_from(base_class):
         repository_type = 'repository_type'
 
         repository = 'repository'
+
         lcg_rel_field = 'LCG-rel'
 
         platform_field = 'platform'
@@ -54,7 +53,7 @@ def define_SwanSpawner_from(base_class):
         lcg_special_type = 'lcg'
 
         eos_special_type = 'eos'
-        
+
         options_form_config = Unicode(
             config=True,
             help='Path to configuration file for options_form rendering.'
@@ -123,8 +122,6 @@ def define_SwanSpawner_from(base_class):
             """ Set base environmental variables for swan jupyter docker image """
             env = super().get_env()
 
-            deploy_lcg = True if self.user_options[self.config_type].upper() == 'LCG' or self.user_options[self.customenv_type].upper() == "CVMFS" else False
-
             username = self.user.name
             if self.local_home:
                 homepath = "/scratch/%s" %(username)
@@ -162,15 +159,6 @@ def define_SwanSpawner_from(base_class):
             # Enable configuration for CERN HTCondor pool
             if self.user_options.get(self.condor_pool, 'none') != 'none':
                 env['CERN_HTCONDOR'] = 'true'
-
-            # Enable configuration for LCG and custom environments
-            if self.user_options[self.source_type] == "lcg":
-                env['ROOT_LCG_VIEW_NAME']     = self.user_options[self.lcg_rel_field]
-                env['ROOT_LCG_VIEW_PLATFORM'] = self.user_options[self.platform_field]
-                env['USER_ENV_SCRIPT']        = self.user_options[self.user_script_env_field]
-                env['ROOT_LCG_VIEW_PATH']     = self.lcg_view_path
-            elif self.user_options[self.source_type] == "customenv":
-                env['AUTOENV'] = self.user_options[self.autoenv]
 
             return env
 
