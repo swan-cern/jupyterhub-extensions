@@ -28,7 +28,7 @@ def define_SwanSpawner_from(base_class):
 
         builder_version = 'builder_version'
 
-        repository_type = 'repository_type'
+        repo_type = 'repo_type'
 
         repository = 'repository'
 
@@ -103,7 +103,7 @@ def define_SwanSpawner_from(base_class):
                 options[self.builder]               = builder
                 options[self.builder_version]       = builder_version
                 options[self.repository]            = formdata[self.repository][0]
-                options[self.repository_type]       = formdata[self.repository_type][0]
+                options[self.repo_type]       = formdata[self.repo_type][0]
 
                 if not options[self.repository]:
                     raise ValueError("No Repository specified")

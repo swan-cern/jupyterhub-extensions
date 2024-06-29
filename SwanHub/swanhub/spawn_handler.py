@@ -160,7 +160,7 @@ class SpawnHandler(JHSpawnHandler):
             # Add the query parameters to the URL
             query_params = {
                 "repo": options.get(configs.repository),
-                "repo_type": options.get(configs.repository_type),
+                "repo_type": options.get(configs.repo_type),
             }
             if options.get(configs.builder) == configs.accpy_special_type:
                 query_params[options.get(configs.builder)] = options.get(configs.builder_version)
