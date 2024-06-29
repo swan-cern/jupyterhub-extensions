@@ -55,7 +55,7 @@ def define_SwanSpawner_from(base_class):
         lcg_special_type = 'lcg'
 
         eos_special_type = 'eos'
-        
+
         options_form_config = Unicode(
             config=True,
             help='Path to configuration file for options_form rendering.'
@@ -95,7 +95,6 @@ def define_SwanSpawner_from(base_class):
         def options_from_form(self, formdata):
             # Builders are specified in builder-builderversion format
             builder, builder_version = formdata[self.builder][0].lower().split('-')
-            notebook = formdata[self.notebook][0] if self.notebook in formdata else ''
 
             options = {}
             options[self.software_source]       = formdata[self.software_source][0]
@@ -106,10 +105,10 @@ def define_SwanSpawner_from(base_class):
             options[self.notebook]              = formdata.get(self.notebook, [''])[0].replace("$CERNBOX_HOME/", "").replace(self.eos_path_format.format(username=self.user.name), "")
 
             if options[self.software_source] == self.customenv_special_type:
-                options[self.builder]         = builder
-                options[self.builder_version] = builder_version
-                options[self.repository]      = formdata[self.repository][0]
-                options[self.repo_type]       = formdata[self.repo_type][0]
+                options[self.builder]               = builder
+                options[self.builder_version]       = builder_version
+                options[self.repository]            = formdata[self.repository][0]
+                options[self.repository_type]       = formdata[self.repository_type][0]
 
                 if not options[self.repository]:
                     raise ValueError("No Repository specified")

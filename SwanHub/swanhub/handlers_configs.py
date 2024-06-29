@@ -33,10 +33,6 @@ class SpawnHandlersConfigs(SingletonConfigurable):
 
     user_script_env_field = 'scriptenv'
 
-    user_n_cores = 'ncores'
-
-    user_memory = 'memory'
-
     spark_cluster_field = 'spark-cluster'
 
     user_n_cores = 'ncores'
