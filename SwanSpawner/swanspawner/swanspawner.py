@@ -100,9 +100,9 @@ def define_SwanSpawner_from(base_class):
             options[self.user_memory]           = formdata[self.user_memory][0] + 'G'
             options[self.use_jupyterlab_field]  = formdata.get(self.use_jupyterlab_field, 'unchecked')[0]
             if options[self.software_source] == self.customenv_special_type:
-                options[self.builder]               = builder
-                options[self.builder_version]       = builder_version
-                options[self.repository]            = formdata[self.repository][0]
+                options[self.builder]         = builder
+                options[self.builder_version] = builder_version
+                options[self.repository]      = formdata[self.repository][0]
                 options[self.repo_type]       = formdata[self.repo_type][0]
 
                 if not options[self.repository]:

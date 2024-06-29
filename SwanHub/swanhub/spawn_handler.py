@@ -168,10 +168,7 @@ class SpawnHandler(JHSpawnHandler):
             # Execution SwanCustomEnvs extension with the corresponding query arguments
             next_url = url_concat(url_path_join("user", user.escaped_name, "customenvs", server_name), query_params)
         else: # LCG release
-            next_url = self.get_next_url(
-                user,
-                default=url_path_join(self.hub.base_url, "spawn-pending", user.escaped_name, server_name),
-            )
+            next_url = url_path_join(self.hub.base_url, "spawn-pending", user.escaped_name, server_name)
 
         self.redirect(next_url)
 
