@@ -207,7 +207,7 @@
      * Adjusts the width of the repository type dropdown element based on the selected option
      */
     function adjust_repository_dropdown() {
-        const selectElement = document.getElementById('repository_type_dropdown');
+        const selectElement = document.getElementById('repo_type_dropdown');
         const selectedOptionText = selectElement.options[selectElement.selectedIndex].text;
         const tempElement = document.createElement('span');
         tempElement.style.visibility = 'hidden';
@@ -347,7 +347,7 @@
             </label>
             <br>
             <div style="display: flex;">
-                <select id="repository_type_dropdown" name="repository_type" onchange="adjust_repository_dropdown();" style="width: auto; display: inline-flex; border: 1px solid #afafaf; background-color: #efefef;">
+                <select id="repo_type_dropdown" name="repo_type" onchange="adjust_repository_dropdown();" style="width: auto; display: inline-flex; border: 1px solid #afafaf; background-color: #efefef;">
                     <option value="eos">EOS</option>
                     <option value="git">Git</option>
                 </select>

@@ -35,6 +35,12 @@ class SpawnHandlersConfigs(SingletonConfigurable):
 
     spark_cluster_field = 'spark-cluster'
 
+    user_n_cores = 'ncores'
+
+    user_memory = 'memory'
+
+    condor_pool = 'condor-pool'
+
     customenv_special_type = 'customenv'
 
     accpy_special_type = 'accpy'
