@@ -19,12 +19,6 @@ class SpawnHandlersConfigs(SingletonConfigurable):
 
     builder = 'builder'
     
-    customenv_type_version = 'customenv_type_version'
-
-    software_source = 'software_source'
-
-    builder = 'builder'
-    
     builder_version = 'builder_version'
             
     repo_type = 'repo_type'
@@ -39,13 +33,7 @@ class SpawnHandlersConfigs(SingletonConfigurable):
 
     user_script_env_field = 'scriptenv'
 
-    user_n_cores = 'ncores'
-
-    user_memory = 'memory'
-
     spark_cluster_field = 'spark-cluster'
-
-    condor_pool = 'condor-pool'
 
     customenv_special_type = 'customenv'
 
