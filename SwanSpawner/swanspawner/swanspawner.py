@@ -36,6 +36,8 @@ def define_SwanSpawner_from(base_class):
 
         lcg_rel_field = 'LCG-rel'
 
+        use_local_packages_field = 'use-local-packages'
+
         platform_field = 'platform'
 
         user_script_env_field = 'scriptenv'
@@ -97,18 +99,19 @@ def define_SwanSpawner_from(base_class):
             builder, builder_version = formdata[self.builder][0].lower().split('-')
 
             options = {}
-            options[self.software_source]       = formdata[self.software_source][0]
-            options[self.user_n_cores]          = int(formdata[self.user_n_cores][0])
-            options[self.user_memory]           = formdata[self.user_memory][0] + 'G'
-            options[self.use_jupyterlab_field]  = formdata.get(self.use_jupyterlab_field, 'unchecked')[0]
+            options[self.software_source]           = formdata[self.software_source][0]
+            options[self.user_n_cores]              = int(formdata[self.user_n_cores][0])
+            options[self.user_memory]               = formdata[self.user_memory][0] + 'G'
+            options[self.use_jupyterlab_field]      = formdata.get(self.use_jupyterlab_field, 'unchecked')[0]
+            options[self.use_local_packages_field]  = formdata.get(self.use_local_packages_field, 'unchecked')[0]
             # Clear notebook path from CERNBOX_HOME and EOS path format
-            options[self.notebook]              = formdata.get(self.notebook, [''])[0].replace("$CERNBOX_HOME/", "").replace(self.eos_path_format.format(username=self.user.name), "")
+            options[self.notebook]                  = formdata.get(self.notebook, [''])[0].replace("$CERNBOX_HOME/", "").replace(self.eos_path_format.format(username=self.user.name), "")
 
             if options[self.software_source] == self.customenv_special_type:
                 options[self.builder]               = builder
                 options[self.builder_version]       = builder_version
                 options[self.repository]            = formdata[self.repository][0]
-                options[self.repo_type]       = formdata[self.repo_type][0]
+                options[self.repo_type]             = formdata[self.repo_type][0]
 
                 if not options[self.repository]:
                     raise ValueError("No Repository specified")
