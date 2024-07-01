@@ -34,6 +34,8 @@ def define_SwanSpawner_from(base_class):
 
         lcg_rel_field = 'LCG-rel'
 
+        use_local_packages_field = 'use-local-packages'
+
         platform_field = 'platform'
 
         user_script_env_field = 'scriptenv'
@@ -95,10 +97,11 @@ def define_SwanSpawner_from(base_class):
             builder, builder_version = formdata[self.builder][0].lower().split('-')
 
             options = {}
-            options[self.software_source]       = formdata[self.software_source][0]
-            options[self.user_n_cores]          = int(formdata[self.user_n_cores][0])
-            options[self.user_memory]           = formdata[self.user_memory][0] + 'G'
-            options[self.use_jupyterlab_field]  = formdata.get(self.use_jupyterlab_field, 'unchecked')[0]
+            options[self.software_source]           = formdata[self.software_source][0]
+            options[self.user_n_cores]              = int(formdata[self.user_n_cores][0])
+            options[self.user_memory]               = formdata[self.user_memory][0] + 'G'
+            options[self.use_jupyterlab_field]      = formdata.get(self.use_jupyterlab_field, 'unchecked')[0]
+            options[self.use_local_packages_field]  = formdata.get(self.use_local_packages_field, 'unchecked')[0]
             if options[self.software_source] == self.customenv_special_type:
                 options[self.builder]         = builder
                 options[self.builder_version] = builder_version
@@ -156,6 +159,12 @@ def define_SwanSpawner_from(base_class):
             if self.user_options[self.use_jupyterlab_field] == 'checked':
                 env.update(dict(
                     SWAN_USE_JUPYTERLAB = 'true'
+                ))
+
+            # Append path of user packages installed on CERNBox to PYTHONPATH
+            if self.user_options[self.use_local_packages_field] == 'checked':
+                env.update(dict(
+                    SWAN_USE_LOCAL_PACKAGES = 'true'
                 ))
 
             # Enable configuration for CERN HTCondor pool
