@@ -29,6 +29,8 @@ def define_SwanSpawner_from(base_class):
 
         lcg_rel_field = 'LCG-rel'
 
+        use_local_packages_field = 'use-local-packages'
+
         platform_field = 'platform'
 
         user_script_env_field = 'scriptenv'
@@ -81,14 +83,15 @@ def define_SwanSpawner_from(base_class):
 
         def options_from_form(self, formdata):
             options = {}
-            options[self.lcg_rel_field]         = formdata[self.lcg_rel_field][0]
-            options[self.platform_field]        = formdata[self.platform_field][0]
-            options[self.user_script_env_field] = formdata[self.user_script_env_field][0]
-            options[self.spark_cluster_field]   = formdata[self.spark_cluster_field][0] if self.spark_cluster_field in formdata.keys() else 'none'
-            options[self.condor_pool]           = formdata[self.condor_pool][0]
-            options[self.user_n_cores]          = int(formdata[self.user_n_cores][0])
-            options[self.user_memory]           = formdata[self.user_memory][0] + 'G'
-            options[self.use_jupyterlab_field]  = formdata.get(self.use_jupyterlab_field, 'unchecked')[0]
+            options[self.lcg_rel_field]             = formdata[self.lcg_rel_field][0]
+            options[self.platform_field]            = formdata[self.platform_field][0]
+            options[self.user_script_env_field]     = formdata[self.user_script_env_field][0]
+            options[self.spark_cluster_field]       = formdata[self.spark_cluster_field][0] if self.spark_cluster_field in formdata.keys() else 'none'
+            options[self.condor_pool]               = formdata[self.condor_pool][0]
+            options[self.user_n_cores]              = int(formdata[self.user_n_cores][0])
+            options[self.user_memory]               = formdata[self.user_memory][0] + 'G'
+            options[self.use_jupyterlab_field]      = formdata.get(self.use_jupyterlab_field, 'unchecked')[0]
+            options[self.use_local_packages_field]  = formdata.get(self.use_local_packages_field, 'unchecked')[0]
 
             self.offload = options[self.spark_cluster_field] != 'none'
 
@@ -139,6 +142,12 @@ def define_SwanSpawner_from(base_class):
             if self.user_options[self.use_jupyterlab_field] == 'checked':
                 env.update(dict(
                     SWAN_USE_JUPYTERLAB = 'true'
+                ))
+
+            # Append path of user packages installed on CERNBox to PYTHONPATH
+            if self.user_options[self.use_local_packages_field] == 'checked':
+                env.update(dict(
+                    SWAN_USE_LOCAL_PACKAGES = 'true'
                 ))
 
             # Enable configuration for CERN HTCondor pool

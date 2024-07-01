@@ -182,6 +182,7 @@
         var platformOptions = document.getElementById('platformOptions');
         var clusterOptions  = document.getElementById('clusterOptions');
         var jupyterLabOption = document.getElementById("use-jupyterlab");
+        var useLocalPackagesOption = document.getElementById('use-local-packages');
 
         /**
          * Store the chosen platform in a hidden form field, as disabled fields
@@ -197,6 +198,7 @@
             select the JupyterLab interface */
             clusterOptions.removeAttribute('disabled');
             jupyterLabOption.removeAttribute('disabled');
+            useLocalPackagesOption.removeAttribute('disabled');
         } else {
             if (!isNXCALS) {
                 clusterOptions.setAttribute('disabled', '');
@@ -204,6 +206,7 @@
             }
 
             jupyterLabOption.setAttribute('disabled', '');
+            useLocalPackagesOption.setAttribute('disabled', '');
         }
 
         hiddenPlatformOptions.value = platformOptions.value;
@@ -212,8 +215,9 @@
     function adjust_platforms() {
         var platformOptions = document.getElementById('platformOptions');
         var jupyterLabOption = document.getElementById('use-jupyterlab');
+        var useLocalPackagesOption = document.getElementById('use-local-packages');
 
-        if (jupyterLabOption.checked) {
+        if (jupyterLabOption.checked || useLocalPackagesOption.checked) {
             platformOptions.setAttribute('disabled', '');
         } else {
             platformOptions.removeAttribute('disabled');
@@ -249,11 +253,24 @@
     <br>
     <label for="lcgReleaseOptions">Software stack <a href="#" onclick="toggle_visibility('lcgReleaseDetails');"><span class='nbs'>more...</span></a>
     <div style="display:none;" id="lcgReleaseDetails">
-       <span class='nb'>The software stack to associate to the container. See the <a target="_blank" href="http://lcginfo.cern.ch/">LCG package info</a> page.</span>
+        <span class='nb'>The software stack to associate to the container. See the <a target="_blank" href="http://lcginfo.cern.ch/">LCG package info</a> page.</span>
+        <br>
+        <span class='nb'>Additionally, it is possible to use Python packages installed by the user on CERNBox. More information <a target="_blank" href="https://swan.docs.cern.ch/advanced/install_packages/">here</a>.</span>
     </div>
     </label>
     <select id="lcgReleaseOptions" name="LCG-rel" onchange="adjust_form();">
     </select>
+    <div style="display: flex; align-items: center">
+        <input
+          id="use-local-packages"
+          type="checkbox"
+          name="use-local-packages"
+          value="checked"
+          style="display: inline; width: initial; margin: 0 8px 0 0"
+          onchange="adjust_platforms();"
+        />
+        <span> Use Python packages installed on CERNBox</span>
+      </div>
     <br>
     <label for="platformOptions">Platform <a href="#" onclick="toggle_visibility('platformDetails');"><span class='nbs'>more...</span></a>
     <div style="display:none;" id="platformDetails">
