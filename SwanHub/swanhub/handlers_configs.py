@@ -27,6 +27,8 @@ class SpawnHandlersConfigs(SingletonConfigurable):
 
     notebook = 'notebook'
 
+    conda_special_type = 'conda'
+
     lcg_rel_field = 'LCG-rel'
 
     platform_field = 'platform'
