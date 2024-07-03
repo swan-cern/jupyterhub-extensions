@@ -143,12 +143,14 @@ def define_SwanSpawner_from(base_class):
                 SERVER_HOSTNAME        = os.uname().nodename
             ))
 
-            # Set LCG-related variables
+            # Enable LCG-related variables
             if self.user_options[self.software_source] == self.lcg_special_type:
-                env['ROOT_LCG_VIEW_NAME']     = self.user_options[self.lcg_rel_field]
-                env['ROOT_LCG_VIEW_PLATFORM'] = self.user_options[self.platform_field]
-                env['USER_ENV_SCRIPT']        = self.user_options[self.user_script_env_field]
-                env['ROOT_LCG_VIEW_PATH']     = self.lcg_view_path
+                env.update(dict(
+                    ROOT_LCG_VIEW_NAME       = self.user_options[self.lcg_rel_field],
+                    ROOT_LCG_VIEW_PLATFORM   = self.user_options[self.platform_field],
+                    USER_ENV_SCRIPT          = self.user_options[self.user_script_env_field],
+                    ROOT_LCG_VIEW_PATH       = self.lcg_view_path
+                ))
 
             # Enable JupyterLab interface
             if self.user_options[self.use_jupyterlab_field] == 'checked':
@@ -158,7 +160,9 @@ def define_SwanSpawner_from(base_class):
 
             # Enable configuration for CERN HTCondor pool
             if self.user_options.get(self.condor_pool, 'none') != 'none':
-                env['CERN_HTCONDOR'] = 'true'
+                env.update(dict(
+                    CERN_HTCONDOR = 'true'
+                ))
 
             return env
 
