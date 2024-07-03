@@ -144,6 +144,17 @@ def define_SwanSpawner_from(base_class):
                     SWAN_USE_JUPYTERLAB = 'true'
                 ))
 
+                user_interface = 'lab'
+            else:
+                user_interface = 'classic'
+
+            self.log_metric(
+                self.user.name,
+                self.this_host,
+                'ui',
+                user_interface
+            )
+
             # Append path of user packages installed on CERNBox to PYTHONPATH
             if self.user_options[self.use_local_packages_field] == 'checked':
                 env.update(dict(
