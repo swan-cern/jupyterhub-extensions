@@ -184,8 +184,6 @@ class SpawnHandler(JHSpawnHandler):
             }
             if options.get(configs.builder) == configs.accpy_special_type:
                 query_params[options.get(configs.builder)] = options.get(configs.builder_version)
-            elif options.get(configs.builder) == configs.conda_special_type:
-                query_params[options.get(configs.builder)] = True
 
             # Execution SwanCustomEnvs extension with the corresponding query arguments
             next_url = url_concat(url_path_join("user", user.escaped_name, "customenvs", server_name), query_params)
