@@ -10,7 +10,6 @@ from socket import gethostname
 from traitlets import (
     Unicode,
     Bool,
-    Dict,
     Int
 )
 
@@ -26,6 +25,16 @@ def define_SwanSpawner_from(base_class):
     """
 
     class SwanSpawner(base_class):
+
+        software_source = 'software_source'
+
+        builder = 'builder'
+
+        builder_version = 'builder_version'
+
+        repo_type = 'repo_type'
+
+        repository = 'repository'
 
         lcg_rel_field = 'LCG-rel'
 
@@ -44,6 +53,12 @@ def define_SwanSpawner_from(base_class):
         spark_cluster_field = 'spark-cluster'
 
         condor_pool = 'condor-pool'
+
+        customenv_special_type = 'customenv'
+
+        lcg_special_type = 'lcg'
+
+        eos_special_type = 'eos'
 
         options_form_config = Unicode(
             config=True,
@@ -82,18 +97,31 @@ def define_SwanSpawner_from(base_class):
                 self.options_form = self._render_templated_options_form
 
         def options_from_form(self, formdata):
+            # Builders are specified in builder-builderversion format
+            builder, builder_version = formdata[self.builder][0].lower().split('-')
+
             options = {}
-            options[self.lcg_rel_field]             = formdata[self.lcg_rel_field][0]
-            options[self.platform_field]            = formdata[self.platform_field][0]
-            options[self.user_script_env_field]     = formdata[self.user_script_env_field][0]
-            options[self.spark_cluster_field]       = formdata[self.spark_cluster_field][0] if self.spark_cluster_field in formdata.keys() else 'none'
-            options[self.condor_pool]               = formdata[self.condor_pool][0]
+            options[self.software_source]           = formdata[self.software_source][0]
             options[self.user_n_cores]              = int(formdata[self.user_n_cores][0])
             options[self.user_memory]               = formdata[self.user_memory][0] + 'G'
             options[self.use_jupyterlab_field]      = formdata.get(self.use_jupyterlab_field, 'unchecked')[0]
             options[self.use_local_packages_field]  = formdata.get(self.use_local_packages_field, 'unchecked')[0]
+            if options[self.software_source] == self.customenv_special_type:
+                options[self.builder]         = builder
+                options[self.builder_version] = builder_version
+                options[self.repository]      = formdata[self.repository][0]
+                options[self.repo_type]       = formdata[self.repo_type][0]
 
-            self.offload = options[self.spark_cluster_field] != 'none'
+                if not options[self.repository]:
+                    raise ValueError("No Repository specified")
+            else:
+                options[self.lcg_rel_field]         = formdata[self.lcg_rel_field][0]
+                options[self.platform_field]        = formdata[self.platform_field][0]
+                options[self.user_script_env_field] = formdata[self.user_script_env_field][0]
+                options[self.spark_cluster_field]   = formdata[self.spark_cluster_field][0]
+                options[self.condor_pool]           = formdata[self.condor_pool][0]
+
+                self.offload = options[self.spark_cluster_field] != 'none'
 
             return options
 
@@ -112,30 +140,23 @@ def define_SwanSpawner_from(base_class):
 
             #FIXME remove userrid and username and just use jovyan 
             #FIXME clean JPY env variables
-            if self.lcg_rel_field in self.user_options:
-                # session spawned via the form
+            env.update(dict(
+                USER                   = username,
+                NB_USER                = username,
+                USER_ID                = self.user_uid,
+                NB_UID                 = self.user_uid,
+                HOME                   = homepath,
+                EOS_PATH_FORMAT        = self.eos_path_format,
+                SERVER_HOSTNAME        = os.uname().nodename
+            ))
+
+            # Enable LCG-related variables
+            if self.user_options[self.software_source] == self.lcg_special_type:
                 env.update(dict(
-                    ROOT_LCG_VIEW_NAME     = self.user_options[self.lcg_rel_field],
-                    ROOT_LCG_VIEW_PLATFORM = self.user_options[self.platform_field],
-                    USER_ENV_SCRIPT        = self.user_options[self.user_script_env_field],
-                    ROOT_LCG_VIEW_PATH     = self.lcg_view_path,
-                    USER                   = username,
-                    NB_USER                = username,
-                    USER_ID                = self.user_uid,
-                    NB_UID                 = self.user_uid,
-                    HOME                   = homepath,
-                    EOS_PATH_FORMAT        = self.eos_path_format,
-                    SERVER_HOSTNAME        = os.uname().nodename
-                ))
-            else:
-                # session spawned via the API
-                env.update(dict(
-                    USER                   = "jovyan",
-                    HOME                   = "/home/jovyan",
-                    NB_USER                = 'jovyan',
-                    USER_ID                = 1000,
-                    NB_UID                 = 1000,
-                    SERVER_HOSTNAME        = os.uname().nodename,
+                    ROOT_LCG_VIEW_NAME       = self.user_options[self.lcg_rel_field],
+                    ROOT_LCG_VIEW_PLATFORM   = self.user_options[self.platform_field],
+                    USER_ENV_SCRIPT          = self.user_options[self.user_script_env_field],
+                    ROOT_LCG_VIEW_PATH       = self.lcg_view_path
                 ))
 
             # Enable JupyterLab interface
@@ -151,8 +172,10 @@ def define_SwanSpawner_from(base_class):
                 ))
 
             # Enable configuration for CERN HTCondor pool
-            if self.user_options[self.condor_pool] != 'none':
-                env['CERN_HTCONDOR'] = 'true'
+            if self.user_options.get(self.condor_pool, 'none') != 'none':
+                env.update(dict(
+                    CERN_HTCONDOR = 'true'
+                ))
 
             return env
 
@@ -218,7 +241,7 @@ def define_SwanSpawner_from(base_class):
             start_time_start_container = time.time()
             
             #if the user script exists, we allow extended timeout
-            if self.user_options[self.user_script_env_field].strip()!='':
+            if self.user_options.get(self.user_script_env_field, '').strip() != '':
                 self.start_timeout = self.extended_timeout
 
             # start configured container

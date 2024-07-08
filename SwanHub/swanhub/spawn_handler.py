@@ -107,6 +107,7 @@ class SpawnHandler(JHSpawnHandler):
 
         start_time_spawn = time.time()
 
+        options = {}
         try:
             options = await maybe_future(spawner.run_options_from_form(form_options))
             await self.spawn_single_user(user, server_name=server_name, options=options)
@@ -136,7 +137,6 @@ class SpawnHandler(JHSpawnHandler):
                     user, options, time.time() - start_time_spawn)
 
         except Exception as e:
-
             self._log_spawn_metrics(
                 user, options, time.time() - start_time_spawn, e)
 
@@ -155,12 +155,21 @@ class SpawnHandler(JHSpawnHandler):
 
         if current_user is user:
             self.set_login_cookie(user)
-        next_url = self.get_next_url(
-            user,
-            default=url_path_join(
-                self.hub.base_url, "spawn-pending", user.escaped_name, server_name
-            ),
-        )
+
+        if options.get(configs.software_source) == configs.customenv_special_type:
+            # Add the query parameters to the URL
+            query_params = {
+                "repo": options.get(configs.repository),
+                "repo_type": options.get(configs.repo_type),
+            }
+            if options.get(configs.builder) == configs.accpy_special_type:
+                query_params[options.get(configs.builder)] = options.get(configs.builder_version)
+
+            # Execution SwanCustomEnvs extension with the corresponding query arguments
+            next_url = url_concat(url_path_join("user", user.escaped_name, "customenvs", server_name), query_params)
+        else: # LCG release
+            next_url = url_path_join(self.hub.base_url, "spawn-pending", user.escaped_name, server_name)
+
         self.redirect(next_url)
 
     async def _render_form_wrapper(self, for_user, message=''):
@@ -215,7 +224,7 @@ class SpawnHandler(JHSpawnHandler):
                 metrics.append((metric, (date, 1)))
 
         spawn_context_key = ".".join(
-            [options[configs.lcg_rel_field], options[configs.spark_cluster_field]])
+            [options.get(configs.lcg_rel_field, "CustomEnv"), options.get(configs.spark_cluster_field, "none")])
         if not spawn_exception:
             # Add spawn success (no exception) and duration to the log and send as metrics
             spawn_exc_class = "None"
