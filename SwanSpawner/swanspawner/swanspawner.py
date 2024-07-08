@@ -112,8 +112,8 @@ def define_SwanSpawner_from(base_class):
                 options[self.repository]      = formdata[self.repository][0]
                 options[self.repo_type]       = formdata[self.repo_type][0]
 
-                if not options[self.repository]:
-                    raise ValueError("No Repository specified")
+                if options[self.repository] is None or options[self.repository].strip() == '':
+                    raise ValueError('No Repository specified')
             else:
                 options[self.lcg_rel_field]         = formdata[self.lcg_rel_field][0]
                 options[self.platform_field]        = formdata[self.platform_field][0]
