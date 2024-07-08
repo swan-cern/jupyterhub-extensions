@@ -39,10 +39,16 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
         # An Alma9-based user image is configured by default via the chart
         # settings, but users could still select a CentOS7 platform.
         # In that case, reconfigure to use a CentOS7-based user image
-        if 'centos7' in self.user_options[self.platform_field]:
+        if self.user_options[self.software_source] == self.lcg_special_type and 'centos7' in self.user_options[self.platform_field]:
             image = self.centos7_image
             if not image:
                 raise RuntimeError('The user selected the CentOS7 platform, but no CentOS7 image was configured')
+            self.image = image
+
+        if self.user_options[self.software_source] == self.customenv_special_type and self.user_options[self.builder] == 'accpy':
+            image = self.image.replace('swan-cern', 'swan-accpy')
+            if not image:
+                raise RuntimeError('The user selected an Acc-Py environment, but no Acc-Py image was configured')
             self.image = image
 
         try:
@@ -70,8 +76,8 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
                 self.log.error('Error deleting secret {namespace}:{eos_secret_name}: {e}')
 
             # Cleanup for computing integrations (Spark, HTCondor)
-            clean_spark = self.user_options[self.spark_cluster_field] != 'none'
-            clean_condor = self.user_options[self.condor_pool] != 'none'
+            clean_spark = self.user_options.get(self.spark_cluster_field, 'none') != 'none'
+            clean_condor = self.user_options.get(self.condor_pool, 'none') != 'none'
             if clean_spark or clean_condor:
                 # Delete NodePort service opening ports for computing integrations
                 computing_ports_service = f'computing-ports-{username}'

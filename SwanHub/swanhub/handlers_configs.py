@@ -15,11 +15,25 @@ class SpawnHandlersConfigs(SingletonConfigurable):
         Singleton class where all the configurations are stored
     """
 
+    software_source = 'software_source'
+
+    builder = 'builder'
+
+    builder_version = 'builder_version'
+
+    repo_type = 'repo_type'
+
+    repository = 'repository'
+
     lcg_rel_field = 'LCG-rel'
 
     spark_cluster_field = 'spark-cluster'
 
     user_script_env_field = 'scriptenv'
+
+    customenv_special_type = 'customenv'
+
+    accpy_special_type = 'accpy'
 
     local_home = Bool(
         default_value=False,
