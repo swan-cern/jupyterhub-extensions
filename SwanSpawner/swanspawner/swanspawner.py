@@ -112,7 +112,7 @@ def define_SwanSpawner_from(base_class):
                 options[self.repository]      = formdata[self.repository][0]
                 options[self.repo_type]       = formdata[self.repo_type][0]
 
-                if options[self.repository] is None:
+                if not options[self.repository]:
                     raise ValueError('Cannot create custom software environment: no repository specified')
             else:
                 options[self.lcg_rel_field]         = formdata[self.lcg_rel_field][0]
