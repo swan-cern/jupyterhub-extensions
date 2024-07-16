@@ -12,6 +12,7 @@ from traitlets import (
     Bool,
     Int
 )
+from re import match
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -54,11 +55,15 @@ def define_SwanSpawner_from(base_class):
 
         condor_pool = 'condor-pool'
 
+        notebook = 'notebook'
+
         customenv_special_type = 'customenv'
 
         lcg_special_type = 'lcg'
 
         eos_special_type = 'eos'
+
+        notebook_pattern = r'^([^<>|\\:()&;,\/]+\/)*[^<>|\\:()&;,\/]+\.ipynb$'
 
         options_form_config = Unicode(
             config=True,
@@ -106,6 +111,12 @@ def define_SwanSpawner_from(base_class):
             options[self.user_memory]               = formdata[self.user_memory][0] + 'G'
             options[self.use_jupyterlab_field]      = formdata.get(self.use_jupyterlab_field, 'unchecked')[0]
             options[self.use_local_packages_field]  = formdata.get(self.use_local_packages_field, 'unchecked')[0]
+
+            # Clear notebook path from CERNBOX_HOME and EOS path format
+            options[self.notebook]                  = formdata.get(self.notebook, [''])[0]
+            if options[self.notebook] and not match(self.notebook_pattern, options[self.notebook]):
+                raise ValueError('Invalid notebook path: %s' % options[self.notebook])
+
             if options[self.software_source] == self.customenv_special_type:
                 options[self.builder]         = builder
                 options[self.builder_version] = builder_version

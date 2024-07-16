@@ -21,6 +21,7 @@ from socket import (
     SOCK_STREAM,
     gethostname,
 )
+from urllib.parse import parse_qs, urlparse, unquote
 
 
 class SpawnHandler(JHSpawnHandler):
@@ -54,12 +55,30 @@ class SpawnHandler(JHSpawnHandler):
             self.finish(form)
             return
 
-        try:
-            await super().get(for_user, server_name)
-        except web.HTTPError as e:
-            form = await self._render_form_wrapper(user, message=e.message)
-            self.finish(form)
-            return
+        if not self.request.query_arguments:
+            try:
+                await super().get(for_user, server_name)
+            except web.HTTPError as e:
+                form = await self._render_form_wrapper(user, message=e.message)
+                self.finish(form)
+                return
+        else:
+            query_options = {key: [value[0].encode("utf-8")] for key, value in parse_qs(urlparse(unquote(self.request.uri)).query).items()}
+            self.request.body_arguments = {
+                configs.software_source: query_options.get(configs.software_source, [b'']),
+                configs.repository: query_options.get(configs.repository, [b'']),
+                configs.repo_type: query_options.get(configs.repo_type, [b'']),
+                configs.builder: query_options.get(configs.builder, [b'-']),
+                configs.lcg_rel_field: query_options.get(configs.lcg_rel_field, [b'']),
+                configs.platform_field: query_options.get(configs.platform_field, [b'']),
+                configs.spark_cluster_field: query_options.get(configs.spark_cluster_field, [b'']),
+                configs.user_script_env_field: query_options.get(configs.user_script_env_field, [b'']),
+                configs.condor_pool: query_options.get(configs.condor_pool, [b'']),
+                configs.user_n_cores: query_options.get(configs.user_n_cores, [b'2']),
+                configs.user_memory: query_options.get(configs.user_memory, [b'8']),
+                configs.notebook: query_options.get(configs.notebook, [b'']),
+            }
+            return await self.post(user_name=for_user, server_name=server_name)
 
     @web.authenticated
     def post(self, user_name=None, server_name=''):
@@ -161,6 +180,7 @@ class SpawnHandler(JHSpawnHandler):
             query_params = {
                 "repo": options.get(configs.repository),
                 "repo_type": options.get(configs.repo_type),
+                "notebook": options.get(configs.notebook, ''),
             }
             if options.get(configs.builder) == configs.accpy_special_type:
                 query_params[options.get(configs.builder)] = options.get(configs.builder_version)
@@ -169,6 +189,8 @@ class SpawnHandler(JHSpawnHandler):
             next_url = url_concat(url_path_join("user", user.escaped_name, "customenvs", server_name), query_params)
         else: # LCG release
             next_url = url_path_join(self.hub.base_url, "spawn-pending", user.escaped_name, server_name)
+            if options.get(configs.notebook):
+                next_url = url_path_join("user", user.escaped_name, "lab", "tree", *options[configs.notebook].split('/'))
 
         self.redirect(next_url)
 
