@@ -31,6 +31,10 @@ class SpawnHandlersConfigs(SingletonConfigurable):
 
     user_script_env_field = 'scriptenv'
 
+    notebook = 'notebook'
+
+    use_jupyterlab_field = 'use-jupyterlab'
+
     customenv_special_type = 'customenv'
 
     accpy_special_type = 'accpy'
