@@ -65,6 +65,20 @@
     }
 
     /**
+     * Build a simple error message on top of Header
+     */
+    function build_error_message(message) {
+        const error_message = document.createElement('span');
+        error_message.style.color = 'red';
+        error_message.innerHTML = message;
+        error_message.appendChild(document.createElement('br'));
+        const optionsHeader = document.getElementById('optionsHeader');
+        if (!optionsHeader.querySelector('span')) {
+            optionsHeader.insertBefore(error_message, optionsHeader.firstChild);
+        }
+    }
+
+    /**
      * Enable display of element if previously disabled, and disable if previously enabled
      */
     function toggle_visibility(id) {
@@ -311,14 +325,7 @@
             }
             notebook_config.style.display = 'block';
         } else if (software_source && !is_software_source_valid) {
-            const error_message = document.createElement('span');
-            error_message.style.color = 'red';
-            error_message.innerHTML = `Invalid software source: ${software_source}`;
-            error_message.appendChild(document.createElement('br'));
-            const optionsHeader = document.getElementById('optionsHeader');
-            if (!optionsHeader.querySelector('span')) {
-                optionsHeader.insertBefore(error_message, optionsHeader.firstChild);
-            }
+            build_error_message(`Invalid software source: ${software_source}`);
         }
 
         if (lcgOption.checked) {
