@@ -56,7 +56,7 @@ class SpawnHandler(JHSpawnHandler):
 
         # By default, the super().get() starts spawning the session if any
         # query arguments are specified. So, we need to explicitly check for
-        # the software_source query argument to re-render the form and fulfill
+        # the software_source query argument to re-render the form and fill
         # it with the remaining query arguments.
         if configs.software_source in self.request.query_arguments:
             form = await self._render_form_wrapper(user)
