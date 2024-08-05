@@ -233,7 +233,7 @@
         } else if (selectElement.value === 'git') {
             repositoryOption.placeholder= "e.g. https://gitlab.cern.ch/user/myrepo";
             // Regular expression pattern for the repository provided by a GitLab or GitHub repository.
-            repositoryOption.pattern = '^https?:\\/\\/(?:github\\.com|gitlab\\.cern\\.ch)\\/([a-zA-Z0-9_-]+)\\/([a-zA-Z0-9_-]+)\\/?$';
+            repositoryOption.pattern = '^https?:\\/\\/(?:github\\.com|gitlab\\.cern\\.ch)\\/([a-zA-Z0-9_-]+)\\/([a-zA-Z0-9_-]+)(\\/|\\.git)?$';
         }
     }
 
