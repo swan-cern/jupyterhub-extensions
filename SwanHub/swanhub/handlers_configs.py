@@ -31,7 +31,7 @@ class SpawnHandlersConfigs(SingletonConfigurable):
 
     user_script_env_field = 'scriptenv'
 
-    notebook = 'notebook'
+    file = 'file'
 
     use_jupyterlab_field = 'use-jupyterlab'
 

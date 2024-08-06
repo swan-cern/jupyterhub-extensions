@@ -54,7 +54,7 @@ def define_SwanSpawner_from(base_class):
 
         condor_pool = 'condor-pool'
 
-        notebook = 'notebook'
+        file = 'file'
 
         customenv_special_type = 'customenv'
 
@@ -108,7 +108,7 @@ def define_SwanSpawner_from(base_class):
             options[self.user_memory]               = formdata[self.user_memory][0] + 'G'
             options[self.use_jupyterlab_field]      = formdata.get(self.use_jupyterlab_field, 'unchecked')[0]
             options[self.use_local_packages_field]  = formdata.get(self.use_local_packages_field, 'unchecked')[0]
-            options[self.notebook]                  = formdata.get(self.notebook, '')[0]
+            options[self.file]                      = formdata.get(self.file, '')[0]
 
             if options[self.software_source] == self.customenv_special_type:
                 options[self.builder]         = builder

@@ -54,7 +54,7 @@
      */
     function set_options(elements) {
         for (var id in elements) {
-            select_input(id, elements[id]);
+            set_input(id, elements[id]);
         }
     }
     /**
@@ -244,7 +244,7 @@
     /**
      * Adjusts the width of the repository type dropdown element based on the selected option
      */
-    function adjust_repo_typeOptions() {
+    function adjust_repo_type_options() {
         const selectElement = document.getElementById('repo_typeOptions');
         const selectedOptionText = selectElement.options[selectElement.selectedIndex].text;
         const tempElement = document.createElement('span');
@@ -280,7 +280,6 @@
         var customenv_config = document.getElementById('customenv_config');
         var external_res_config = document.getElementById('external_res_config');
         var lcg_config = document.getElementById('lcg_config');
-        var notebook_config = document.getElementById('notebook_config');
 
         adjust_form();
 
@@ -305,26 +304,28 @@
             inputs: {
                 "scriptenv": "scriptenvOption",
                 "repository": "repositoryOption",
-                "notebook": "notebookOption",
+                "file": "fileOption",
             },
         }
         if (is_software_source_valid) {
-            select_checkbox(`${software_source}Option`, true);
+            set_checkbox(`${software_source}Option`, true);
             document.querySelectorAll('input[name="software_source"]:not(:checked)').forEach((elem) => elem.disabled = true);
             for (const [param, elem] of Object.entries(query_map.checkboxes)) {
                 const checked = (urlParams.get(param) || "").toLowerCase() === 'true';
-                select_checkbox(elem, checked);
+                set_checkbox(elem, checked);
             }
             for (const [param, elem] of Object.entries(query_map.selectors)) {
-                const selected = urlParams.get(param) || select_default_option(elem);
-                select_input(elem, selected);
+                const selected = urlParams.get(param) || get_default_option(elem);
+                set_input(elem, selected);
             }
             for (const [param, elem] of Object.entries(query_map.inputs)) {
                 const value = urlParams.get(param) || "";
-                select_input(elem, value);
+                set_input(elem, value);
             }
-            notebook_config.style.display = 'block';
-        } else if (software_source && !is_software_source_valid) {
+            if (urlParams.get('file') !== null  && urlParams.get('file') !== '') {
+                toggle_visibility('file_config');
+            }
+        } else {
             build_error_message(`Invalid software source: ${software_source}`);
         }
 
@@ -338,7 +339,7 @@
                 adjust_platforms();
             }
         } else {
-            adjust_repo_typeOptions();
+            adjust_repo_type_options();
             lcg_config.style.display = 'none';
             customenv_config.style.display = 'block';
             external_res_config.style.display = 'none';
@@ -447,7 +448,7 @@
             </label>
             <br>
             <div style="display: flex;">
-                <select id="repo_typeOptions" name="repo_type" onchange="adjust_repo_typeOptions();" style="width: auto; display: inline-flex; border: 1px solid #afafaf; background-color: #efefef;">
+                <select id="repo_typeOptions" name="repo_type" onchange="adjust_repo_type_options();" style="width: auto; display: inline-flex; border: 1px solid #afafaf; background-color: #efefef;">
                     <option value="eos">EOS</option>
                     <option value="git">Git</option>
                 </select>
@@ -517,15 +518,15 @@
         <br>
     </div>
 
-    <!-- Notebook path information text -->
-    <div id="notebook_config" style="display: none;">
-        <h2>Extra</h2>
-        <label for="notebookOption">Notebook path <a href="#" onclick="toggle_visibility('notebookDetails');"><span class='nbs'>more...</span></a>
-            <div style="display:none;" id="notebookDetails">
-                <span class='nb'>The path to the notebook that will be automatically opened when the session is launched.</span>
+    <!-- File path information text -->
+    <div id="file_config" style="display: none;">
+        <h2>Open File</h2>
+        <label for="fileOption">File path <a href="#" onclick="toggle_visibility('fileDetails');"><span class='nbs'>more...</span></a>
+            <div style="display:none;" id="fileDetails">
+                <span class='nb'>Relative path of the file to be opened after the session is launched. For EOS repositories, it is relative to CERNBOX_HOME; for Git repositories, it is relative to the repository root.</span>
             </div>
         </label>
-        <input type="text" id="notebookOption" name="notebook">
+        <input type="text" id="fileOption" name="file">
         <br>
     </div>
 </div>
