@@ -54,6 +54,15 @@ class SpawnHandler(JHSpawnHandler):
             self.finish(form)
             return
 
+        # By default, the super().get() starts spawning the session if any
+        # query arguments are specified. So, we need to explicitly check for
+        # the software_source query argument to re-render the form and fill
+        # it with the remaining query arguments.
+        if configs.software_source in self.request.query_arguments:
+            form = await self._render_form_wrapper(user)
+            self.finish(form)
+            return
+
         try:
             await super().get(for_user, server_name)
         except web.HTTPError as e:
@@ -156,11 +165,13 @@ class SpawnHandler(JHSpawnHandler):
         if current_user is user:
             self.set_login_cookie(user)
 
+
         if options.get(configs.software_source) == configs.customenv_special_type:
             # Add the query parameters to the URL
             query_params = {
                 "repo": options.get(configs.repository),
                 "repo_type": options.get(configs.repo_type),
+                "file": options.get(configs.file, ''),
             }
             if options.get(configs.builder) == configs.accpy_special_type:
                 query_params[options.get(configs.builder)] = options.get(configs.builder_version)
@@ -169,6 +180,8 @@ class SpawnHandler(JHSpawnHandler):
             next_url = url_concat(url_path_join("user", user.escaped_name, "customenvs", server_name), query_params)
         else: # LCG release
             next_url = url_path_join(self.hub.base_url, "spawn-pending", user.escaped_name, server_name)
+            if options.get(configs.file) and options[configs.use_jupyterlab_field] == 'checked':
+                next_url = url_path_join("user", user.escaped_name, "lab", "tree", *options[configs.file].split('/'))
 
         self.redirect(next_url)
 
