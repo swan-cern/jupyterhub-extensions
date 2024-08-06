@@ -8,6 +8,19 @@
 
     var formInitialized = false;
 
+    var sourceConfig = {
+        lcg: {
+            optionsElement: "lcgReleaseOptions",
+            sourceForm: "lcg_options",
+            formElement: "lcg",
+        },
+        customenv: {
+            optionsElement: "builderOptions",
+            sourceForm: "customenv_options",
+            formElement: "builder",
+        }
+    };
+
     /**
      * Get Form data dictionary for given selectedValue.
      */
@@ -25,6 +38,47 @@
     }
 
     /**
+     * Get the value of the first selectable option in the given select element
+     */
+    function get_default_option(id) {
+        return document.getElementById(id).selectedOptions[0].value;
+    }
+    /**
+     * Set the given input with the specified value
+     */
+    function set_input(id, value) {
+        document.getElementById(id).value = value;
+    }
+    /**
+     * Loops throught the elements keys and selects the option with the given value
+     */
+    function set_options(elements) {
+        for (var id in elements) {
+            set_input(id, elements[id]);
+        }
+    }
+    /**
+     * (Un)check the element with the given id
+     */
+    function set_checkbox(id, checked) {
+        document.getElementById(id).checked = checked;
+    }
+
+    /**
+     * Build a simple error message on top of Header
+     */
+    function build_error_message(message) {
+        const error_message = document.createElement('span');
+        error_message.style.color = 'red';
+        error_message.innerHTML = message;
+        error_message.appendChild(document.createElement('br'));
+        const optionsHeader = document.getElementById('optionsHeader');
+        if (!optionsHeader.querySelector('span')) {
+            optionsHeader.insertBefore(error_message, optionsHeader.firstChild);
+        }
+    }
+
+    /**
      * Enable display of element if previously disabled, and disable if previously enabled
      */
     function toggle_visibility(id) {
@@ -38,7 +92,7 @@
     /**
      * Enable display of element if previously disabled, and disable if previously enabled
      */
-     function validate_repository_input() {
+    function validate_repository_input() {
         var repoInput = document.getElementById('repositoryOption');
         const repoPattern = new RegExp(repoInput.pattern);
 
@@ -53,27 +107,7 @@
      * Renders a form based on config file
      */
     function adjust_form() {
-        const sourceOptions = document.getElementsByName('software_source');
-        let selectedSource = null;
-        for (let i = 0; i < sourceOptions.length; i++) {
-            if (sourceOptions[i].checked) {
-                selectedSource = sourceOptions[i].value;
-                break;
-            }
-        }
-
-        var sourceConfig = {
-            lcg: {
-                optionsElement: document.getElementById("lcgReleaseOptions"),
-                sourceForm: "lcg_options",
-                formElement: "lcg",
-            },
-            customenv: {
-                optionsElement: document.getElementById("builderOptions"),
-                sourceForm: "customenv_options",
-                formElement: "builder",
-            }
-        };
+        let selectedSource = document.querySelector('input[name="software_source"]:checked').value;
 
         // if form has not been yet initialized, initialize
         if (!formInitialized) {
@@ -90,7 +124,7 @@
             for (var source in sourceConfig) {
                 const currentSource = sourceConfig[source];
                 const formOptions = formConfig[currentSource.sourceForm];
-                currentSource.optionsElement.innerHTML = '';
+                document.getElementById(currentSource.optionsElement).innerHTML = '';
                 var firstFormOptionselected = false;
 
                 for( var i = 0 ; i < formOptions.length ; i++ ){
@@ -111,14 +145,14 @@
                         formOption.text = formEntry[currentSource.formElement].text;
                     }
 
-                    currentSource.optionsElement.add(formOption);
+                    document.getElementById(currentSource.optionsElement).add(formOption);
                 }
             }
         }
 
         // get currently selected source and extract its configuration (formData)
         const selectedConfig = sourceConfig[selectedSource];
-        var selectedValue = selectedConfig.optionsElement.value;
+        var selectedValue = document.getElementById(selectedConfig.optionsElement).value;
         var formData = findFormData(selectedConfig.sourceForm, selectedConfig.formElement, selectedValue);
 
         var available_configs = {
@@ -210,8 +244,8 @@
     /**
      * Adjusts the width of the repository type dropdown element based on the selected option
      */
-     function adjust_repository_dropdown() {
-        const selectElement = document.getElementById('repo_type_dropdown');
+    function adjust_repo_type_options() {
+        const selectElement = document.getElementById('repo_typeOptions');
         const selectedOptionText = selectElement.options[selectElement.selectedIndex].text;
         const tempElement = document.createElement('span');
         tempElement.style.visibility = 'hidden';
@@ -248,17 +282,68 @@
         var lcg_config = document.getElementById('lcg_config');
 
         adjust_form();
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const software_source = urlParams.get('software_source');
+        const is_software_source_valid = software_source && Object.keys(sourceConfig).includes(software_source);
+        const query_map = {
+            checkboxes: {
+                "use-jupyterlab": 'use-jupyterlab',
+                "use-local-packages":'use-local-packages',
+            },
+            selectors: {
+                "ncores": "coresOptions",
+                "memory": "memoryOptions",
+                "LCG-rel": "lcgReleaseOptions",
+                "platform": "platformOptions",
+                "spark-cluster": "clusterOptions",
+                "condor-pool": "condorOptions",
+                "repo_type": "repo_typeOptions",
+                "builder": "builderOptions",
+            },
+            inputs: {
+                "scriptenv": "scriptenvOption",
+                "repository": "repositoryOption",
+                "file": "fileOption",
+            },
+        }
+        if (is_software_source_valid) {
+            set_checkbox(`${software_source}Option`, true);
+            document.querySelectorAll('input[name="software_source"]:not(:checked)').forEach((elem) => elem.disabled = true);
+            for (const [param, elem] of Object.entries(query_map.checkboxes)) {
+                const checked = (urlParams.get(param) || "").toLowerCase() === 'true';
+                set_checkbox(elem, checked);
+            }
+            for (const [param, elem] of Object.entries(query_map.selectors)) {
+                const selected = urlParams.get(param) || get_default_option(elem);
+                set_input(elem, selected);
+            }
+            for (const [param, elem] of Object.entries(query_map.inputs)) {
+                const value = urlParams.get(param) || "";
+                set_input(elem, value);
+            }
+            if (urlParams.get('file') !== null  && urlParams.get('file') !== '') {
+                toggle_visibility('file_config');
+            }
+        } else {
+            build_error_message(`Invalid software source: ${software_source}`);
+        }
+
         if (lcgOption.checked) {
             lcg_config.style.display = 'block';
             customenv_config.style.display = 'none';
             external_res_config.style.display = 'block';
-            adjust_spark();
+
+            if (is_software_source_valid) {
+                adjust_options();
+                adjust_platforms();
+            }
         } else {
-            adjust_repository_dropdown();
+            adjust_repo_type_options();
             lcg_config.style.display = 'none';
             customenv_config.style.display = 'block';
             external_res_config.style.display = 'none';
-        } 
+        }
     }
 
     window.onload = toggle_form;
@@ -286,8 +371,8 @@
         onchange="adjust_platforms();"
       />
       <span> Try the new JupyterLab interface (experimental)</span>
+      <br>
     </div>
-    <br>
 
     <!-- Source Type selection -->
     <div id="software_sourceSection">
@@ -363,7 +448,7 @@
             </label>
             <br>
             <div style="display: flex;">
-                <select id="repo_type_dropdown" name="repo_type" onchange="adjust_repository_dropdown();" style="width: auto; display: inline-flex; border: 1px solid #afafaf; background-color: #efefef;">
+                <select id="repo_typeOptions" name="repo_type" onchange="adjust_repo_type_options();" style="width: auto; display: inline-flex; border: 1px solid #afafaf; background-color: #efefef;">
                     <option value="eos">EOS</option>
                     <option value="git">Git</option>
                 </select>
@@ -430,5 +515,18 @@
             </label>
             <select id="condorOptions" name="condor-pool"></select>
         </div>
+        <br>
+    </div>
+
+    <!-- File path information text -->
+    <div id="file_config" style="display: none;">
+        <h2>Open File</h2>
+        <label for="fileOption">File path <a href="#" onclick="toggle_visibility('fileDetails');"><span class='nbs'>more...</span></a>
+            <div style="display:none;" id="fileDetails">
+                <span class='nb'>Relative path of the file to be opened after the session is launched. For EOS repositories, it is relative to CERNBOX_HOME; for Git repositories, it is relative to the repository root.</span>
+            </div>
+        </label>
+        <input type="text" id="fileOption" name="file">
+        <br>
     </div>
 </div>
