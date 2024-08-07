@@ -99,9 +99,6 @@ def define_SwanSpawner_from(base_class):
                 self.options_form = self._render_templated_options_form
 
         def options_from_form(self, formdata):
-            # Builders are specified in builder-builderversion format
-            builder, builder_version = formdata[self.builder][0].lower().split('-')
-
             options = {}
             options[self.software_source]           = formdata[self.software_source][0]
             options[self.user_n_cores]              = int(formdata[self.user_n_cores][0])
@@ -111,13 +108,15 @@ def define_SwanSpawner_from(base_class):
             options[self.file]                      = formdata.get(self.file, '')[0]
 
             if options[self.software_source] == self.customenv_special_type:
-                options[self.builder]         = builder
-                options[self.builder_version] = builder_version
                 options[self.repository]      = formdata[self.repository][0]
                 options[self.repo_type]       = formdata[self.repo_type][0]
-
                 if not options[self.repository]:
                     raise ValueError('Cannot create custom software environment: no repository specified')
+
+                # Builders are specified in builder-builderversion format
+                builder, builder_version = formdata[self.builder][0].lower().split('-')
+                options[self.builder]         = builder
+                options[self.builder_version] = builder_version
             else:
                 options[self.lcg_rel_field]         = formdata[self.lcg_rel_field][0]
                 options[self.platform_field]        = formdata[self.platform_field][0]
