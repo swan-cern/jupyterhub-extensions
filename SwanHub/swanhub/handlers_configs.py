@@ -37,8 +37,6 @@ class SpawnHandlersConfigs(SingletonConfigurable):
 
     customenv_special_type = 'customenv'
 
-    accpy_special_type = 'accpy'
-
     local_home = Bool(
         default_value=False,
         config=True,
