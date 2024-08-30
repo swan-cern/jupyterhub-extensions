@@ -113,7 +113,7 @@ def define_SwanSpawner_from(base_class):
                 if not options[self.repository]:
                     raise ValueError('Cannot create custom software environment: no repository specified')
 
-                # Builders are specified in builder:builderversion format (e.g. swan:1.0)
+                # Builders can have a version or not. When they do, we receive the following text from the form: builder:builder_version
                 raw_builder = formdata.get(self.builder, [''])[0].lower()
                 if raw_builder.count(':') == 1:
                     options[self.builder], options[self.builder_version] = raw_builder.split(':')
