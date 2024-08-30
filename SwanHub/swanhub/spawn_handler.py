@@ -171,10 +171,12 @@ class SpawnHandler(JHSpawnHandler):
             query_params = {
                 "repo": options.get(configs.repository),
                 "repo_type": options.get(configs.repo_type),
+                "builder": options.get(configs.builder),
                 "file": options.get(configs.file, ''),
             }
-            if options.get(configs.builder) == configs.accpy_special_type:
-                query_params[options.get(configs.builder)] = options.get(configs.builder_version)
+            # If the builder has a version, pass it as an argument of the query
+            if options.get(configs.builder_version):
+                query_params["builder_version"] = options[configs.builder_version]
 
             # Execution SwanCustomEnvs extension with the corresponding query arguments
             next_url = url_concat(url_path_join("user", user.escaped_name, "customenvs", server_name), query_params)
