@@ -103,7 +103,7 @@ def define_SwanSpawner_from(base_class):
 
             username = self.user.name
             if self.local_home:
-                homepath = "/scratch/%s" %(username)
+                homepath = "/home/%s" %(username)
             else:
                 homepath = self.eos_path_format.format(username = username)
 
