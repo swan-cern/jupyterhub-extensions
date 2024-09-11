@@ -280,6 +280,7 @@
         var customenv_config = document.getElementById('customenv_config');
         var external_res_config = document.getElementById('external_res_config');
         var lcg_config = document.getElementById('lcg_config');
+        var jupyterLabOption = document.getElementById('use-jupyterlab');
 
         adjust_form();
 
@@ -333,6 +334,8 @@
             lcg_config.style.display = 'block';
             customenv_config.style.display = 'none';
             external_res_config.style.display = 'block';
+            jupyterLabOption.checked = false;
+            jupyterLabOption.removeAttribute('disabled');
 
             if (is_software_source_valid) {
                 adjust_options();
@@ -343,6 +346,8 @@
             lcg_config.style.display = 'none';
             customenv_config.style.display = 'block';
             external_res_config.style.display = 'none';
+            jupyterLabOption.checked = true;
+            jupyterLabOption.setAttribute('disabled', '');
         }
     }
 
