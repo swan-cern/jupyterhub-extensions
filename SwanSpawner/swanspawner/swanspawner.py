@@ -36,31 +36,31 @@ def define_SwanSpawner_from(base_class):
 
         repository = 'repository'
 
-        lcg_rel_field = 'LCG-rel'
+        lcg_rel_field = 'lcg'
 
         use_local_packages_field = 'use-local-packages'
 
-        platform_field = 'platform'
+        platform_field = 'platforms'
 
         user_script_env_field = 'scriptenv'
 
-        user_n_cores = 'ncores'
+        user_n_cores = 'cores'
 
         user_memory = 'memory'
 
         use_jupyterlab_field = 'use-jupyterlab'
 
-        spark_cluster_field = 'spark-cluster'
+        spark_cluster_field = 'clusters'
 
-        condor_pool = 'condor-pool'
-
-        file = 'file'
+        condor_pool = 'condor'
 
         customenv_special_type = 'customenv'
 
         lcg_special_type = 'lcg'
 
         eos_special_type = 'eos'
+
+        repo_type_options = ['eos', 'git']
 
         options_form_config = Unicode(
             config=True,
@@ -98,35 +98,84 @@ def define_SwanSpawner_from(base_class):
                 # if options_form not provided, use templated options form based on configuration file
                 self.options_form = self._render_templated_options_form
 
-        def options_from_form(self, formdata):
+        def _popup_error(self, options: dict, invalid_selection: str) -> None:
+            """ Raise an error if the selection is invalid """
+            err_msg = f'Invalid {invalid_selection} selection: {options[invalid_selection]}'
+            self.log.error(err_msg)
+            raise ValueError(err_msg)
+
+        def _get_selection(self, options_form_config: dict, options: dict, parent: str) -> dict:
+            """ 
+            Get major selection which can be either a builder, for customenvs, or a LCG release.
+            Each selection has its own minor options that need to be validated, as well.
+            """
+            selection = next((_ for _ in options_form_config[f'{options[self.software_source]}_options'] if _['type'] == 'selection' and options[parent] == _[parent]['value']), None)
+            if not selection:
+                self._popup_error(options, parent)
+            return selection
+
+        def _validate_selection_options(self, selection: dict, options: dict) -> None:
+            """
+            Ensure the validity of the minor options selected by the user,
+            to prevent the acceptance of malicious / erroneous values
+            """
+            for attr, available_options in selection.items():
+                if type(available_options) == list and options.get(attr) not in (_.get('value') for _ in available_options):
+                    self._popup_error(options, attr)
+
+        def options_from_form(self, formdata: dict) -> dict:
+            """
+            Get the options from the form and validate them according to the available options
+            given by the configuration file, and raises errors for invalid selections.
+            """
+            with open(self.options_form_config) as yaml_file:
+                options_form_config = yaml.safe_load(yaml_file)
+
+            # Get common options
             options = {}
             options[self.software_source]           = formdata[self.software_source][0]
-            options[self.user_n_cores]              = int(formdata[self.user_n_cores][0])
-            options[self.user_memory]               = formdata[self.user_memory][0] + 'G'
+            options[self.user_n_cores]              = formdata[self.user_n_cores][0]
+            options[self.user_memory]               = formdata[self.user_memory][0]
             options[self.use_jupyterlab_field]      = formdata.get(self.use_jupyterlab_field, 'unchecked')[0]
-            options[self.use_local_packages_field]  = formdata.get(self.use_local_packages_field, 'unchecked')[0]
-            options[self.file]                      = formdata.get(self.file, '')[0]
 
             if options[self.software_source] == self.customenv_special_type:
-                options[self.repository]      = formdata[self.repository][0]
                 options[self.repo_type]       = formdata[self.repo_type][0]
+                if options[self.repo_type] not in self.repo_type_options:
+                    self._popup_error(options, self.repo_type)
+
+                options[self.repository]      = formdata[self.repository][0]
                 if not options[self.repository]:
                     raise ValueError('Cannot create custom software environment: no repository specified')
 
                 # Builders can have a version or not. When they do, we receive the following text from the form: builder:builder_version
-                raw_builder = formdata.get(self.builder, [''])[0].lower()
-                if raw_builder.count(':') == 1:
-                    options[self.builder], options[self.builder_version] = raw_builder.split(':')
-                else:
-                    options[self.builder] = raw_builder
-            else:
-                options[self.lcg_rel_field]         = formdata[self.lcg_rel_field][0]
-                options[self.platform_field]        = formdata[self.platform_field][0]
-                options[self.user_script_env_field] = formdata[self.user_script_env_field][0]
-                options[self.spark_cluster_field]   = formdata[self.spark_cluster_field][0]
-                options[self.condor_pool]           = formdata[self.condor_pool][0]
+                options[self.builder] = formdata.get(self.builder, [''])[0].lower()
+                selection = self._get_selection(options_form_config, options, self.builder)
+
+                # Validate user selected options with what is on the yaml form
+                self._validate_selection_options(selection, options)
+
+                if options[self.builder].count(':') == 1:
+                    options[self.builder], options[self.builder_version] = options[self.builder].split(':')
+            elif options[self.software_source] == self.lcg_special_type:
+                options[self.lcg_rel_field]             = formdata[self.lcg_rel_field][0]
+                options[self.platform_field]            = formdata[self.platform_field][0]
+                options[self.user_script_env_field]     = formdata[self.user_script_env_field][0]
+                options[self.spark_cluster_field]       = formdata[self.spark_cluster_field][0]
+                options[self.condor_pool]               = formdata[self.condor_pool][0]
+                options[self.use_local_packages_field]  = formdata.get(self.use_local_packages_field, 'unchecked')[0]
+
+                selection = self._get_selection(options_form_config, options, self.lcg_rel_field)
+
+                # Validate user selected options with what is on the yaml form    
+                self._validate_selection_options(selection, options)
 
                 self.offload = options[self.spark_cluster_field] != 'none'
+            else:
+                self._popup_error(options, self.software_source)
+
+            # Format resource options to do request
+            options[self.user_n_cores] = int(options[self.user_n_cores])
+            options[self.user_memory]  = options[self.user_memory] + 'G'
 
             return options
 
@@ -172,7 +221,7 @@ def define_SwanSpawner_from(base_class):
                 ))
 
             # Append path of user packages installed on CERNBox to PYTHONPATH
-            if self.user_options[self.use_local_packages_field] == 'checked':
+            if self.user_options.get(self.use_local_packages_field) == 'checked':
                 env.update(dict(
                     SWAN_USE_LOCAL_PACKAGES = 'true'
                 ))
@@ -268,7 +317,7 @@ def define_SwanSpawner_from(base_class):
 
         def _render_templated_options_form(self, spawner):
             """
-            Render a form from a template based on options_form_config json config file
+            Render a form from a template based on options_form_config yaml config file
             """
             templates_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
             env = Environment(loader=FileSystemLoader(templates_dir))
