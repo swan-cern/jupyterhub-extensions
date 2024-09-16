@@ -10,7 +10,7 @@
 
     var sourceConfig = {
         lcg: {
-            optionsElement: "lcgReleaseOptions",
+            optionsElement: "lcgOptions",
             sourceForm: "lcg_options",
             formElement: "lcg",
         },
@@ -293,12 +293,12 @@
                 "use-local-packages":'use-local-packages',
             },
             selectors: {
-                "ncores": "coresOptions",
+                "cores": "coresOptions",
                 "memory": "memoryOptions",
-                "LCG-rel": "lcgReleaseOptions",
-                "platform": "platformOptions",
-                "spark-cluster": "clusterOptions",
-                "condor-pool": "condorOptions",
+                "lcg": "lcgOptions",
+                "platforms": "platformOptions",
+                "clusters": "clusterOptions",
+                "condor": "condorOptions",
                 "repo_type": "repo_typeOptions",
                 "builder": "builderOptions",
             },
@@ -397,15 +397,15 @@
 
     <!-- LCG configuration -->
     <div id="lcg_config">
-        <div id="lcgReleaseSection">
-            <label for="lcgReleaseOptions">Software stack <a href="#" onclick="toggle_visibility('lcgReleaseDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="lcgReleaseDetails">
+        <div id="lcgSection">
+            <label for="lcgOptions">Software stack <a href="#" onclick="toggle_visibility('lcgDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="lcgDetails">
                     <span class='nb'>The software stack to associate to the container. See the <a target="_blank" href="http://lcginfo.cern.ch/">LCG package info</a> page.</span>
                     <br>
                     <span class='nb'>Additionally, it is possible to use Python packages installed by the user on CERNBox. More information <a target="_blank" href="https://swan.docs.cern.ch/advanced/install_packages/">here</a>.</span>
                 </div>
             </label>
-            <select id="lcgReleaseOptions" name="LCG-rel" onchange="adjust_form();"></select>
+            <select id="lcgOptions" name="lcg" onchange="adjust_form();"></select>
             <div style="display: flex; align-items: center">
                 <input
                   id="use-local-packages"
@@ -426,8 +426,8 @@
                     <span class='nb'>The combination of compiler version and flags.</span>
                 </div>
             </label>
-            <select id="platformOptions" name="platform" onchange="adjust_options();"></select>
-            <input type="hidden" id="hiddenPlatformOptions" name="platform">
+            <select id="platformOptions" name="platforms" onchange="adjust_options();"></select>
+            <input type="hidden" id="hiddenPlatformOptions" name="platforms">
         </div>
         <br>
 
@@ -478,12 +478,12 @@
         <h2>Session resources</h2>
 
         <div id="coresSection">
-            <label for="coresOptions">Number of cores <a href="#" onclick="toggle_visibility('ncoresDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="ncoresDetails">
+            <label for="coresOptions">Number of cores <a href="#" onclick="toggle_visibility('coresDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="coresDetails">
                     <span class='nb'>Amount of cores allocated to the container.</span>
                 </div>
             </label>
-            <select id="coresOptions" name="ncores"></select>
+            <select id="coresOptions" name="cores"></select>
         </div>
         <br>
 
@@ -503,12 +503,12 @@
         <h2>External computing resources</h2>
         
         <div id="clusterSection">
-            <label for="clusterOptions">Spark cluster <a href="#" onclick="toggle_visibility('sparkClusterDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="sparkClusterDetails">
+            <label for="clusterOptions">Spark cluster <a href="#" onclick="toggle_visibility('clustersDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="clustersDetails">
                     <span class='nb'>Name of the Spark cluster to connect to from notebooks. See the <a target="_blank" href="https://hadoop-user-guide.web.cern.ch/">Hadoop User guide</a> and the <a target="_blank" href="https://sparktraining.web.cern.ch/">Spark training course</a></span>
                 </div>
             </label>
-            <select id="clusterOptions" name="spark-cluster"></select>
+            <select id="clusterOptions" name="clusters"></select>
         </div>
         <br>
 
@@ -518,7 +518,7 @@
                     <span class='nb'>Name of the HTCondor pool to use.</span>
                 </div>
             </label>
-            <select id="condorOptions" name="condor-pool"></select>
+            <select id="condorOptions" name="condor"></select>
         </div>
         <br>
     </div>
