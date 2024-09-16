@@ -3,7 +3,7 @@
 
 """CERN Specific Spawner class"""
 
-import re, json
+import re, yaml
 import os
 import time
 from socket import gethostname
@@ -267,8 +267,8 @@ def define_SwanSpawner_from(base_class):
             template = env.get_template('options_form_template.html')
 
             try:
-                with open(self.options_form_config) as json_file:
-                    options_form_config = json.load(json_file)
+                with open(self.options_form_config) as yaml_file:
+                    options_form_config = yaml.safe_load(yaml_file)
 
                 return template.render(options_form_config=options_form_config)
             except Exception as ex:
