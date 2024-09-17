@@ -160,7 +160,7 @@ def define_SwanSpawner_from(base_class):
                 options[self.lcg_rel_field]             = formdata[self.lcg_rel_field][0]
                 options[self.platform_field]            = formdata[self.platform_field][0]
                 options[self.user_script_env_field]     = formdata[self.user_script_env_field][0]
-                options[self.spark_cluster_field]       = formdata[self.spark_cluster_field][0]
+                options[self.spark_cluster_field]       = formdata.get(self.spark_cluster_field, ['none'])[0]
                 options[self.condor_pool]               = formdata[self.condor_pool][0]
                 options[self.use_local_packages_field]  = formdata.get(self.use_local_packages_field, 'unchecked')[0]
 
