@@ -7,6 +7,7 @@
     var formConfig = {{ options_form_config }};
 
     var formInitialized = false;
+    var previous_jupyterlab = undefined;
 
     var sourceConfig = {
         lcg: {
@@ -334,18 +335,18 @@
             lcg_config.style.display = 'block';
             customenv_config.style.display = 'none';
             external_res_config.style.display = 'block';
-            jupyterLabOption.checked = false;
-            jupyterLabOption.removeAttribute('disabled');
-
             if (is_software_source_valid) {
                 adjust_options();
-                adjust_platforms();
+            } else {
+                jupyterLabOption.checked = previous_jupyterlab;
             }
+            adjust_platforms();
         } else {
             adjust_repo_type_options();
             lcg_config.style.display = 'none';
             customenv_config.style.display = 'block';
             external_res_config.style.display = 'none';
+            previous_jupyterlab = jupyterLabOption.checked;
             jupyterLabOption.checked = true;
             jupyterLabOption.setAttribute('disabled', '');
         }
