@@ -54,6 +54,8 @@ def define_SwanSpawner_from(base_class):
 
         condor_pool = 'condor'
 
+        file = 'file'
+
         customenv_special_type = 'customenv'
 
         lcg_special_type = 'lcg'
@@ -137,6 +139,8 @@ def define_SwanSpawner_from(base_class):
             options[self.user_n_cores]              = formdata[self.user_n_cores][0]
             options[self.user_memory]               = formdata[self.user_memory][0]
             options[self.use_jupyterlab_field]      = formdata.get(self.use_jupyterlab_field, 'unchecked')[0]
+            # File to be opened when the session gets started (specified only as query parameter)
+            options[self.file]                      = formdata.get(self.file, [''])[0]
 
             if options[self.software_source] == self.customenv_special_type:
                 options[self.repo_type]       = formdata[self.repo_type][0]
