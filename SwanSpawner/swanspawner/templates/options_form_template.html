@@ -166,7 +166,8 @@
             ],
             'customenv': [
                 {elementName: 'coresOptions', formKey: 'cores'},
-                {elementName: 'memoryOptions', formKey: 'memory'}
+                {elementName: 'memoryOptions', formKey: 'memory'},
+                {elementName: 'clusterOptions', formKey: 'clusters'}, 
             ]
         };
 
@@ -175,7 +176,7 @@
             var configElement = document.getElementById(config.elementName);
             configElement.innerHTML = '';
 
-            for( var i = 0 ; i < formData[config.formKey].length ; i++ ){
+            for( var i = 0 ; i < (formData[config.formKey] || []).length ; i++ ){
                 var formOption = formData[config.formKey][i];
 
                 var selectOption = document.createElement("option");
@@ -208,8 +209,8 @@
          */ 
         var hiddenPlatformOptions = document.getElementById('hiddenPlatformOptions');
 
-        var isAlma = platformOptions.selectedOptions[0].text.startsWith('AlmaLinux 9');
-        var isNXCALS = clusterOptions.selectedOptions[0].text.startsWith('BE NXCALS (NXCals)');
+        var isAlma = (platformOptions.selectedOptions[0] && platformOptions.selectedOptions[0].text.startsWith('AlmaLinux 9'));
+        var isNXCALS = (clusterOptions.selectedOptions[0] && clusterOptions.selectedOptions[0].text.startsWith('BE NXCALS (NXCals)'));
 
         if (isAlma) {
             /* On Alma9, make sure cluster selection is enabled and that users can
@@ -240,6 +241,34 @@
         } else {
             platformOptions.removeAttribute('disabled');
         }
+    }
+
+    /**
+     * Modifies the displayed form according to the selected type of configuration (LCG or Custom Environments)
+     * If the builder is accpy, the external resources configuration is displayed (without condor)
+     */
+    function adjust_clusters(external_res_config, condorSection, lcg_config, customenv_config, jupyterLabOption) {
+        var builderOptions = document.getElementById('builderOptions');
+        var external_res_config = external_res_config || document.getElementById('external_res_config');
+        var condorSection = condorSection || document.getElementById('condorSection');
+        var lcg_config = lcg_config || document.getElementById('lcg_config');
+        var customenv_config = customenv_config || document.getElementById('customenv_config');
+        var jupyterLabOption = jupyterLabOption || document.getElementById('use-jupyterlab');
+
+        if (builderOptions.options[builderOptions.selectedIndex].value.startsWith('accpy')) {
+            external_res_config.style.display = 'block';
+            condorSection.style.display = 'none';
+        } else {
+            external_res_config.style.display = 'none';
+            condorSection.style.display = 'block';
+        }
+
+        adjust_form();
+
+        lcg_config.style.display = 'none';
+        customenv_config.style.display = 'block';
+        jupyterLabOption.checked = true;
+        jupyterLabOption.setAttribute('disabled', '');
     }
 
     /**
@@ -280,6 +309,7 @@
 
         var customenv_config = document.getElementById('customenv_config');
         var external_res_config = document.getElementById('external_res_config');
+        var condorSection = document.getElementById('condorSection');
         var lcg_config = document.getElementById('lcg_config');
         var jupyterLabOption = document.getElementById('use-jupyterlab');
 
@@ -335,6 +365,7 @@
             lcg_config.style.display = 'block';
             customenv_config.style.display = 'none';
             external_res_config.style.display = 'block';
+            condorSection.style.display = 'block';
             if (is_software_source_valid) {
                 adjust_options();
             } else {
@@ -343,12 +374,8 @@
             adjust_platforms();
         } else {
             adjust_repo_type_options();
-            lcg_config.style.display = 'none';
-            customenv_config.style.display = 'block';
-            external_res_config.style.display = 'none';
             previous_jupyterlab = jupyterLabOption.checked;
-            jupyterLabOption.checked = true;
-            jupyterLabOption.setAttribute('disabled', '');
+            adjust_clusters(external_res_config, condorSection, lcg_config, customenv_config, jupyterLabOption);
         }
     }
 
@@ -469,7 +496,7 @@
                     <span class='nb'>Program responsible for building the custom environment (generic or community-specific).</a></span>
                 </div>
             </label>
-            <select id="builderOptions" name="builder"></select>
+            <select id="builderOptions" name="builder" onchange="adjust_clusters();"></select>
         </div>
         <br>
     </div>

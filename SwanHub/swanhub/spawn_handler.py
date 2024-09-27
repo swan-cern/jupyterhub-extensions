@@ -177,6 +177,8 @@ class SpawnHandler(JHSpawnHandler):
             # If the builder has a version, pass it as an argument of the query
             if options.get(configs.builder_version):
                 query_params[configs.builder_version] = options[configs.builder_version]
+            if options.get(configs.spark_cluster_field, "none") != "none":
+                query_params["nxcals"] = True
 
             # Execution SwanCustomEnvs extension with the corresponding query arguments
             next_url = url_concat(url_path_join("user", user.escaped_name, "customenvs", server_name), query_params)
