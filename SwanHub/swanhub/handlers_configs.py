@@ -25,9 +25,9 @@ class SpawnHandlersConfigs(SingletonConfigurable):
 
     repository = 'repository'
 
-    lcg_rel_field = 'LCG-rel'
+    lcg_rel_field = 'lcg'
 
-    spark_cluster_field = 'spark-cluster'
+    spark_cluster_field = 'clusters'
 
     user_script_env_field = 'scriptenv'
 
