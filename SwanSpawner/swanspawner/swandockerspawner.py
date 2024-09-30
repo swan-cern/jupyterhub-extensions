@@ -194,7 +194,6 @@ class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
                 hadoop_container_path = '/spark'
 
                 # Ensure that env variables are properly cleared
-                self.env.pop('WEBHDFS_TOKEN', None)
                 self.env.pop('HADOOP_TOKEN_FILE_LOCATION', None)
                 self.env.pop('KUBECONFIG', None)
 
@@ -236,11 +235,9 @@ class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
                     # Set default location for krb5cc in tmp directory for yarn
                     self.env['KRB5CCNAME'] = '/tmp/krb5cc'
 
-                # set location of hadoop token file and webhdfs token for Spark
-                if os.path.exists(hadoop_host_path + '/hadoop.toks') and os.path.exists(hadoop_host_path + '/webhdfs.toks'):
+                # set location of hadoop token file token for Spark
+                if os.path.exists(hadoop_host_path + '/hadoop.toks'):
                     self.env['HADOOP_TOKEN_FILE_LOCATION'] = hadoop_container_path + '/hadoop.toks'
-                    with open(hadoop_host_path + '/webhdfs.toks', 'r') as webhdfs_token_file:
-                        self.env['WEBHDFS_TOKEN'] = webhdfs_token_file.read()
                 else:
                     if cluster == 'hadoop-nxcals':
                         raise ValueError(
@@ -249,10 +246,10 @@ class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
                             Please <a href="http://nxcals-docs.web.cern.ch/current/user-guide/data-access/nxcals-access-request/" target="_blank">request access</a>
                             """)
                     elif cluster == 'k8s':
-                        # if there is no HADOOP_TOKEN_FILE or WEBHDFS_TOKEN with K8s we ignore (no HDFS access granted)
+                        # if there is no HADOOP_TOKEN_FILE with K8s we ignore (no HDFS access granted)
                         pass
                     else:
-                        # yarn clusters require HADOOP_TOKEN_FILE and WEBHDFS_TOKEN containing YARN and HDFS tokens
+                        # yarn clusters require HADOOP_TOKEN_FILE containing YARN and HDFS tokens
                         raise ValueError(
                             """
                             Access to the Analytix cluster is not granted. 
