@@ -21,8 +21,6 @@ class SpawnHandlersConfigs(SingletonConfigurable):
 
     builder_version = 'builder_version'
 
-    repo_type = 'repo_type'
-
     repository = 'repository'
 
     lcg_rel_field = 'lcg'
