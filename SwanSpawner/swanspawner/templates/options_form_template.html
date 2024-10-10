@@ -95,9 +95,8 @@
      */
     function validate_repository_input() {
         var repoInput = document.getElementById('repositoryOption');
-        const repoPattern = new RegExp(repoInput.pattern);
-
-        if (repoInput.value && !repoPattern.test(repoInput.value)) {
+        const repoPattern = /^https?:\/\/(?:github\.com|gitlab\.cern\.ch)\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)(\/|\.git)?$/.test(repoInput.value);
+        if (repoInput.value && !repoPattern) {
             repoInput.style.backgroundColor = '#ffcccc';
         } else {
             repoInput.style.backgroundColor = '#ffffff';
@@ -272,36 +271,6 @@
     }
 
     /**
-     * Adjusts the width of the repository type dropdown element based on the selected option
-     */
-    function adjust_repo_type_options() {
-        const selectElement = document.getElementById('repo_typeOptions');
-        const selectedOptionText = selectElement.options[selectElement.selectedIndex].text;
-        const tempElement = document.createElement('span');
-        tempElement.style.visibility = 'hidden';
-        tempElement.style.whiteSpace = 'nowrap';
-        tempElement.style.fontSize = window.getComputedStyle(selectElement).fontSize;
-        tempElement.innerHTML = selectedOptionText;
-
-        document.body.appendChild(tempElement);
-        const width = tempElement.offsetWidth;
-        document.body.removeChild(tempElement);
-
-        selectElement.style.width = `${width + 50}px`;
-
-        const repositoryOption = document.getElementById('repositoryOption');
-        if (selectElement.value === 'eos') {
-            repositoryOption.placeholder = 'e.g. $CERNBOX_HOME/MyFolder';
-            // Regular expression pattern for the repository provided by a EOS folder.
-            repositoryOption.pattern = '^(\\\$CERNBOX_HOME(\\/[^<>\|\\\\:()&;,\n]+)*\\/?|\\/eos\\/user\\/[a-z](\\/[^<>\|\\\\:()&;,\n]+)+\\/?)$';
-        } else if (selectElement.value === 'git') {
-            repositoryOption.placeholder= "e.g. https://gitlab.cern.ch/user/myrepo";
-            // Regular expression pattern for the repository provided by a GitLab or GitHub repository.
-            repositoryOption.pattern = '^https?:\\/\\/(?:github\\.com|gitlab\\.cern\\.ch)\\/([a-zA-Z0-9_-]+)\\/([a-zA-Z0-9_-]+)(\\/|\\.git)?$';
-        }
-    }
-
-    /**
      * Modifies the displayed form according to the selected type of configuration (LCG or Custom Environments)
      */
      function toggle_form() {
@@ -330,7 +299,6 @@
                 "platforms": "platformOptions",
                 "clusters": "clusterOptions",
                 "condor": "condorOptions",
-                "repo_type": "repo_typeOptions",
                 "builder": "builderOptions",
             },
             inputs: {
@@ -373,7 +341,6 @@
             }
             adjust_platforms();
         } else {
-            adjust_repo_type_options();
             previous_jupyterlab = jupyterLabOption.checked;
             adjust_clusters(external_res_config, condorSection, lcg_config, customenv_config, jupyterLabOption);
         }
@@ -476,16 +443,19 @@
             <label for="repositoryOption">Repository 
                 <a href="#" onclick="toggle_visibility('repositoryDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="repositoryDetails">
-                    <span class='nb'>Repository containing a requirements.txt file. It can be a path on EOS or the URL of a public git repository.</span>
+                    <span class='nb'>URL of a public git repository containing a requirements.txt file.</span>
                 </div>
             </label>
             <br>
             <div style="display: flex;">
-                <select id="repo_typeOptions" name="repo_type" onchange="adjust_repo_type_options();" style="width: auto; display: inline-flex; border: 1px solid #afafaf; background-color: #efefef;">
-                    <option value="eos">EOS</option>
-                    <option value="git">Git</option>
-                </select>
-                <input type="text" id="repositoryOption" name="repository" style="flex-grow: 1; margin-left: 0; border: 1px solid #afafaf;" oninput="validate_repository_input();">
+                <input 
+                    type="text"
+                    id="repositoryOption"
+                    name="repository"
+                    style="flex-grow: 1; margin-left: 0; border: 1px solid #afafaf;"
+                    placeholder="e.g. https://gitlab.cern.ch/user/myrepo"
+                    oninput="validate_repository_input();"
+                />
             </div>
         </div>
         <br>
