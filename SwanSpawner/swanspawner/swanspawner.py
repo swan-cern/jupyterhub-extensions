@@ -32,8 +32,6 @@ def define_SwanSpawner_from(base_class):
 
         builder_version = 'builder_version'
 
-        repo_type = 'repo_type'
-
         repository = 'repository'
 
         lcg_rel_field = 'lcg'
@@ -61,8 +59,6 @@ def define_SwanSpawner_from(base_class):
         lcg_special_type = 'lcg'
 
         eos_special_type = 'eos'
-
-        repo_type_options = ['eos', 'git']
 
         options_form_config = Unicode(
             config=True,
@@ -144,10 +140,6 @@ def define_SwanSpawner_from(base_class):
             options[self.file]                      = formdata.get(self.file, [''])[0]
 
             if options[self.software_source] == self.customenv_special_type:
-                options[self.repo_type]       = formdata[self.repo_type][0]
-                if options[self.repo_type] not in self.repo_type_options:
-                    self._popup_error(options, self.repo_type)
-
                 options[self.repository]      = formdata[self.repository][0]
                 if not options[self.repository]:
                     raise ValueError('Cannot create custom software environment: no repository specified')
