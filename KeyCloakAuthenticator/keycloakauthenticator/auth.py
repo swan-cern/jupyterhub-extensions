@@ -165,7 +165,8 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 end_session_url = data.get('end_session_endpoint')
                 if self.enable_logout and end_session_url:
                     if self.logout_redirect_url:
-                        end_session_url += '?redirect_uri=%s' % self.logout_redirect_url
+                        end_session_url += '?post_logout_redirect_uri=%s' % self.logout_redirect_url
+                        end_session_url += '&client_id=%s' % self.client_id
                     # Update parent class OAuthenticator.logout_redirect_url
                     self.logout_redirect_url = end_session_url 
 
