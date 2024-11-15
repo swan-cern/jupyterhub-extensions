@@ -343,6 +343,12 @@
         } else {
             previous_jupyterlab = jupyterLabOption.checked;
             adjust_clusters(external_res_config, condorSection, lcg_config, customenv_config, jupyterLabOption);
+            if (is_software_source_valid) {
+                for (const [param, elem] of Object.entries(query_map.selectors)) {
+                    const selected = urlParams.get(param) || get_default_option(elem);
+                    set_input(elem, selected);
+                }
+            }
         }
     }
 
