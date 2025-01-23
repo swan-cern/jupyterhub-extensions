@@ -3,7 +3,7 @@
 
 """CERN Specific Spawner class"""
 
-import re, yaml
+import re, yaml, json
 import os
 import time
 from socket import gethostname
@@ -45,6 +45,8 @@ def define_SwanSpawner_from(base_class):
         user_n_cores = 'cores'
 
         user_memory = 'memory'
+
+        gpu = 'gpu'
 
         use_jupyterlab_field = 'use-jupyterlab'
 
@@ -113,6 +115,8 @@ def define_SwanSpawner_from(base_class):
             if not self.options_form and self.options_form_config:
                 # if options_form not provided, use templated options form based on configuration file
                 self.options_form = self._render_templated_options_form
+            # Dictionary with dynamic information to insert in the options form
+            self._dynamic_form_info = {}
 
         def _popup_error(self, options: dict, invalid_selection: str) -> None:
             """ Raise an error if the selection is invalid """
@@ -154,6 +158,7 @@ def define_SwanSpawner_from(base_class):
             options[self.user_memory]               = formdata[self.user_memory][0]
             options[self.spark_cluster_field]       = formdata.get(self.spark_cluster_field, ['none'])[0]
             options[self.use_jupyterlab_field]      = formdata.get(self.use_jupyterlab_field, 'unchecked')[0]
+            options[self.gpu]                       = formdata.get(self.gpu, ['none'])[0]
             # File to be opened when the session gets started
             options[self.file]                      = formdata.get(self.file, [''])[0]
 
@@ -339,8 +344,7 @@ def define_SwanSpawner_from(base_class):
             try:
                 with open(self.options_form_config) as yaml_file:
                     options_form_config = yaml.safe_load(yaml_file)
-
-                return template.render(options_form_config=options_form_config, general_domain_name=self.general_domain_name, ats_domain_name=self.ats_domain_name)
+                return template.render(options_form_config=options_form_config, dynamic_form_info=json.dumps(self._dynamic_form_info), general_domain_name=self.general_domain_name, ats_domain_name=self.ats_domain_name)
             except Exception as ex:
                 self.log.error("Could not initialize form: %s", ex, exc_info=True)
                 raise RuntimeError(
