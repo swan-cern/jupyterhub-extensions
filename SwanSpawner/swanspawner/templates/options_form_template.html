@@ -42,6 +42,7 @@
 <!--
 
     const form_config = {{ options_form_config }};
+    var dynamicFormInfo = {{ dynamic_form_info }};
     const enable_customenv_form = form_config['enable_customenv_form'];
     const enable_generate_url_form = form_config['enable_generate_url_form'];
     const enable_network_form = form_config['enable_network_form'];
@@ -72,6 +73,7 @@
         "platforms": [lcg_source],
         "clusters": [lcg_source, customenv_source],
         "condor": [lcg_source],
+        "gpu": [lcg_source],
     };
     const inputs = {
         "scriptenv": [lcg_source],
@@ -394,6 +396,42 @@
                     config_element.add(select_option);
                 }
             }
+            // Special handling for GPU after form population
+            if (selected_source === lcg_source) {
+                const selectLCG = document.getElementById('lcgOptions');
+                const selectGpu = document.getElementById('gpuOptions');
+                
+                // Enable GPU selection only if CUDA stack is used
+                if (selectLCG.selectedOptions[0] && selectLCG.selectedOptions[0].value.includes('cuda')) {
+                    var gpuFlavours = dynamicFormInfo['gpu_flavours'];
+                    
+                    selectGpu.innerHTML = '';
+                    for (var i = 0; i < gpuFlavours.length; i++) {
+                        var flavour = gpuFlavours[i];
+                        
+                        var selectGpuOption = document.createElement("option");
+                        selectGpuOption.value = flavour;
+                        selectGpuOption.text = flavour;
+                        if (i === 0) {
+                            selectGpuOption.selected = true;
+                        }
+                        
+                        selectGpu.add(selectGpuOption);
+                    }
+                    
+                    selectGpu.removeAttribute('disabled');
+                } else {
+                    selectGpu.setAttribute('disabled', '');
+                }
+                
+                // If no GPU flavour is shown, just show None
+                if (selectGpu.length == 0) {
+                    var selectGpuOption = document.createElement("option");
+                    selectGpuOption.value = 'none';
+                    selectGpuOption.text = 'None';
+                    selectGpu.add(selectGpuOption);
+                }
+            }
         }
         if (selected_source === lcg_source) {
             adjustOptions();
@@ -674,12 +712,12 @@
 
     <!-- Resources configuration -->
     <div id="resources_config">
-        <h2>Session resources</h2>
+        <h2 for="session-resources">Session resources</h2>
 
         <div id="coresSection">
-            <label for="coresOptions">Number of cores <a href="#" onclick="toggleVisibility('coresDetails');"><span class='nbs'>more...</span></a>
+                <label for="coresOptions">CPU <a href="#" onclick="toggleVisibility('coresDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="coresDetails">
-                    <span class='nb'>Amount of cores allocated to the container.</span>
+                    <span class='nb'>Number of CPU cores to associate to the container.</span>
                 </div>
             </label>
             <select id="coresOptions" name="cores" required></select>
@@ -693,6 +731,16 @@
                 </div>
             </label>
             <select id="memoryOptions" name="memory" required></select>
+        </div>
+        <br>
+
+        <div id="gpuSection">
+            <label for="gpuOptions">GPU <a href="#" onclick="toggleVisibility('gpuDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="gpuDetails">
+                    <span class='nb'>GPU model or flavour to attach to the container.</span>
+                </div>
+            </label>
+            <select id="gpuOptions" name="gpu"></select>
         </div>
         <br>
     </div>
