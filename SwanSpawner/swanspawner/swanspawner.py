@@ -39,6 +39,8 @@ def define_SwanSpawner_from(base_class):
 
         user_memory = 'memory'
 
+        gpu = 'gpu'
+
         use_jupyterlab_field = 'use-jupyterlab'
 
         spark_cluster_field = 'spark-cluster'
@@ -80,6 +82,8 @@ def define_SwanSpawner_from(base_class):
             if not self.options_form and self.options_form_config:
                 # if options_form not provided, use templated options form based on configuration file
                 self.options_form = self._render_templated_options_form
+            # Dictionary with dynamic information to insert in the options form
+            self._dynamic_form_info = {}
 
         def options_from_form(self, formdata):
             options = {}
@@ -90,6 +94,7 @@ def define_SwanSpawner_from(base_class):
             options[self.condor_pool]               = formdata[self.condor_pool][0]
             options[self.user_n_cores]              = int(formdata[self.user_n_cores][0])
             options[self.user_memory]               = formdata[self.user_memory][0] + 'G'
+            options[self.gpu]                       = formdata.get(self.gpu, ['none'])[0]
             options[self.use_jupyterlab_field]      = formdata.get(self.use_jupyterlab_field, 'unchecked')[0]
             options[self.use_local_packages_field]  = formdata.get(self.use_local_packages_field, 'unchecked')[0]
 
@@ -241,7 +246,7 @@ def define_SwanSpawner_from(base_class):
                 with open(self.options_form_config) as json_file:
                     options_form_config = json.load(json_file)
 
-                return template.render(options_form_config=options_form_config)
+                return template.render(options_form_config=options_form_config, dynamic_form_info=json.dumps(self._dynamic_form_info))
             except Exception as ex:
                 self.log.error("Could not initialize form: %s", ex, exc_info=True)
                 raise RuntimeError(
