@@ -1,4 +1,5 @@
 from .swanspawner import define_SwanSpawner_from
+from ._gpuinfo import AvailableGPUs
 from kubespawner import KubeSpawner
 
 from kubernetes_asyncio.client.rest import ApiException
@@ -20,6 +21,11 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
         config=True,
         help='URL of the CentOS7 user image.'
     )
+
+    # Constant that sets a role name for participants of SWAN events
+    SWAN_EVENTS_ROLE = 'swan-events'
+
+    gpus = AvailableGPUs(SWAN_EVENTS_ROLE)
 
     async def start(self):
         """Perform extra configurations required for SWAN session spawning in
@@ -89,3 +95,13 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
                         await self.api.delete_namespaced_secret(hadoop_secret_name, namespace)
                     except ApiException as e:
                         self.log.error('Error deleting secret {namespace}:{hadoop_secret_name}: {e}')
+
+    def _render_templated_options_form(self, spawner):
+        """
+        Adds dynamic GPU information to render as part of the options form
+        """
+        gpu_flavours = self.gpus.get_gpu_flavours()
+        # Sort flavours by count so the most common one appears first in the list,
+        # and therefore is rendered first in the form.
+        self._dynamic_form_info['gpu_flavours'] = sorted(gpu_flavours, key=lambda x: gpu_flavours.get(x).count, reverse=True)
+        return super()._render_templated_options_form(spawner)

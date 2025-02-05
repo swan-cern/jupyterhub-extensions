@@ -5,6 +5,7 @@
 <!--
 
     var lcgFormConfig = {{ options_form_config }};
+    var dynamicFormInfo = {{ dynamic_form_info }};
 
     var formInitialized = false;
 
@@ -133,6 +134,39 @@
             }
 
             selectMemory.add(selectMemoryOption);
+        }
+
+        // adjust gpu option for lcg
+        var selectGpu = document.getElementById('gpuOptions');
+        selectGpu.innerHTML = '';
+        // Enable GPU selection only if CUDA stack is used
+        if (selectLCG.selectedOptions[0].value.includes('cuda')) {
+            var gpuFlavours = dynamicFormInfo['gpu_flavours']
+
+            for( var i = 0 ; i < gpuFlavours.length ; i++ ){
+                var flavour = gpuFlavours[i];
+
+                var selectGpuOption = document.createElement("option");
+                selectGpuOption.value = flavour;
+                selectGpuOption.text = flavour;
+                if (i === 0) {
+                    selectGpuOption.selected = true;
+                }
+
+                selectGpu.add(selectGpuOption);
+            }
+
+            selectGpu.removeAttribute('disabled');
+        }
+        else {
+            selectGpu.setAttribute('disabled', '');
+        }
+        // If no GPU flavour is shown, just show None
+        if (selectGpu.length == 0) {
+            var selectGpuOption = document.createElement("option");
+            selectGpuOption.value = 'none';
+            selectGpuOption.text = 'None';
+            selectGpu.add(selectGpuOption);
         }
 
         // adjust clusters option for lcg
@@ -287,9 +321,10 @@
     </label>
     <input type="text" id="scriptenvOption" name="scriptenv" placeholder="e.g. $CERNBOX_HOME/MySWAN/myscript.sh">
     <br>
-    <label for="coresOptions">Number of cores <a href="#" onclick="toggle_visibility('ncoresDetails');"><span class='nbs'>more...</span></a>
+    <h2 for="session-resources">Session resources</h2>
+    <label for="coresOptions">CPU <a href="#" onclick="toggle_visibility('ncoresDetails');"><span class='nbs'>more...</span></a>
     <div style="display:none;" id="ncoresDetails">
-       <span class='nb'>Number of cores to associate to the container.</span>
+       <span class='nb'>Number of CPU cores to associate to the container.</span>
     </div>
     </label>
     <select id="coresOptions" name="ncores"></select>
@@ -300,6 +335,13 @@
     </div>
     </label>
     <select id="memoryOptions" name="memory"></select>
+    <br>
+    <label for="gpuOptions">GPU <a href="#" onclick="toggle_visibility('gpuDetails');"><span class='nbs'>more...</span></a>
+    <div style="display:none;" id="gpuDetails">
+       <span class='nb'>GPU model or flavour to attach to the container.</span>
+    </div>
+    </label>
+    <select id="gpuOptions" name="gpu"></select>
     <br>
     <h2 for="computing-resources">External computing resources</h2>
     <label for="clusterOptions">Spark cluster <a href="#" onclick="toggle_visibility('sparkClusterDetails');"><span class='nbs'>more...</span></a>
