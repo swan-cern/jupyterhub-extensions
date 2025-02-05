@@ -1,6 +1,12 @@
 <style> .nb{ font-weight:normal } </style>
 <style> .nbs{ font-weight:normal; font-size:small } </style>
 <style> .news{ font-weight:normal; background-color:yellow } </style>
+<style>
+#extra_options {
+    transition: transform 0.2s ease;
+    margin-right: 5px;
+}
+</style>
 <script type="text/javascript">
 <!--
 
@@ -91,10 +97,21 @@
     }
 
     /**
+     * Rotate the triangle icon when the file options are toggled
+     */
+    function toggle_extra_options(id) {
+        const triangle = document.getElementById(id);
+        if (triangle.style.transform === "rotate(90deg)") {
+            triangle.style.transform = "rotate(0deg)";
+        } else {
+            triangle.style.transform = "rotate(90deg)";
+        }
+        toggle_visibility('fileSection');
+    }
+    /**
      * Enable display of element if previously disabled, and disable if previously enabled
      */
-    function validate_repository_input() {
-        var repoInput = document.getElementById('repositoryOption');
+    function validate_repository_input(repoInput) {
         const repoPattern = /^https?:\/\/(?:github\.com|gitlab\.cern\.ch)\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)(\/|\.git)?$/.test(repoInput.value);
         if (repoInput.value && !repoPattern) {
             repoInput.style.backgroundColor = '#ffcccc';
@@ -323,7 +340,7 @@
                 set_input(elem, value);
             }
             if (urlParams.get('file') !== null  && urlParams.get('file') !== '') {
-                toggle_visibility('file_config');
+                toggle_extra_options('extra_options');
             }
         } else if (software_source !== null) {
             build_error_message(`Invalid software source: ${software_source}`);
@@ -460,7 +477,7 @@
                     name="repository"
                     style="flex-grow: 1; margin-left: 0; border: 1px solid #afafaf;"
                     placeholder="e.g. https://gitlab.cern.ch/user/myrepo"
-                    oninput="validate_repository_input();"
+                    oninput="validate_repository_input(this);"
                 />
             </div>
         </div>
@@ -527,15 +544,20 @@
         <br>
     </div>
 
-    <!-- File path information text -->
-    <div id="file_config" style="display: none;">
-        <h2>Open File</h2>
-        <label for="fileOption">File path <a href="#" onclick="toggle_visibility('fileDetails');"><span class='nbs'>more...</span></a>
-            <div style="display:none;" id="fileDetails">
-                <span class='nb'>Relative path of the file to be opened after the session is launched. For LCG sessions, it is relative to CERNBOX_HOME; for Custom Environments, it is relative to the specified repository root.</span>
-            </div>
-        </label>
-        <input type="text" id="fileOption" name="file">
+    <!-- Extra Options -->
+    <div id="extra_options_config" style="display: block;">
+        <!-- Toggle Extra Options Section -->
+        <h2 role="button" onclick="toggle_extra_options('extra_options');" style="display: flex; align-items: center; text-decoration: none;"><span id="extra_options">‣</span>Extra options</h2>
+
+        <!-- File path information text -->
+        <div id="fileSection" style="display: none;">
+            <label for="fileOption">File path <a href="#" onclick="toggle_visibility('fileDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="fileDetails">
+                    <span class='nb'>Relative path of the file to be opened after the session is launched. For LCG sessions, it is relative to CERNBOX_HOME; for Custom Environments, it is relative to the specified repository root.</span>
+                </div>
+            </label>
+            <input type="text" id="fileOption" name="file">
+        </div>
         <br>
     </div>
 </div>
