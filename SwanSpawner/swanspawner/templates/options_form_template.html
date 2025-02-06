@@ -2,6 +2,37 @@
 <style> .nbs{ font-weight:normal; font-size:small } </style>
 <style> .news{ font-weight:normal; background-color:yellow } </style>
 <style>
+.clipboard-button {
+    float: right;
+    position: relative;
+    cursor: pointer;
+    width: fit-content;
+    border: 1px solid #0053A1;
+    border-radius: 8px;
+    padding: 5px;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+.clipboard-button:hover {
+    transform: scale(1.05);
+}
+.tooltip {
+    position: absolute;
+    right: 110%; top: 50%;
+    transform: translateY(-50%);
+    background-color: #333;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    white-space: nowrap;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.clipboard-button:hover .tooltip {
+    display: block;
+    opacity: 1;
+}
 #extra_options {
     transition: transform 0.2s ease;
     margin-right: 5px;
@@ -26,6 +57,28 @@
             sourceForm: "customenv_options",
             formElement: "builder",
         }
+    };
+
+    // Map of query parameters to their respective form elements
+    var query_map = {
+        checkboxes: {
+            "use-jupyterlab": 'use-jupyterlab',
+            "use-local-packages":'use-local-packages',
+        },
+        selectors: {
+            "cores": "coresOptions",
+            "memory": "memoryOptions",
+            "lcg": "lcgOptions",
+            "platforms": "platformOptions",
+            "clusters": "clusterOptions",
+            "condor": "condorOptions",
+            "builder": "builderOptions",
+        },
+        inputs: {
+            "scriptenv": "scriptenvOption",
+            "repository": "repositoryOption",
+            "file": "fileOption",
+        },
     };
 
     /**
@@ -108,6 +161,47 @@
         }
         toggle_visibility('fileSection');
     }
+
+    /**
+     * Copy the current form configuration to the clipboard
+     */
+    function copyToClipboard() {
+        const selected_source = document.querySelector('input[name="software_source"]:checked').value;
+        const generatedURL = new URL(`${window.location.href.split('?')[0]}`);
+        const params = new URLSearchParams();
+        params.append('software_source', selected_source);
+
+        // Loop query_map, check if the element is filled and add it to the generatedURL
+        for (const [param, elem_id] of Object.entries(query_map.checkboxes)) {
+            const elem = document.getElementById(elem_id);
+            if (elem.getClientRects().length && elem.checked) {
+                params.append(param, 'true');
+            }
+        }
+        // do the same for selectors and inputs, both at once
+        for (const [param, elem_id] of Object.entries(query_map.selectors).concat(Object.entries(query_map.inputs))) {
+            const elem = document.getElementById(elem_id);
+            if (elem.getClientRects().length && elem.value && elem.value != 'none') {
+                params.append(param, elem.value);
+            }
+        }
+        generatedURL.search = params.toString();
+
+        const tooltip = document.querySelector('.tooltip');
+        navigator.clipboard.writeText(generatedURL).then(() => {
+            tooltip.textContent = 'URL Copied!';
+        }).catch(err => {
+            console.error('Failed to copy URL: ', err);
+            tooltip.textContent = 'Failed to copy URL, try again!';
+            tooltip.style.backgroundColor = 'red';
+        }).finally(() => {
+            setTimeout(() => {
+                tooltip.textContent = 'Generate URL';
+                tooltip.style.backgroundColor = '#333';
+            }, 3000);
+        });
+    }
+
     /**
      * Enable display of element if previously disabled, and disable if previously enabled
      */
@@ -304,26 +398,6 @@
         const urlParams = new URLSearchParams(window.location.search);
         const software_source = urlParams.get('software_source');
         const is_software_source_valid = software_source && Object.keys(sourceConfig).includes(software_source);
-        const query_map = {
-            checkboxes: {
-                "use-jupyterlab": 'use-jupyterlab',
-                "use-local-packages":'use-local-packages',
-            },
-            selectors: {
-                "cores": "coresOptions",
-                "memory": "memoryOptions",
-                "lcg": "lcgOptions",
-                "platforms": "platformOptions",
-                "clusters": "clusterOptions",
-                "condor": "condorOptions",
-                "builder": "builderOptions",
-            },
-            inputs: {
-                "scriptenv": "scriptenvOption",
-                "repository": "repositoryOption",
-                "file": "fileOption",
-            },
-        }
         if (is_software_source_valid) {
             set_checkbox(`${software_source}Option`, true);
             document.querySelectorAll('input[name="software_source"]:not(:checked)').forEach((elem) => elem.disabled = true);
@@ -379,33 +453,42 @@
     <label for="alma9">
     <span class='news' id="alma9">Try out our new experimental interface based on <b>JupyterLab</b> and let us know your feedback!</span>
     </label>
-    <br><br>
-    <label> User Interface <a href="#" onclick="toggle_visibility('userInterfaceDetails');"><span class='nbs'>more...</span></a></label>
-    <div style="display:none;" id="userInterfaceDetails">
-        <span class='nb'>JupyterLab is the latest web-based interactive development environment for notebooks, code and data. More information <a target="_blank" href="https://jupyterlab.readthedocs.io/en/stable/user/interface.html">here</a>.</span>
-    </div>
-    <div style="display: flex; align-items: center">
-      <input
-        id="use-jupyterlab"
-        type="checkbox"
-        name="use-jupyterlab"
-        value="checked"
-        style="display: inline; width: initial; margin: 0 8px 0 0"
-        onchange="adjust_platforms();"
-      />
-      <span> Try the new JupyterLab interface (experimental)</span>
-      <br>
+    <br>
+
+    <div class="clipboard-button" onclick="copyToClipboard()">
+        <i class="fa fa-clipboard"></i>
+        <span class="tooltip">Generate URL</span>
     </div>
 
     <!-- Source Type selection -->
     <div id="software_sourceSection">
         <h2>Software</h2>
+
+        <label> User Interface <a href="#" onclick="toggle_visibility('userInterfaceDetails');"><span class='nbs'>more...</span></a></label>
+        <div style="display:none;" id="userInterfaceDetails">
+            <span class='nb'>JupyterLab is the latest web-based interactive development environment for notebooks, code and data. More information <a target="_blank" href="https://jupyterlab.readthedocs.io/en/stable/user/interface.html">here</a>.</span>
+        </div>
+        <div style="display: flex; align-items: center">
+            <input
+                id="use-jupyterlab"
+                type="checkbox"
+                name="use-jupyterlab"
+                value="checked"
+                style="display: inline; width: initial; margin: 0 8px 0 0"
+                onchange="adjust_platforms();"
+            />
+            <span> Try the new JupyterLab interface (experimental)</span>
+            <br>
+        </div>
+        <br>
+
         <label>Source <a href="#" onclick="toggle_visibility('sourceDetails');"><span class='nbs'>more...</span></a>
             <div style="display:none;" id="sourceDetails">
                 <span class='nb'>Software source: curated stack (LCG) or custom environment.</span>
             </div>
         </label>
         <br>
+
         <input type="radio" id="lcgOption" name="software_source" value="lcg" checked onchange="toggle_form();" style="width: auto; height: auto; display: inline-block;">
         <label for="lcgOption" style="margin-right: 5%;">LCG</label>
         <input type="radio" id="customenvOption" name="software_source" value="customenv" onchange="toggle_form();" style="width: auto; height: auto; display: inline-block;">
