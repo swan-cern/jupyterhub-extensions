@@ -43,6 +43,34 @@ class SpawnHandler(JHSpawnHandler):
         configs = SpawnHandlersConfigs.instance()
         user = self.current_user
 
+        spawner = user.get_spawner(server_name)
+
+        if spawner.ready:
+            # User has a session running, redirect to the correct page,
+            # according to the user's choice and the current session
+            spawner_software_source = spawner.user_options.get(configs.software_source)
+            if spawner_software_source == configs.customenv_special_type:
+                next_url = url_path_join("user", user.escaped_name, "customenvs", server_name)
+            else:
+                next_url = url_path_join("user", user.escaped_name, "lab")
+
+            page = await self.render_template('spawn_conflict.html', for_user=user, spawner=spawner, next_url=next_url)
+            self.finish(page)
+            return
+            
+        elif spawner.pending:
+            # If the spawner is pending, show the pending page
+            auth_state = await user.get_auth_state()
+            page = await self.render_template(
+                'spawn_pending.html',
+                for_user=user,
+                spawner=spawner,
+                progress_url=url_concat(spawner._progress_url, {"_xsrf": self.xsrf_token.decode('ascii')}),
+                auth_state=auth_state,
+            )
+            self.finish(page)
+            return
+
         # FIXME with RBAC the admin property looks like it has changed,
         # but we're going to drop this code soon either way...
         if not user.admin and os.path.isfile(configs.maintenance_file):
