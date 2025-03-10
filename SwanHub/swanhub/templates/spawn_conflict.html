@@ -45,7 +45,8 @@ require(["jquery"], function ($) {
   }, 5000);
 
   $('#swan-options .btn-secondary').on('click', function() {
-    window.location = `{{base_url}}home?changeconfig&${window.location.href.split('?')[1]}`;
+    const query_params = window.location.href.split('?')[1];
+    window.location = '{{base_url}}home?changeconfig' + (query_params ? '&' + query_params : '');
   });
 
   $('#swan-options .btn-primary').on('click', function() {
