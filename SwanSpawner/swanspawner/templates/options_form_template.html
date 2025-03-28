@@ -45,6 +45,7 @@
 
     var formInitialized = false;
     var previous_jupyterlab = undefined;
+    const enable_customenv_form = formConfig['enable_customenv_form'];
 
     var sourceConfig = {
         lcg: {
@@ -219,6 +220,9 @@
      */
     function adjust_form() {
         let selectedSource = document.querySelector('input[name="software_source"]:checked').value;
+        if (enable_customenv_form !== "true") {
+            document.getElementById('software_source_selection').style.display = 'none';
+        }
 
         // if form has not been yet initialized, initialize
         if (!formInitialized) {
@@ -482,18 +486,20 @@
         </div>
         <br>
 
-        <label>Source <a href="#" onclick="toggle_visibility('sourceDetails');"><span class='nbs'>more...</span></a>
-            <div style="display:none;" id="sourceDetails">
-                <span class='nb'>Software source: curated stack (LCG) or custom environment.</span>
-            </div>
-        </label>
-        <br>
+        <div id="software_source_selection">
+            <label>Source <a href="#" onclick="toggle_visibility('sourceDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="sourceDetails">
+                    <span class='nb'>Software source: curated stack (LCG) or custom environment.</span>
+                </div>
+            </label>
+            <br>
 
-        <input type="radio" id="lcgOption" name="software_source" value="lcg" checked onchange="toggle_form();" style="width: auto; height: auto; display: inline-block;">
-        <label for="lcgOption" style="margin-right: 5%;">LCG</label>
-        <input type="radio" id="customenvOption" name="software_source" value="customenv" onchange="toggle_form();" style="width: auto; height: auto; display: inline-block;">
-        <label for="customenvOption">Custom Environment</label>
-        <br><br>
+            <input type="radio" id="lcgOption" name="software_source" value="lcg" checked onchange="toggle_form();" style="width: auto; height: auto; display: inline-block;">
+            <label for="lcgOption" style="margin-right: 5%;">LCG</label>
+            <input type="radio" id="customenvOption" name="software_source" value="customenv" onchange="toggle_form();" style="width: auto; height: auto; display: inline-block;">
+            <label for="customenvOption">Custom Environment</label>
+            <br><br>
+        </div>
     </div>
 
     <!-- LCG configuration -->
