@@ -421,6 +421,8 @@
             for (const [param, elem] of Object.entries(query_map.inputs)) {
                 const value = urlParams.get(param) || "";
                 set_input(elem, value);
+                // Validate the repository value coming from the URL (and color it red if invalid)
+                if (param === 'repository') validate_repository_input(document.getElementById(elem));
             }
             if (urlParams.get('file') !== null  && urlParams.get('file') !== '') {
                 toggle_extra_options('extra_options');
