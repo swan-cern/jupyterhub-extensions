@@ -397,6 +397,7 @@
         var lcg_config = document.getElementById('lcg_config');
         var jupyterLabOption = document.getElementById('use-jupyterlab');
 
+        // Do the initial fillment of the form in order to get all the available software stacks (or builders)
         adjust_form();
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -409,9 +410,13 @@
                 const checked = (urlParams.get(param) || "").toLowerCase() === 'true';
                 set_checkbox(elem, checked);
             }
-            for (const [param, elem] of Object.entries(query_map.selectors)) {
+            // Sort the list of selectors because `lcg` (or `builder`) has to be the first one to be filled
+            const sorted_selectors = Object.entries(query_map.selectors).sort(([a], [b]) => (a === 'lcg' || a === 'builder') ? -1 : (b === 'lcg' || b === 'builder') ? 1 : 0);
+            for (const [param, elem] of sorted_selectors) {
                 const selected = urlParams.get(param) || get_default_option(elem);
                 set_input(elem, selected);
+                // Refill the remaining selectors according to the specified software stack/builder (each one has its platforms, resources etc)
+                if (param === 'lcg' || param === 'builder') adjust_form();
             }
             for (const [param, elem] of Object.entries(query_map.inputs)) {
                 const value = urlParams.get(param) || "";
