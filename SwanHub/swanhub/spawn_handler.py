@@ -52,7 +52,11 @@ class SpawnHandler(JHSpawnHandler):
             if spawner_software_source == configs.customenv_special_type:
                 next_url = url_path_join("user", user.escaped_name, "customenvs", server_name)
             else:
-                next_url = url_path_join("user", user.escaped_name, "lab")
+                use_jupyterlab = spawner.user_options.get(configs.use_jupyterlab_field)
+                if use_jupyterlab == 'checked':
+                    next_url = url_path_join("user", user.escaped_name, "lab")
+                else:
+                    next_url = url_path_join("user", user.escaped_name, "projects")
 
             page = await self.render_template('spawn_conflict.html', for_user=user, spawner=spawner, next_url=next_url)
             self.finish(page)
