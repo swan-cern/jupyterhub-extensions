@@ -126,20 +126,6 @@
     }
 
     /**
-     * Build a simple error message on top of Header
-     */
-    function build_error_message(message) {
-        const error_message = document.createElement('span');
-        error_message.style.color = 'red';
-        error_message.innerHTML = message;
-        error_message.appendChild(document.createElement('br'));
-        const optionsHeader = document.getElementById('optionsHeader');
-        if (!optionsHeader.querySelector('span')) {
-            optionsHeader.insertBefore(error_message, optionsHeader.firstChild);
-        }
-    }
-
-    /**
      * Enable display of element if previously disabled, and disable if previously enabled
      */
     function toggle_visibility(id) {
@@ -427,8 +413,6 @@
             if (urlParams.get('file') !== null  && urlParams.get('file') !== '') {
                 toggle_extra_options('extra_options');
             }
-        } else if (software_source !== null) {
-            build_error_message(`Invalid software source: ${software_source}`);
         }
 
         if (lcgOption.checked) {
