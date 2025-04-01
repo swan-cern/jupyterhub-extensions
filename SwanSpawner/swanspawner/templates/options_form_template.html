@@ -129,11 +129,8 @@
      * Enable display of element if previously disabled, and disable if previously enabled
      */
     function toggle_visibility(id) {
-        var e = document.getElementById(id);
-        if(e.style.display == 'block')
-            e.style.display = 'none';
-        else
-            e.style.display = 'block';
+        const elem = document.getElementById(id);
+        elem.style.display = elem.style.display === 'none' ? 'block' : 'none';
     }
 
     /**
@@ -141,11 +138,7 @@
      */
     function toggle_extra_options(id) {
         const triangle = document.getElementById(id);
-        if (triangle.style.transform === "rotate(90deg)") {
-            triangle.style.transform = "rotate(0deg)";
-        } else {
-            triangle.style.transform = "rotate(90deg)";
-        }
+        triangle.style.transform = triangle.style.transform === "rotate(90deg)" ? "rotate(0deg)" : "rotate(90deg)";
         toggle_visibility('fileSection');
     }
 
@@ -180,7 +173,6 @@
         }).catch(err => {
             console.error('Failed to copy URL: ', err);
             tooltip.textContent = 'Failed to copy URL, try again!';
-            tooltip.style.backgroundColor = 'red';
         }).finally(() => {
             setTimeout(() => {
                 tooltip.textContent = 'Generate URL';
@@ -225,8 +217,9 @@
             for (var source in sourceConfig) {
                 const currentSource = sourceConfig[source];
                 const formOptions = formConfig[currentSource.sourceForm];
-                document.getElementById(currentSource.optionsElement).innerHTML = '';
-                var firstFormOptionselected = false;
+                let firstFormOptionselected = false;
+                let currentElement = document.getElementById(currentSource.optionsElement);
+                currentElement.innerHTML = '';
 
                 for( var i = 0 ; i < formOptions.length ; i++ ){
                     var formEntry = formOptions[i];
@@ -246,7 +239,7 @@
                         formOption.text = formEntry[currentSource.formElement].text;
                     }
 
-                    document.getElementById(currentSource.optionsElement).add(formOption);
+                    currentElement.add(formOption);
                 }
             }
         }
