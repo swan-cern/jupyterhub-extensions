@@ -87,7 +87,12 @@ class SpawnHandler(JHSpawnHandler):
         # the software_source query argument to re-render the form and fill
         # it with the remaining query arguments.
         if configs.software_source in self.request.query_arguments:
-            form = await self._render_form_wrapper(user)
+            error_message = None
+            selected_software_source = self.request.query_arguments[configs.software_source][0].decode('utf8')
+            # Check if the selected software source is valid
+            if selected_software_source not in (configs.lcg_rel_field, configs.customenv_special_type):
+                error_message = f"Invalid software source: {selected_software_source}"
+            form = await self._render_form_wrapper(user, message=error_message)
             self.finish(form)
             return
 
