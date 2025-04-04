@@ -334,6 +334,7 @@
         } else {
             platformOptions.removeAttribute('disabled');
         }
+        document.getElementById('extra_options_config').style.display = jupyterLabOption.checked ? 'block' : 'none';
     }
 
     /**
@@ -420,6 +421,7 @@
             }
             adjust_platforms();
         } else {
+            document.getElementById('extra_options_config').style.display = 'block';
             previous_jupyterlab = jupyterLabOption.checked;
             adjust_clusters(external_res_config, condorSection, lcg_config, customenv_config, jupyterLabOption);
             if (is_software_source_valid) {
