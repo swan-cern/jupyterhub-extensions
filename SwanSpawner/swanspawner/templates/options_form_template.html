@@ -376,6 +376,8 @@
         var condorSection = document.getElementById('condorSection');
         var lcg_config = document.getElementById('lcg_config');
         var jupyterLabOption = document.getElementById('use-jupyterlab');
+        var lcg_details = document.getElementById('lcg-details');
+        var customenv_details = document.getElementById('customenv-details');
 
         // Do the initial fillment of the form in order to get all the available software stacks (or builders)
         adjust_form();
@@ -414,6 +416,7 @@
             customenv_config.style.display = 'none';
             external_res_config.style.display = 'block';
             condorSection.style.display = 'block';
+            customenv_details.style.display = 'none';
             if (is_software_source_valid) {
                 adjust_options();
             } else {
@@ -421,6 +424,7 @@
             }
             adjust_platforms();
         } else {
+            lcg_details.style.display = 'none';
             document.getElementById('extra_options_config').style.display = 'block';
             previous_jupyterlab = jupyterLabOption.checked;
             adjust_clusters(external_res_config, condorSection, lcg_config, customenv_config, jupyterLabOption);
@@ -628,7 +632,8 @@
         <div id="fileSection" style="display: none;">
             <label for="fileOption">File path <a href="#" onclick="toggle_visibility('fileDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="fileDetails">
-                    <span class='nb'>Relative path of the file to be opened after the session is launched. For LCG sessions, it is relative to CERNBOX_HOME; for Custom Environments, it is relative to the specified repository root.</span>
+                    <span id="lcg-details" class='nb'>Path of the file to be opened after the session is launched, relative to CERNBOX_HOME.</span>
+                    <span id="customenv-details" class='nb'>Path of the file to be opened after the session is launched, relative to the root of the git repository.</span>
                 </div>
             </label>
             <input type="text" id="fileOption" name="file">
