@@ -73,10 +73,15 @@
       keyboard: false
     });
 
-    $('#spawn').on('click', function () {
-      starting = true;
-      modal.modal('hide');
-      return true;
+    $('#spawn').on('click', function (e) {
+      const form = document.getElementById('spawn_form');
+
+      // If form is valid, continue with modal hide
+      if (form.checkValidity()) { 
+        starting = true;
+        modal.modal('hide');
+        return true;
+      }
     });
 
     modal.on('shown.bs.modal', function () {

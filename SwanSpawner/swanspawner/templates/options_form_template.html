@@ -502,7 +502,7 @@
                     <span class='nb'>Additionally, it is possible to use Python packages installed by the user on CERNBox. More information <a target="_blank" href="https://swan.docs.cern.ch/advanced/install_packages/">here</a>.</span>
                 </div>
             </label>
-            <select id="lcgOptions" name="lcg" onchange="adjust_form();"></select>
+            <select id="lcgOptions" name="lcg" onchange="adjust_form();" required></select>
             <div style="display: flex; align-items: center">
                 <input
                   id="use-local-packages"
@@ -523,7 +523,7 @@
                     <span class='nb'>The combination of compiler version and flags.</span>
                 </div>
             </label>
-            <select id="platformOptions" name="platforms" onchange="adjust_options();"></select>
+            <select id="platformOptions" name="platforms" onchange="adjust_options();" required></select>
             <input type="hidden" id="hiddenPlatformOptions" name="platforms">
         </div>
         <br>
@@ -568,7 +568,7 @@
                     <span class='nb'>Program responsible for building the custom environment (generic or community-specific).</a></span>
                 </div>
             </label>
-            <select id="builderOptions" name="builder" onchange="adjust_clusters();"></select>
+            <select id="builderOptions" name="builder" onchange="adjust_clusters();" required></select>
         </div>
         <br>
     </div>
@@ -583,7 +583,7 @@
                     <span class='nb'>Amount of cores allocated to the container.</span>
                 </div>
             </label>
-            <select id="coresOptions" name="cores"></select>
+            <select id="coresOptions" name="cores" required></select>
         </div>
         <br>
 
@@ -593,7 +593,7 @@
                     <span class='nb'>Amount of memory allocated to the container.</span>
                 </div>
             </label>
-            <select id="memoryOptions" name="memory"></select>
+            <select id="memoryOptions" name="memory" required></select>
         </div>
         <br>
     </div>
@@ -608,7 +608,7 @@
                     <span class='nb'>Name of the Spark cluster to connect to from notebooks. See the <a target="_blank" href="https://hadoop-user-guide.web.cern.ch/">Hadoop User guide</a> and the <a target="_blank" href="https://sparktraining.web.cern.ch/">Spark training course</a></span>
                 </div>
             </label>
-            <select id="clusterOptions" name="clusters"></select>
+            <select id="clusterOptions" name="clusters" required></select>
         </div>
         <br>
 
@@ -618,7 +618,7 @@
                     <span class='nb'>Name of the HTCondor pool to use.</span>
                 </div>
             </label>
-            <select id="condorOptions" name="condor"></select>
+            <select id="condorOptions" name="condor" required></select>
             <br>
         </div>
     </div>
