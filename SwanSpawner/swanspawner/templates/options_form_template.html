@@ -432,24 +432,36 @@
         keepVisibles(['customenv_config', 'extra_options_config', 'customenv-details'], true);
     }
 
-        if (lcgOption.checked) {
-            lcg_config.style.display = 'block';
-            customenv_config.style.display = 'none';
-            external_res_config.style.display = 'block';
-            condorSection.style.display = 'block';
-            customenv_details.style.display = 'none';
-            if (is_software_source_valid) {
-                adjust_options();
-            } else {
-                jupyterLabOption.checked = previous_jupyterlab;
-            }
-            adjust_platforms();
-        } else {
-            lcg_details.style.display = 'none';
-            document.getElementById('extra_options_config').style.display = 'block';
-            previous_jupyterlab = jupyterLabOption.checked;
-            adjust_clusters(external_res_config, condorSection, lcg_config, customenv_config, jupyterLabOption);
+    /**
+     * Modifies the displayed form according to the selected type of configuration (LCG or Custom Environments)
+     */
+    function toggleForm() {
+        if (enable_customenv_form !== "true") {
+            document.getElementById('software_source_selection').style.display = 'none';
         }
+
+        const url_params = new URLSearchParams(window.location.search);
+        let selected_source = url_params.get('software_source');
+        // If there are URL parameters and the form is being initialized for the first time, autofill the form, according to the selected source
+        if (selected_source && !form_initialized) {
+            // If only the customenv form is filled and lcg is left blank, fields like platforms and condor will stay untouched. As they are required components
+            // the form won't get submitted, so they need to be filled with the default values
+            adjustForm(lcg_source);
+            // The customenv form needs to be initially filled in order to preserve the main dropdown and extract its options as well
+            adjustForm(customenv_source);
+
+            autofillURLParams(url_params, selected_source);
+        } else {
+            selected_source = document.querySelector('input[name="software_source"]:checked').value;
+            // Do the initial fillment of the form in order to get all the available software stacks (or builders)
+            adjustForm(selected_source);
+        }
+        if (selected_source === lcg_source)
+            showLCGForm();
+        else if (selected_source === customenv_source)
+            showCustomEnvForm();
+        else 
+            throw new Error(`Unknown software source: ${selected_source}`);
     }
 
     window.onload = toggleForm;
