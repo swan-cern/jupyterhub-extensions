@@ -168,15 +168,11 @@
     }
 
     /**
-     * Enable display of element if previously disabled, and disable if previously enabled
+     * Change field background color according to the validation result of repository value
      */
     function validateRepositoryInput(repo_input) {
         const repo_pattern = /^https?:\/\/(?:github\.com|gitlab\.cern\.ch)\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)(\/|\.git)?$/.test(repo_input.value);
-        if (repo_input.value && !repo_pattern) {
-            repo_input.style.backgroundColor = '#ffcccc';
-        } else {
-            repo_input.style.backgroundColor = '#ffffff';
-        }
+        repo_input.style.backgroundColor = repo_input.value && !repo_pattern ? '#ffcccc' : '#ffffff';
     }
 
     /**
