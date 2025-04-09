@@ -105,14 +105,6 @@
         document.getElementById(id).value = value;
     }
     /**
-     * Loops throught the elements keys and selects the option with the given value
-     */
-    function set_options(elements) {
-        for (var id in elements) {
-            set_input(id, elements[id]);
-        }
-    }
-    /**
      * (Un)check the element with the given id
      */
     function setCheckbox(id, checked) {
@@ -215,28 +207,28 @@
                 let currentElement = document.getElementById(currentSource.optionsElement);
                 currentElement.innerHTML = '';
 
-                for( var i = 0 ; i < formOptions.length ; i++ ){
-                    var formEntry = formOptions[i];
-                    var formOption = document.createElement("option");
+            for( var i = 0 ; i < form_options.length ; i++ ){
+                var form_entry = form_options[i];
+                var form_option = document.createElement("option");
 
-                    if (formEntry.type === "label") {
-                        formOption.disabled = "disabled";
-                        formOption.style = "border-bottom:1px solid rgba(153,153,153,.3); margin:-10px 0 4px 0";
-                        formOption.value = formEntry.label.value;
-                        formOption.text = formEntry.label.text;
-                    } else {
-                        if (!firstFormOptionselected) {
-                            firstFormOptionselected = true;
-                            formOption.selected = true;
-                        }
-                        formOption.value = formEntry[currentSource.formElement].value;
-                        formOption.text = formEntry[currentSource.formElement].text;
+                if (form_entry.type === "label") {
+                    form_option.disabled = "disabled";
+                    form_option.style = "border-bottom:1px solid rgba(153,153,153,.3); margin:-10px 0 4px 0";
+                    form_option.value = form_entry.label.value;
+                    form_option.text = form_entry.label.text;
+                } else {
+                    if (!first_form_optionselected) {
+                        first_form_optionselected = true;
+                        form_option.selected = true;
                     }
-
-                    currentElement.add(formOption);
+                    form_option.value = form_entry[source_data.form_element].value;
+                    form_option.text = form_entry[source_data.form_element].text;
                 }
+
+                current_element.add(form_option);
             }
         }
+    }
 
         // get currently selected source and extract its configuration (formData)
         const selectedConfig = sourceConfig[selectedSource];
