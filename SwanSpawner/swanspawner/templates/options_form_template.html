@@ -254,14 +254,16 @@
             for( var i = 0 ; i < (formData[config.formKey] || []).length ; i++ ){
                 var formOption = formData[config.formKey][i];
 
-                var selectOption = document.createElement("option");
-                selectOption.value = formOption.value;
-                selectOption.text = formOption.text;
+                const form_option = formData[config][i];
+
+                const select_option = document.createElement("option");
+                select_option.value = form_option.value;
+                select_option.text = form_option.text;
                 if (i === 0) {
                     selectOption.selected = true;
                 }
 
-                configElement.add(selectOption);
+                config_element.add(select_option);
             }
         });
 
@@ -437,26 +439,19 @@
     <div id="software_sourceSection">
         <h2>Software</h2>
 
-        <label> User Interface <a href="#" onclick="toggle_visibility('userInterfaceDetails');"><span class='nbs'>more...</span></a></label>
+        <label> User Interface <a href="#" onclick="toggleVisibility('userInterfaceDetails');"><span class='nbs'>more...</span></a></label>
         <div style="display:none;" id="userInterfaceDetails">
             <span class='nb'>JupyterLab is the latest web-based interactive development environment for notebooks, code and data. More information <a target="_blank" href="https://jupyterlab.readthedocs.io/en/stable/user/interface.html">here</a>.</span>
         </div>
         <div style="display: flex; align-items: center">
-            <input
-                id="use-jupyterlab"
-                type="checkbox"
-                name="use-jupyterlab"
-                value="checked"
-                style="display: inline; width: initial; margin: 0 8px 0 0"
-                onchange="adjust_platforms();"
-            />
+            <input id="use-jupyterlab" type="checkbox" name="use-jupyterlab" value="checked" style="display: inline; width: initial; margin: 0 8px 0 0" onchange="adjustPlatforms();">
             <span> Try the new JupyterLab interface (experimental)</span>
             <br>
         </div>
         <br>
 
         <div id="software_source_selection">
-            <label>Source <a href="#" onclick="toggle_visibility('sourceDetails');"><span class='nbs'>more...</span></a>
+            <label>Source <a href="#" onclick="toggleVisibility('sourceDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="sourceDetails">
                     <span class='nb'>Software source: curated stack (LCG) or custom environment.</span>
                 </div>
@@ -474,23 +469,16 @@
     <!-- LCG configuration -->
     <div id="lcg_config">
         <div id="lcgSection">
-            <label for="lcgOptions">Software stack <a href="#" onclick="toggle_visibility('lcgDetails');"><span class='nbs'>more...</span></a>
+            <label for="lcgOptions">Software stack <a href="#" onclick="toggleVisibility('lcgDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="lcgDetails">
                     <span class='nb'>The software stack to associate to the container. See the <a target="_blank" href="http://lcginfo.cern.ch/">LCG package info</a> page.</span>
                     <br>
                     <span class='nb'>Additionally, it is possible to use Python packages installed by the user on CERNBox. More information <a target="_blank" href="https://swan.docs.cern.ch/advanced/install_packages/">here</a>.</span>
                 </div>
             </label>
-            <select id="lcgOptions" name="lcg" onchange="adjust_form();" required></select>
+            <select id="lcgOptions" name="lcg" onchange="adjustForm();" required></select>
             <div style="display: flex; align-items: center">
-                <input
-                  id="use-local-packages"
-                  type="checkbox"
-                  name="use-local-packages"
-                  value="checked"
-                  style="display: inline; width: initial; margin: 0 8px 0 0"
-                  onchange="adjust_platforms();"
-                />
+                <input id="use-local-packages" type="checkbox" name="use-local-packages" value="checked" style="display: inline; width: initial; margin: 0 8px 0 0" onchange="adjustPlatforms();">
                 <span> Use Python packages installed on CERNBox</span>
             </div>
         </div>
@@ -502,8 +490,8 @@
                     <span class='nb'>The combination of compiler version and flags.</span>
                 </div>
             </label>
-            <select id="platformOptions" name="platforms" onchange="adjust_options();" required></select>
-            <input type="hidden" id="hiddenPlatformOptions" name="platforms">
+            <select id="platformsOptions" name="platforms" onchange="adjustOptions();" required></select>
+            <input type="hidden" id="hiddenPlatformsOptions" name="platforms">
         </div>
         <br>
 
