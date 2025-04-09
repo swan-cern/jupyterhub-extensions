@@ -41,13 +41,13 @@
 <script type="text/javascript">
 <!--
 
-    var form_config = {{ options_form_config }};
+    const form_config = {{ options_form_config }};
 
-    var form_initialized = false;
-    var previous_jupyterlab = undefined;
+    let form_initialized = false;
+    let previous_jupyterlab = undefined;
     const enable_customenv_form = form_config['enable_customenv_form'];
 
-    var source_config = {
+    const source_config = {
         lcg: {
             options_element: "lcgOptions",
             source_form: "lcg_options",
@@ -61,7 +61,7 @@
     };
 
     // Map of query parameters to their respective form elements
-    var query_map = {
+    const query_map = {
         checkboxes: {
             "use-jupyterlab": 'use-jupyterlab',
             "use-local-packages":'use-local-packages',
@@ -87,7 +87,7 @@
      */
     function findFormData(form, form_element, value) {
         // Data is taken from form_config global variable
-        var form_options = form_config[form];
+        const form_options = form_config[form];
         for (key in form_options) {
             const form_data = form_options[key];
             if (form_data.type === "selection" && form_data[form_element].value === value) {
@@ -189,23 +189,23 @@
             form_initialized = true;
 
             // set proper header for the whole form based on config
-            var options_header = document.getElementById('optionsHeader');
-            var header = form_config['header'];
+            const options_header = document.getElementById('optionsHeader');
+            const header = form_config['header'];
             if (header) {
                 options_header.innerHTML = header;
             }
 
             // Loop through all source types and populate the main dropdown options (lcg -> lcg_release, customenv -> builder)
-            for (var source in source_config) {
+            for (let source in source_config) {
                 const current_source = source_config[source];
                 const form_options = form_config[current_source.source_form];
                 let first_form_optionselected = false;
-                let current_element = document.getElementById(current_source.options_element);
+                const current_element = document.getElementById(current_source.options_element);
                 current_element.innerHTML = '';
 
-                for( var i = 0 ; i < form_options.length ; i++ ){
-                    var form_entry = form_options[i];
-                    var form_option = document.createElement("option");
+                for( let i = 0 ; i < form_options.length ; i++ ){
+                    const form_entry = form_options[i];
+                    const form_option = document.createElement("option");
 
                     if (form_entry.type === "label") {
                         form_option.disabled = "disabled";
@@ -228,10 +228,10 @@
 
         // get currently selected source and extract its configuration (form_data)
         const selected_config = source_config[selected_source];
-        var selected_value = document.getElementById(selected_config.options_element).value;
-        var form_data = findFormData(selected_config.source_form, selected_config.form_element, selected_value);
+        const selected_value = document.getElementById(selected_config.options_element).value;
+        const form_data = findFormData(selected_config.source_form, selected_config.form_element, selected_value);
 
-        var available_configs = {
+        const available_configs = {
             'lcg': [
                 {element_name: 'platformOptions', form_key: 'platforms'}, 
                 {element_name: 'coresOptions', form_key: 'cores'}, 
@@ -248,13 +248,13 @@
 
         // Populate the form according to main dropdown selection
         available_configs[selected_source].forEach(function(config) {
-            var config_element = document.getElementById(config.element_name);
+            const config_element = document.getElementById(config.element_name);
             config_element.innerHTML = '';
 
-            for( var i = 0 ; i < (form_data[config.form_key] || []).length ; i++ ){
-                var form_option = form_data[config.form_key][i];
+            for( let i = 0 ; i < (form_data[config.form_key] || []).length ; i++ ){
+                const form_option = form_data[config.form_key][i];
 
-                var select_option = document.createElement("option");
+                const select_option = document.createElement("option");
                 select_option.value = form_option.value;
                 select_option.text = form_option.text;
                 if (i === 0) {
@@ -273,19 +273,19 @@
      * to use the JupyterLab interface depending on the chosen platform
      */
     function adjustOptions() {
-        var platform_options = document.getElementById('platformOptions');
-        var cluster_options  = document.getElementById('clusterOptions');
-        var jupyter_lab_option = document.getElementById("use-jupyterlab");
-        var use_local_packages_option = document.getElementById('use-local-packages');
+        const platform_options = document.getElementById('platformOptions');
+        const cluster_options  = document.getElementById('clusterOptions');
+        const jupyter_lab_option = document.getElementById("use-jupyterlab");
+        const use_local_packages_option = document.getElementById('use-local-packages');
 
         /**
          * Store the chosen platform in a hidden form field, as disabled fields
          * are not sent in the request
          */ 
-        var hidden_platform_options = document.getElementById('hiddenPlatformOptions');
+        const hidden_platform_options = document.getElementById('hiddenPlatformOptions');
 
-        var is_alma = (platform_options.selectedOptions[0] && platform_options.selectedOptions[0].text.startsWith('AlmaLinux 9'));
-        var is_nxcals = (cluster_options.selectedOptions[0] && cluster_options.selectedOptions[0].text.startsWith('BE NXCALS (NXCals)'));
+        const is_alma = (platform_options.selectedOptions[0] && platform_options.selectedOptions[0].text.startsWith('AlmaLinux 9'));
+        const is_nxcals = (cluster_options.selectedOptions[0] && cluster_options.selectedOptions[0].text.startsWith('BE NXCALS (NXCals)'));
 
         if (is_alma) {
             /* On Alma9, make sure cluster selection is enabled and that users can
@@ -307,9 +307,9 @@
     }
 
     function adjustPlatforms() {
-        var platform_options = document.getElementById('platformOptions');
-        var jupyter_lab_option = document.getElementById('use-jupyterlab');
-        var use_local_packages_option = document.getElementById('use-local-packages');
+        const platform_options = document.getElementById('platformOptions');
+        const jupyter_lab_option = document.getElementById('use-jupyterlab');
+        const use_local_packages_option = document.getElementById('use-local-packages');
 
         if (jupyter_lab_option.checked || use_local_packages_option.checked) {
             platform_options.setAttribute('disabled', '');
@@ -324,12 +324,12 @@
      * If the builder is accpy, the external resources configuration is displayed (without condor)
      */
     function adjustClusters(external_res_config, condor_section, lcg_config, customenv_config, jupyter_lab_option) {
-        var builder_options = document.getElementById('builderOptions');
-        var external_res_config = external_res_config || document.getElementById('external_res_config');
-        var condor_section = condor_section || document.getElementById('condorSection');
-        var lcg_config = lcg_config || document.getElementById('lcg_config');
-        var customenv_config = customenv_config || document.getElementById('customenv_config');
-        var jupyter_lab_option = jupyter_lab_option || document.getElementById('use-jupyterlab');
+        const builder_options = document.getElementById('builderOptions');
+        const external_res_config = external_res_config || document.getElementById('external_res_config');
+        const condor_section = condor_section || document.getElementById('condorSection');
+        const lcg_config = lcg_config || document.getElementById('lcg_config');
+        const customenv_config = customenv_config || document.getElementById('customenv_config');
+        const jupyter_lab_option = jupyter_lab_option || document.getElementById('use-jupyterlab');
 
         if (builder_options.options[builder_options.selectedIndex].value.startsWith('accpy')) {
             external_res_config.style.display = 'block';
@@ -349,15 +349,15 @@
      * Modifies the displayed form according to the selected type of configuration (LCG or Custom Environments)
      */
      function toggleForm() {
-        var lcg_option = document.getElementById('lcgOption');
+        const lcg_option = document.getElementById('lcgOption');
 
-        var customenv_config = document.getElementById('customenv_config');
-        var external_res_config = document.getElementById('external_res_config');
-        var condor_section = document.getElementById('condorSection');
-        var lcg_config = document.getElementById('lcg_config');
-        var jupyter_lab_option = document.getElementById('use-jupyterlab');
-        var lcg_details = document.getElementById('lcg-details');
-        var customenv_details = document.getElementById('customenv-details');
+        const customenv_config = document.getElementById('customenv_config');
+        const external_res_config = document.getElementById('external_res_config');
+        const condor_section = document.getElementById('condorSection');
+        const lcg_config = document.getElementById('lcg_config');
+        const jupyter_lab_option = document.getElementById('use-jupyterlab');
+        const lcg_details = document.getElementById('lcg-details');
+        const customenv_details = document.getElementById('customenv-details');
 
         // Do the initial fillment of the form in order to get all the available software stacks (or builders)
         adjustForm();
