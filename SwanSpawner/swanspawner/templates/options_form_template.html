@@ -137,6 +137,30 @@
         const elem = document.getElementById(id);
         elem.style.display = elem.style.display === 'none' ? 'block' : 'none';
     }
+    
+    /**
+     * Keep the visibility of the element (or a list of elements) with the given id(s)
+     */
+    function keepVisible(id, visible) {
+        const elem = document.getElementById(id);
+        elem.style.display = visible ? 'block' : 'none';
+    }
+    function keepVisibles(ids, visible) {
+        ids.forEach((id) => keepVisible(id, visible));
+    }
+    
+    /**
+     * Disable a given element (or a list of elements)
+     */
+    function keepDisable(element, disable) {
+        if (disable === true) 
+            element.setAttribute('disabled', '');
+        else 
+            element.removeAttribute('disabled');
+    }
+    function keepDisables(elements, enable) {
+        elements.forEach((elem) => keepDisable(elem, enable));
+    }
 
     /**
      * Rotate the triangle icon when the file options are toggled
@@ -301,17 +325,14 @@
         if (is_alma) {
             /* On Alma9, make sure cluster selection is enabled and that users can
             select the JupyterLab interface */
-            cluster_options.removeAttribute('disabled');
-            jupyter_lab_option.removeAttribute('disabled');
-            use_local_packages_option.removeAttribute('disabled');
+            keepDisables([clusters_options, jupyter_lab_option, use_local_packages_option], false);
         } else {
             if (!is_nxcals) {
-                clusters_options.setAttribute('disabled', '');
+                keepDisable(clusters_options, true);
                 clusters_options.selectedIndex = 0;
             }
 
-            jupyterLabOption.setAttribute('disabled', '');
-            useLocalPackagesOption.setAttribute('disabled', '');
+            keepDisables([jupyter_lab_option, use_local_packages_option], true);
         }
 
         hidden_platform_options.value = platform_options.value;
