@@ -42,44 +42,79 @@
 <!--
 
     const form_config = {{ options_form_config }};
-
-    let form_initialized = false;
-    let previous_jupyterlab = undefined;
     const enable_customenv_form = form_config['enable_customenv_form'];
 
-    const source_config = {
+    let form_initialized = false, previous_jupyterlab = undefined;
+
+    const lcg_source = 'lcg', customenv_source = 'customenv';
+    const lcg_parent_field = 'lcg', builder_parent_field = 'builder';
+
+    // Define all the elements to their corresponding type
+    // Naming rules:
+    // checkboxes: use-<element>
+    // selectors: <element>Options
+    // inputs: <element>Option
+    // The elements are defined in the options_form_config yaml file
+    const checkboxes = {
+        "use-local-packages": [lcg_source],
+        "use-jupyterlab": [lcg_source, customenv_source],
+        [`use-${lcg_source}`]: [lcg_source, customenv_source],
+        [`use-${customenv_source}`]:[lcg_source, customenv_source],
+    };
+    const selectors = {
+        [lcg_parent_field]: [lcg_source],
+        [builder_parent_field]: [customenv_source],
+        "cores": [lcg_source, customenv_source],
+        "memory": [lcg_source, customenv_source],
+        "platforms": [lcg_source],
+        "clusters": [lcg_source, customenv_source],
+        "condor": [lcg_source],
+    };
+    const inputs = {
+        "scriptenv": [lcg_source],
+        "file": [lcg_source, customenv_source],
+        "repository": [customenv_source],
+    };
+
+    // build object with key: keyOptions pairs
+    const buildQueryPair = (element_type_dict, software_source) => {
+        const query_pair = {};
+        for (const [key, software_sources_list] of Object.entries(element_type_dict)) {
+            if (element_type_dict === checkboxes && software_sources_list.includes(software_source))
+                query_pair[key] = key;
+            else if (element_type_dict === selectors && software_sources_list.includes(software_source))
+                query_pair[key] = `${key}Options`;
+            else if (element_type_dict === inputs && software_sources_list.includes(software_source))
+                query_pair[key] = `${key}Option`;
+        }
+        return query_pair;
+    };
+
+    // Map all the elements to the configuration they are applied to
+    const query_map = {
         lcg: {
-            options_element: "lcgOptions",
-            source_form: "lcg_options",
-            form_element: "lcg",
+            checkboxes: buildQueryPair(checkboxes, lcg_source),
+            selectors: buildQueryPair(selectors, lcg_source),
+            inputs: buildQueryPair(inputs, lcg_source),
         },
         customenv: {
-            options_element: "builderOptions",
-            source_form: "customenv_options",
-            form_element: "builder",
+            checkboxes: buildQueryPair(checkboxes, customenv_source),
+            selectors: buildQueryPair(selectors, customenv_source),
+            inputs: buildQueryPair(inputs, customenv_source),
         }
     };
 
-    // Map of query parameters to their respective form elements
-    const query_map = {
-        checkboxes: {
-            "use-jupyterlab": 'use-jupyterlab',
-            "use-local-packages":'use-local-packages',
+    const source_config = {
+        lcg: {
+            options_element: query_map[lcg_source].selectors[lcg_parent_field],
+            source_form: lcg_source + '_options',
+            form_element: lcg_parent_field,
         },
-        selectors: {
-            "cores": "coresOptions",
-            "memory": "memoryOptions",
-            "lcg": "lcgOptions",
-            "platforms": "platformOptions",
-            "clusters": "clusterOptions",
-            "condor": "condorOptions",
-            "builder": "builderOptions",
-        },
-        inputs: {
-            "scriptenv": "scriptenvOption",
-            "repository": "repositoryOption",
-            "file": "fileOption",
-        },
+        customenv: {
+            options_element: query_map[customenv_source].selectors[builder_parent_field],
+            source_form: customenv_source + '_options',
+            form_element: builder_parent_field,
+        }
     };
 
     /**
@@ -138,15 +173,17 @@
         params.append('software_source', selected_source);
 
         // Loop query_map, check if the element is filled and add it to the generated_url
-        for (const [param, elem_id] of Object.entries(query_map.checkboxes)) {
+        for (const [param, elem_id] of Object.entries(query_map[selected_source].checkboxes)) {
             const elem = document.getElementById(elem_id);
-            if (elem.getClientRects().length && elem.checked) {
+            // Check if the element is present in the page and checked (exclude the software source selection)
+            if (elem.getClientRects().length && elem.checked && param !== 'use-'+lcg_source && param !== 'use-'+customenv_source) {
                 params.append(param, 'true');
             }
         }
-        // do the same for selectors and inputs, both at once
-        for (const [param, elem_id] of Object.entries(query_map.selectors).concat(Object.entries(query_map.inputs))) {
+        // Do the same for selectors and inputs, simultaneously
+        for (const [param, elem_id] of Object.entries(query_map[selected_source].selectors).concat(Object.entries(query_map[selected_source].inputs))) {
             const elem = document.getElementById(elem_id);
+            // Check if the element is present in the page and has a value
             if (elem.getClientRects().length && elem.value && elem.value != 'none') {
                 params.append(param, elem.value);
             }
@@ -176,83 +213,69 @@
     }
 
     /**
+     * Initialize the form populating the main dropdown (lcg stack/builder) and loading its options
+     */
+    function initializeForm() {
+        // Set proper header for the whole form based on config
+        const options_header = document.getElementById('optionsHeader');
+        const header = form_config['header'];
+        if (header) {
+            options_header.innerHTML = header;
+        }
+
+        // Loop through all source types and populate the main dropdown options (lcg -> lcg_release, customenv -> builder)
+        for (const [source, source_data] of Object.entries(source_config)) {
+            let first_form_optionselected = false;
+            const form_options = form_config[source_data.source_form];
+            const current_element = document.getElementById(source_data.options_element);
+            current_element.innerHTML = '';
+
+            for( let i = 0 ; i < form_options.length ; i++ ){
+                const form_entry = form_options[i];
+                const form_option = document.createElement("option");
+
+                if (form_entry.type === "label") {
+                    form_option.disabled = "disabled";
+                    form_option.style = "border-bottom:1px solid rgba(153,153,153,.3); margin:-10px 0 4px 0";
+                    form_option.value = form_entry.label.value;
+                    form_option.text = form_entry.label.text;
+                } else {
+                    if (!first_form_optionselected) {
+                        first_form_optionselected = true;
+                        form_option.selected = true;
+                    }
+                    form_option.value = form_entry[source_data.form_element].value;
+                    form_option.text = form_entry[source_data.form_element].text;
+                }
+
+                current_element.add(form_option);
+            }
+        }
+        form_initialized = true;
+    }
+
+    /**
      * Renders a form based on config file
      */
-    function adjustForm() {
-        let selected_source = document.querySelector('input[name="software_source"]:checked').value;
-        if (enable_customenv_form !== "true") {
-            document.getElementById('software_source_selection').style.display = 'none';
-        }
+    function adjustForm(selected_source) {
+        // Initialize the form if it hasn't been done yet
+        if (!form_initialized) initializeForm();
 
-        // if form has not been yet initialized, initialize
-        if (!form_initialized) {
-            form_initialized = true;
-
-            // set proper header for the whole form based on config
-            const options_header = document.getElementById('optionsHeader');
-            const header = form_config['header'];
-            if (header) {
-                options_header.innerHTML = header;
-            }
-
-            // Loop through all source types and populate the main dropdown options (lcg -> lcg_release, customenv -> builder)
-            for (let source in source_config) {
-                const current_source = source_config[source];
-                const form_options = form_config[current_source.source_form];
-                let first_form_optionselected = false;
-                const current_element = document.getElementById(current_source.options_element);
-                current_element.innerHTML = '';
-
-                for( let i = 0 ; i < form_options.length ; i++ ){
-                    const form_entry = form_options[i];
-                    const form_option = document.createElement("option");
-
-                    if (form_entry.type === "label") {
-                        form_option.disabled = "disabled";
-                        form_option.style = "border-bottom:1px solid rgba(153,153,153,.3); margin:-10px 0 4px 0";
-                        form_option.value = form_entry.label.value;
-                        form_option.text = form_entry.label.text;
-                    } else {
-                        if (!first_form_optionselected) {
-                            first_form_optionselected = true;
-                            form_option.selected = true;
-                        }
-                        form_option.value = form_entry[current_source.form_element].value;
-                        form_option.text = form_entry[current_source.form_element].text;
-                    }
-
-                    current_element.add(form_option);
-                }
-            }
-        }
-
-        // get currently selected source and extract its configuration (form_data)
+        // Get currently selected source and extract its configuration (formData)
         const selected_config = source_config[selected_source];
         const selected_value = document.getElementById(selected_config.options_element).value;
         const form_data = findFormData(selected_config.source_form, selected_config.form_element, selected_value);
 
-        const available_configs = {
-            'lcg': [
-                {element_name: 'platformOptions', form_key: 'platforms'}, 
-                {element_name: 'coresOptions', form_key: 'cores'}, 
-                {element_name: 'memoryOptions', form_key: 'memory'}, 
-                {element_name: 'clusterOptions', form_key: 'clusters'}, 
-                {element_name: 'condorOptions', form_key: 'condor'}
-            ],
-            'customenv': [
-                {element_name: 'coresOptions', form_key: 'cores'},
-                {element_name: 'memoryOptions', form_key: 'memory'},
-                {element_name: 'clusterOptions', form_key: 'clusters'}, 
-            ]
-        };
-
         // Populate the form according to main dropdown selection
-        available_configs[selected_source].forEach(function(config) {
-            const config_element = document.getElementById(config.element_name);
+        for (const [config, element] of Object.entries(query_map[selected_source].selectors)) {
+            // Skip the parent field as it is already populated
+            if (config === lcg_parent_field || config == builder_parent_field) continue;
+
+            const config_element = document.getElementById(element);
             config_element.innerHTML = '';
 
-            for( let i = 0 ; i < (form_data[config.form_key] || []).length ; i++ ){
-                const form_option = form_data[config.form_key][i];
+            for( let i = 0 ; i < (form_data[config] || []).length ; i++ ){
+                const form_option = form_data[config][i];
 
                 const select_option = document.createElement("option");
                 select_option.value = form_option.value;
@@ -263,9 +286,7 @@
 
                 config_element.add(select_option);
             }
-        });
-
-        adjustOptions();
+        }
     }
 
     /**
@@ -273,8 +294,8 @@
      * to use the JupyterLab interface depending on the chosen platform
      */
     function adjustOptions() {
-        const platform_options = document.getElementById('platformOptions');
-        const cluster_options  = document.getElementById('clusterOptions');
+        const platform_options = document.getElementById('platformsOptions');
+        const cluster_options  = document.getElementById('clustersOptions');
         const jupyter_lab_option = document.getElementById("use-jupyterlab");
         const use_local_packages_option = document.getElementById('use-local-packages');
 
@@ -282,7 +303,7 @@
          * Store the chosen platform in a hidden form field, as disabled fields
          * are not sent in the request
          */ 
-        const hidden_platform_options = document.getElementById('hiddenPlatformOptions');
+        const hidden_platform_options = document.getElementById('hiddenPlatformsOptions');
 
         const is_alma = (platform_options.selectedOptions[0] && platform_options.selectedOptions[0].text.startsWith('AlmaLinux 9'));
         const is_nxcals = (cluster_options.selectedOptions[0] && cluster_options.selectedOptions[0].text.startsWith('BE NXCALS (NXCals)'));
@@ -307,7 +328,7 @@
     }
 
     function adjustPlatforms() {
-        const platform_options = document.getElementById('platformOptions');
+        const platform_options = document.getElementById('platformsOptions');
         const jupyter_lab_option = document.getElementById('use-jupyterlab');
         const use_local_packages_option = document.getElementById('use-local-packages');
 
@@ -463,10 +484,10 @@
             </label>
             <br>
 
-            <input type="radio" id="lcgOption" name="software_source" value="lcg" checked onchange="toggleForm();" style="width: auto; height: auto; display: inline-block;">
-            <label for="lcgOption" style="margin-right: 5%;">LCG</label>
-            <input type="radio" id="customenvOption" name="software_source" value="customenv" onchange="toggleForm();" style="width: auto; height: auto; display: inline-block;">
-            <label for="customenvOption">Custom Environment</label>
+            <input type="radio" id="use-lcg" name="software_source" value="lcg" checked onchange="toggleForm();" style="width: auto; height: auto; display: inline-block;">
+            <label for="use-lcg" style="margin-right: 5%;">LCG</label>
+            <input type="radio" id="use-customenv" name="software_source" value="customenv" onchange="toggleForm();" style="width: auto; height: auto; display: inline-block;">
+            <label for="use-customenv">Custom Environment</label>
             <br><br>
         </div>
     </div>
@@ -481,7 +502,7 @@
                     <span class='nb'>Additionally, it is possible to use Python packages installed by the user on CERNBox. More information <a target="_blank" href="https://swan.docs.cern.ch/advanced/install_packages/">here</a>.</span>
                 </div>
             </label>
-            <select id="lcgOptions" name="lcg" onchange="adjustForm();" required></select>
+            <select id="lcgOptions" name="lcg" onchange="adjustForm(lcg_source);" required></select>
             <div style="display: flex; align-items: center">
                 <input
                   id="use-local-packages"
@@ -497,13 +518,13 @@
         <br>
 
         <div id="platformSection">
-            <label for="platformOptions">Platform <a href="#" onclick="toggleVisibility('platformDetails');"><span class='nbs'>more...</span></a>
+            <label for="platformsOptions">Platform <a href="#" onclick="toggleVisibility('platformDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="platformDetails">
                     <span class='nb'>The combination of compiler version and flags.</span>
                 </div>
             </label>
-            <select id="platformOptions" name="platforms" onchange="adjustOptions();" required></select>
-            <input type="hidden" id="hiddenPlatformOptions" name="platforms">
+            <select id="platformsOptions" name="platforms" onchange="adjustOptions();" required></select>
+            <input type="hidden" id="hiddenPlatformsOptions" name="platforms">
         </div>
         <br>
 
@@ -547,7 +568,7 @@
                     <span class='nb'>Program responsible for building the custom environment (generic or community-specific).</a></span>
                 </div>
             </label>
-            <select id="builderOptions" name="builder" onchange="adjustClusters();" required></select>
+            <select id="builderOptions" name="builder" onchange="adjustForm(customenv_source);" required></select>
         </div>
         <br>
     </div>
@@ -582,12 +603,12 @@
         <h2>External computing resources</h2>
         
         <div id="clusterSection">
-            <label for="clusterOptions">Spark cluster <a href="#" onclick="toggleVisibility('clustersDetails');"><span class='nbs'>more...</span></a>
+            <label for="clustersOptions">Spark cluster <a href="#" onclick="toggleVisibility('clustersDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="clustersDetails">
                     <span class='nb'>Name of the Spark cluster to connect to from notebooks. See the <a target="_blank" href="https://hadoop-user-guide.web.cern.ch/">Hadoop User guide</a> and the <a target="_blank" href="https://sparktraining.web.cern.ch/">Spark training course</a></span>
                 </div>
             </label>
-            <select id="clusterOptions" name="clusters" required></select>
+            <select id="clustersOptions" name="clusters" required></select>
         </div>
         <br>
 
