@@ -365,99 +365,120 @@
     }
 
     /**
-     * Modifies the displayed form according to the selected type of configuration (LCG or Custom Environments)
-     * If the builder is accpy, the external resources configuration is displayed (without condor)
+     * Autofill the form according to the specified URL parameters
      */
-    function adjustClusters(external_res_config, condor_section, lcg_config, customenv_config, jupyter_lab_option) {
-        const builder_options = document.getElementById('builderOptions');
-        const external_res_config = external_res_config || document.getElementById('external_res_config');
-        const condor_section = condor_section || document.getElementById('condorSection');
-        const lcg_config = lcg_config || document.getElementById('lcg_config');
-        const customenv_config = customenv_config || document.getElementById('customenv_config');
-        const jupyter_lab_option = jupyter_lab_option || document.getElementById('use-jupyterlab');
-
-        if (builder_options.options[builder_options.selectedIndex].value.startsWith('accpy')) {
-            external_res_config.style.display = 'block';
-            condor_section.style.display = 'none';
-        } else {
-            external_res_config.style.display = 'none';
-            condor_section.style.display = 'block';
+    function autofillURLParams(url_params, selected_source) {
+        // Fill all checkboxes first (including the software source)
+        for (const [argument, element] of Object.entries(query_map[selected_source].checkboxes)) {
+            let checked = (url_params.get(argument) || "").toLowerCase() === 'true';
+            // Force the selection of the correct software source
+            if (argument === 'use-'+selected_source) checked = true;
+            if (argument === 'use-jupyterlab' && selected_source === lcg_source) previous_jupyterlab = checked;
+            setCheckbox(element, checked);
         }
 
-        lcg_config.style.display = 'none';
-        customenv_config.style.display = 'block';
+        // Fill all selectors (lcg and builder are specially important cause they are used to populate the rest of the form)
+        for (const [argument, element] of Object.entries(query_map[selected_source].selectors)) {
+            const selected = url_params.get(argument);
+            if (selected) {
+                setInput(element, selected);
+                
+                // Refill the remaining selectors according to the specified software stack/builder (each one has its platforms, resources etc)
+                if (argument === lcg_parent_field || argument === builder_parent_field) {
+                    adjustForm(selected_source);
+                    if (selected_source === lcg_source) {
+                        adjustOptions();
+                        adjustPlatforms();
+                    }
+                }
+            }
+        }
+
+        // Fill all inputs (scriptenv, repository and file)
+        for (const [param, elem] of Object.entries(query_map[selected_source].inputs)) {
+            const selected = url_params.get(param) || "";
+            setInput(elem, selected);
+
+            // Validate the repository value coming from the URL (and color it red if invalid)
+            if (param === 'repository') 
+                validateRepositoryInput(document.getElementById(elem));
+
+            // Toggle the extra options section if the file parameter is specified
+            if (param === 'file' && selected !== null  && selected !== '')
+                toggleExtraOptions('extra_options');
+        }
+        setVisible(selected_source+"-details", true);
+        // Hide the other details section
+        setVisible((selected_source === lcg_source ? customenv_source : lcg_source)+"-details", false);
+    }
+
+    /**
+     * Show the LCG form and hide the Custom Environment form
+     */
+    function showLCGForm() {
+        // Recover last value specified in LCG config; unblock jupyterlab option
+        const jupyter_lab_option = document.getElementById('use-jupyterlab');
+        jupyter_lab_option.checked = previous_jupyterlab !== undefined ? previous_jupyterlab : false;
+        setDisabled(jupyter_lab_option, false);
+
+        // Hide repository and builder; file section; details about customenv in file section
+        setVisibleMany(['customenv_config', 'extra_options_config', 'customenv-details'], false);
+        // Show LCG stack, use-local-packages, scriptenv and platforms; condor section; details about lcg in file section
+        setVisibleMany(['lcg_config', 'condorSection', 'lcg-details'], true);
+
+        adjustOptions();
+        adjustPlatforms();
+    }
+
+    /**
+     * Show the Custom Environment form and hide the LCG form
+     */
+    function showCustomEnvForm() {
+        // Save last value specified in LCG config; enable and block jupyterlab option
+        const jupyter_lab_option = document.getElementById('use-jupyterlab');
+        if (!form_initialized) previous_jupyterlab = jupyter_lab_option.checked;
         jupyter_lab_option.checked = true;
-        jupyter_lab_option.setAttribute('disabled', '');
+        setDisabled(jupyter_lab_option, true);
+
+        // Hide LCG stack, use-local-packages, scriptenv and platforms; condor section; details about customenvs in file section
+        setVisibleMany(['lcg_config', 'condorSection', 'lcg-details'], false);
+        // Show repository and builder; file section; details about LCG in file section
+        setVisibleMany(['customenv_config', 'extra_options_config', 'customenv-details'], true);
     }
 
     /**
      * Modifies the displayed form according to the selected type of configuration (LCG or Custom Environments)
      */
-     function toggleForm() {
-        const lcg_option = document.getElementById('lcgOption');
-
-        const customenv_config = document.getElementById('customenv_config');
-        const external_res_config = document.getElementById('external_res_config');
-        const condor_section = document.getElementById('condorSection');
-        const lcg_config = document.getElementById('lcg_config');
-        const jupyter_lab_option = document.getElementById('use-jupyterlab');
-        const lcg_details = document.getElementById('lcg-details');
-        const customenv_details = document.getElementById('customenv-details');
-
-        // Do the initial fillment of the form in order to get all the available software stacks (or builders)
-        adjustForm();
-
-        const url_params = new URLSearchParams(window.location.search);
-        const software_source = url_params.get('software_source');
-        const is_software_source_valid = software_source && Object.keys(source_config).includes(software_source);
-        if (is_software_source_valid) {
-            setCheckbox(`${software_source}Option`, true);
-            // Change the form right now in order to don't show lcg form in case of error for any missing field
-            if (software_source === 'customenv') 
-                adjustClusters(external_res_config, condor_section, lcg_config, customenv_config, jupyter_lab_option);
-            document.querySelectorAll('input[name="software_source"]:not(:checked)').forEach((elem) => elem.disabled = true);
-            for (const [param, elem] of Object.entries(query_map.checkboxes)) {
-                const checked = (url_params.get(param) || "").toLowerCase() === 'true';
-                setCheckbox(elem, checked);
-            }
-            // Sort the list of selectors because `lcg` (or `builder`) has to be the first one to be filled
-            const sorted_selectors = Object.entries(query_map.selectors).sort(([a], [b]) => (a === 'lcg' || a === 'builder') ? -1 : (b === 'lcg' || b === 'builder') ? 1 : 0);
-            for (const [param, elem] of sorted_selectors) {
-                const selected = url_params.get(param);
-                if (selected) {
-                    setInput(elem, selected);
-                    // Refill the remaining selectors according to the specified software stack/builder (each one has its platforms, resources etc)
-                    if (param === 'lcg' || param === 'builder') adjustForm();
-                }
-            }
-            for (const [param, elem] of Object.entries(query_map.inputs)) {
-                const value = url_params.get(param) || "";
-                setInput(elem, value);
-                // Validate the repository value coming from the URL (and color it red if invalid)
-                if (param === 'repository') validateRepositoryInput(document.getElementById(elem));
-            }
-            if (url_params.get('file') !== null  && url_params.get('file') !== '') {
-                toggleExtraOptions('extra_options');
-            }
+    function toggleForm() {
+        if (enable_customenv_form !== "true") {
+            document.getElementById('software_source_selection').style.display = 'none';
         }
 
-        if (lcg_option.checked) {
-            lcg_config.style.display = 'block';
-            customenv_config.style.display = 'none';
-            external_res_config.style.display = 'block';
-            condor_section.style.display = 'block';
-            customenv_details.style.display = 'none';
-            if (is_software_source_valid) {
-                adjustOptions();
-            } else {
-                jupyter_lab_option.checked = previous_jupyterlab;
-            }
-            adjustPlatforms();
+        const url_params = new URLSearchParams(window.location.search);
+        let selected_source = url_params.get('software_source');
+        // If there are URL parameters and the form is being initialized for the first time, autofill the form, according to the selected source
+        if (selected_source && !form_initialized) {
+            // If only the customenv form is filled and lcg is left blank, fields like platforms and condor will stay untouched. As they are required components
+            // the form won't get submitted, so they need to be filled with the default values
+            adjustForm(lcg_source);
+            // The customenv form needs to be initially filled in order to preserve the main dropdown and extract its options as well
+            adjustForm(customenv_source);
+
+            // Show the selected source form
+            if (selected_source === lcg_source) showLCGForm();
+            else if (selected_source === customenv_source) showCustomEnvForm();
+            else throw new Error(`Unknown software source: ${selected_source}`);
+
+            autofillURLParams(url_params, selected_source);
         } else {
-            lcg_details.style.display = 'none';
-            document.getElementById('extra_options_config').style.display = 'block';
-            previous_jupyterlab = jupyter_lab_option.checked;
-            adjustClusters(external_res_config, condor_section, lcg_config, customenv_config, jupyter_lab_option);
+            selected_source = document.querySelector('input[name="software_source"]:checked').value;
+            // Do the initial fillment of the form in order to get all the available software stacks (or builders)
+            adjustForm(selected_source);
+
+            // Show the selected source form
+            if (selected_source === lcg_source) showLCGForm();
+            else if (selected_source === customenv_source) showCustomEnvForm();
+            else throw new Error(`Unknown software source: ${selected_source}`);
         }
     }
 
