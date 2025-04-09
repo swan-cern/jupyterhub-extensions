@@ -467,10 +467,10 @@
             </label>
             <br>
 
-            <input type="radio" id="lcgOption" name="software_source" value="lcg" checked onchange="toggle_form();" style="width: auto; height: auto; display: inline-block;">
-            <label for="lcgOption" style="margin-right: 5%;">LCG</label>
-            <input type="radio" id="customenvOption" name="software_source" value="customenv" onchange="toggle_form();" style="width: auto; height: auto; display: inline-block;">
-            <label for="customenvOption">Custom Environment</label>
+            <input type="radio" id="use-lcg" name="software_source" value="lcg" checked onchange="toggleForm();" style="width: auto; height: auto; display: inline-block;">
+            <label for="use-lcg" style="margin-right: 5%;">LCG</label>
+            <input type="radio" id="use-customenv" name="software_source" value="customenv" onchange="toggleForm();" style="width: auto; height: auto; display: inline-block;">
+            <label for="use-customenv">Custom Environment</label>
             <br><br>
         </div>
     </div>
@@ -577,7 +577,7 @@
                     <span class='nb'>Name of the Spark cluster to connect to from notebooks. See the <a target="_blank" href="https://hadoop-user-guide.web.cern.ch/">Hadoop User guide</a> and the <a target="_blank" href="https://sparktraining.web.cern.ch/">Spark training course</a></span>
                 </div>
             </label>
-            <select id="clusterOptions" name="clusters" required></select>
+            <select id="clustersOptions" name="clusters" required></select>
         </div>
         <br>
 
