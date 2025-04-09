@@ -41,45 +41,64 @@
 <script type="text/javascript">
 <!--
 
-    var formConfig = {{ options_form_config }};
+    const form_config = {{ options_form_config }};
+    const enable_customenv_form = form_config['enable_customenv_form'];
 
-    var formInitialized = false;
-    var previous_jupyterlab = undefined;
-    const enable_customenv_form = formConfig['enable_customenv_form'];
+    let form_initialized = false;
+    let previous_jupyterlab = undefined;
 
-    var sourceConfig = {
+    const lcg_source = 'lcg', customenv_source = 'customenv';
+    const lcg_parent_field = 'lcg', builder_parent_field = 'builder';
+    
+    // Define all the elements to their corresponding type
+    // Naming rules:
+    // checkboxes: use-<element>
+    // selectors: <element>Options
+    // inputs: <element>Option
+    // The elements are defined in the options_form_config yaml file
+    const checkboxes = ["use-local-packages", "use-jupyterlab", "use-"+lcg_source, "use-"+customenv_source];
+    const selectors = [builder_parent_field, lcg_parent_field, "cores", "memory", "platforms", "clusters", "condor"];
+    const inputs = ["scriptenv", "repository", "file"];
+    
+    // build object with key: keyOptions pairs
+    const buildQueryPair = (keys) => {
+        const query_pair = {};
+        keys.forEach((key) => {
+            if (checkboxes.includes(key))
+                query_pair[key] = key;
+            else if (selectors.includes(key))
+                query_pair[key] = `${key}Options`;
+            else if (inputs.includes(key))
+                query_pair[key] = `${key}Option`;
+        });
+        return query_pair;
+    };
+
+    // Map all the elements to the configuration they are applied to
+    const query_map = {
         lcg: {
-            optionsElement: "lcgOptions",
-            sourceForm: "lcg_options",
-            formElement: "lcg",
+            checkboxes: buildQueryPair(checkboxes),
+            selectors: buildQueryPair(selectors.slice(1)),
+            inputs: buildQueryPair([inputs[0]]),
         },
         customenv: {
-            optionsElement: "builderOptions",
-            sourceForm: "customenv_options",
-            formElement: "builder",
+            checkboxes: buildQueryPair(checkboxes.slice(1)),
+            selectors: buildQueryPair([selectors[0], selectors[2], selectors[3], selectors[5]]),
+            inputs: buildQueryPair(inputs.slice(1)),
         }
     };
 
-    // Map of query parameters to their respective form elements
-    var query_map = {
-        checkboxes: {
-            "use-jupyterlab": 'use-jupyterlab',
-            "use-local-packages":'use-local-packages',
+    const source_config = {
+        lcg: {
+            options_element: query_map[lcg_source].selectors[lcg_parent_field],
+            source_form: lcg_source + '_options',
+            form_element: lcg_parent_field,
         },
-        selectors: {
-            "cores": "coresOptions",
-            "memory": "memoryOptions",
-            "lcg": "lcgOptions",
-            "platforms": "platformOptions",
-            "clusters": "clusterOptions",
-            "condor": "condorOptions",
-            "builder": "builderOptions",
-        },
-        inputs: {
-            "scriptenv": "scriptenvOption",
-            "repository": "repositoryOption",
-            "file": "fileOption",
-        },
+        customenv: {
+            options_element: query_map[customenv_source].selectors[builder_parent_field],
+            source_form: customenv_source + '_options',
+            form_element: builder_parent_field,
+        }
     };
 
     /**
@@ -138,15 +157,17 @@
         params.append('software_source', selected_source);
 
         // Loop query_map, check if the element is filled and add it to the generated_url
-        for (const [param, elem_id] of Object.entries(query_map.checkboxes)) {
+        for (const [param, elem_id] of Object.entries(query_map[selected_source].checkboxes)) {
             const elem = document.getElementById(elem_id);
-            if (elem.getClientRects().length && elem.checked) {
+            // Check if the element is present in the page and checked (exclude the software source selection)
+            if (elem.getClientRects().length && elem.checked && param !== 'use-'+lcg_source && param !== 'use-'+customenv_source) {
                 params.append(param, 'true');
             }
         }
-        // do the same for selectors and inputs, both at once
-        for (const [param, elem_id] of Object.entries(query_map.selectors).concat(Object.entries(query_map.inputs))) {
+        // Do the same for selectors and inputs, simultaneously
+        for (const [param, elem_id] of Object.entries(query_map[selected_source].selectors).concat(Object.entries(query_map[selected_source].inputs))) {
             const elem = document.getElementById(elem_id);
+            // Check if the element is present in the page and has a value
             if (elem.getClientRects().length && elem.value && elem.value != 'none') {
                 params.append(param, elem.value);
             }
@@ -176,32 +197,24 @@
     }
 
     /**
-     * Renders a form based on config file
+     * Initialize the form populating the main dropdown (lcg stack/builder) and loading its options
      */
-    function adjust_form() {
-        let selectedSource = document.querySelector('input[name="software_source"]:checked').value;
-        if (enable_customenv_form !== "true") {
-            document.getElementById('software_source_selection').style.display = 'none';
+    function initializeForm() {
+        form_initialized = true;
+
+        // Set proper header for the whole form based on config
+        const optionsHeader = document.getElementById('optionsHeader');
+        const header = form_config['header'];
+        if (header) {
+            optionsHeader.innerHTML = header;
         }
 
-        // if form has not been yet initialized, initialize
-        if (!formInitialized) {
-            formInitialized = true;
-
-            // set proper header for the whole form based on config
-            var optionsHeader = document.getElementById('optionsHeader');
-            var header = formConfig['header'];
-            if (header) {
-                optionsHeader.innerHTML = header;
-            }
-
-            // Loop through all source types and populate the main dropdown options (lcg -> lcg_release, customenv -> builder)
-            for (var source in sourceConfig) {
-                const currentSource = sourceConfig[source];
-                const formOptions = formConfig[currentSource.sourceForm];
-                let firstFormOptionselected = false;
-                let currentElement = document.getElementById(currentSource.optionsElement);
-                currentElement.innerHTML = '';
+        // Loop through all source types and populate the main dropdown options (lcg -> lcg_release, customenv -> builder)
+        for (const [source, source_data] of Object.entries(source_config)) {
+            let first_form_optionselected = false;
+            const form_options = form_config[source_data.source_form];
+            const current_element = document.getElementById(source_data.options_element);
+            current_element.innerHTML = '';
 
             for( var i = 0 ; i < form_options.length ; i++ ){
                 var form_entry = form_options[i];
@@ -226,48 +239,44 @@
         }
     }
 
-        // get currently selected source and extract its configuration (formData)
-        const selectedConfig = sourceConfig[selectedSource];
-        var selectedValue = document.getElementById(selectedConfig.optionsElement).value;
-        var formData = findFormData(selectedConfig.sourceForm, selectedConfig.formElement, selectedValue);
+    /**
+     * Renders a form based on config file
+     */
+    function adjustForm(selected_source) {
+        selected_source = selected_source || document.querySelector('input[name="software_source"]:checked').value;
 
-        var available_configs = {
-            'lcg': [
-                {elementName: 'platformOptions', formKey: 'platforms'}, 
-                {elementName: 'coresOptions', formKey: 'cores'}, 
-                {elementName: 'memoryOptions', formKey: 'memory'}, 
-                {elementName: 'clusterOptions', formKey: 'clusters'}, 
-                {elementName: 'condorOptions', formKey: 'condor'}
-            ],
-            'customenv': [
-                {elementName: 'coresOptions', formKey: 'cores'},
-                {elementName: 'memoryOptions', formKey: 'memory'},
-                {elementName: 'clusterOptions', formKey: 'clusters'}, 
-            ]
-        };
+        // Initialize the form if it hasn't been done yet
+        if (!form_initialized) initializeForm();
+
+        // Get currently selected source and extract its configuration (formData)
+        const selected_config = source_config[selected_source];
+        const selected_value = document.getElementById(selected_config.options_element).value;
+        const formData = findFormData(selected_config.source_form, selected_config.form_element, selected_value);
 
         // Populate the form according to main dropdown selection
-        available_configs[selectedSource].forEach(function(config) {
-            var configElement = document.getElementById(config.elementName);
-            configElement.innerHTML = '';
+        for (const [config, element] of Object.entries(query_map[selected_source].selectors)) {
+            // Skip the lcg_parent_field as it is already populated
+            if (config === lcg_parent_field || config == builder_parent_field) continue;
 
-            for( var i = 0 ; i < (formData[config.formKey] || []).length ; i++ ){
-                var formOption = formData[config.formKey][i];
+            const config_element = document.getElementById(element);
+            config_element.innerHTML = '';
 
+            for( var i = 0 ; i < (formData[config] || []).length ; i++ ){
                 const form_option = formData[config][i];
 
                 const select_option = document.createElement("option");
                 select_option.value = form_option.value;
                 select_option.text = form_option.text;
                 if (i === 0) {
-                    selectOption.selected = true;
+                    select_option.selected = true;
                 }
 
                 config_element.add(select_option);
             }
-        });
+        }
 
-        adjust_options();
+        // Disable some elements based on the selected checkboxes
+        if (selected_source === lcg_source) adjustOptions();
     }
 
     /**
