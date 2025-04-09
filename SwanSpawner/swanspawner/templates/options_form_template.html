@@ -106,7 +106,7 @@
      */
     function findFormData(form, form_element, value) {
         // Data is taken from form_config global variable
-        var form_options = form_config[form];
+        const form_options = form_config[form];
         for (key in form_options) {
             const form_data = form_options[key];
             if (form_data.type === "selection" && form_data[form_element].value === value) {
@@ -284,19 +284,19 @@
      * to use the JupyterLab interface depending on the chosen platform
      */
     function adjustOptions() {
-        var platform_options = document.getElementById('platformsOptions');
-        var clusters_options  = document.getElementById('clustersOptions');
-        var jupyter_lab_option = document.getElementById("use-jupyterlab");
-        var use_local_packages_option = document.getElementById('use-local-packages');
+        const platform_options = document.getElementById('platformsOptions');
+        const clusters_options  = document.getElementById('clustersOptions');
+        const jupyter_lab_option = document.getElementById("use-jupyterlab");
+        const use_local_packages_option = document.getElementById('use-local-packages');
 
         /**
          * Store the chosen platform in a hidden form field, as disabled fields
          * are not sent in the request
          */ 
-        var hidden_platform_options = document.getElementById('hiddenPlatformsOptions');
+        const hidden_platform_options = document.getElementById('hiddenPlatformsOptions');
 
-        var is_alma = (platform_options.selectedOptions[0] && platform_options.selectedOptions[0].text.startsWith('AlmaLinux 9'));
-        var is_nxcals = (clusters_options.selectedOptions[0] && clusters_options.selectedOptions[0].text.startsWith('BE NXCALS (NXCals)'));
+        const is_alma = (platform_options.selectedOptions[0] && platform_options.selectedOptions[0].text.startsWith('AlmaLinux 9'));
+        const is_nxcals = (clusters_options.selectedOptions[0] && clusters_options.selectedOptions[0].text.startsWith('BE NXCALS (NXCals)'));
 
         if (is_alma) {
             /* On Alma9, make sure cluster selection is enabled and that users can
