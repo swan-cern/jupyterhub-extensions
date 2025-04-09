@@ -147,6 +147,30 @@
     }
 
     /**
+     * Set the visibility of the element (or a list of elements) with the given id(s)
+     */
+    function setVisible(id, visible) {
+        const elem = document.getElementById(id);
+        elem.style.display = visible ? 'block' : 'none';
+    }
+    function setVisibleMany(ids, visible) {
+        ids.forEach((id) => setVisible(id, visible));
+    }
+    
+    /**
+     * Disable a given element (or a list of elements)
+     */
+    function setDisabled(element, disabled) {
+        if (disabled === true) 
+            element.setAttribute('disabled', '');
+        else 
+            element.removeAttribute('disabled');
+    }
+    function setDisabledMany(elements, disabled) {
+        elements.forEach((elem) => setDisabled(elem, disabled));
+    }
+
+    /**
      * Enable display of element if previously disabled, and disable if previously enabled
      */
     function toggleVisibility(id) {
@@ -311,33 +335,33 @@
         if (is_alma) {
             /* On Alma9, make sure cluster selection is enabled and that users can
             select the JupyterLab interface */
-            cluster_options.removeAttribute('disabled');
-            jupyter_lab_option.removeAttribute('disabled');
-            use_local_packages_option.removeAttribute('disabled');
+            setDisabledMany([cluster_options, jupyter_lab_option, use_local_packages_option], false);
         } else {
             if (!is_nxcals) {
-                cluster_options.setAttribute('disabled', '');
+                setDisabled(cluster_options, true);
                 cluster_options.selectedIndex = 0;
             }
 
-            jupyter_lab_option.setAttribute('disabled', '');
-            use_local_packages_option.setAttribute('disabled', '');
+            setDisabledMany([jupyter_lab_option, use_local_packages_option], true);
         }
 
         hidden_platform_options.value = platform_options.value;
     }
 
+    /**
+     * Disable the platform options if the user selects JupyterLab or local packages
+     * and show/hide the extra options section
+     */
     function adjustPlatforms() {
         const platform_options = document.getElementById('platformsOptions');
         const jupyter_lab_option = document.getElementById('use-jupyterlab');
         const use_local_packages_option = document.getElementById('use-local-packages');
 
-        if (jupyter_lab_option.checked || use_local_packages_option.checked) {
-            platform_options.setAttribute('disabled', '');
-        } else {
-            platform_options.removeAttribute('disabled');
-        }
-        document.getElementById('extra_options_config').style.display = jupyter_lab_option.checked ? 'block' : 'none';
+        // Disable the platform options if JupyterLab or local packages are selected
+        setDisabled(platform_options, jupyter_lab_option.checked || use_local_packages_option.checked);
+
+        // Hide the extra options section if JupyterLab is not selected
+        setVisible('extra_options_config', jupyter_lab_option.checked);
     }
 
     /**
