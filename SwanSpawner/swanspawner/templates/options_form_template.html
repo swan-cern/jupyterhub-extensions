@@ -85,23 +85,23 @@
     /**
      * Get Form data dictionary for given selectedValue.
      */
-    function findFormData(form, formElement, value) {
-        // Data is taken from formConfig global variable
-        var formOptions = formConfig[form];
-        for (key in formOptions) {
-            const formData = formOptions[key];
-            if (formData.type === "selection" && formData[formElement].value === value) {
-                return formData;
+    function findFormData(form, form_element, value) {
+        // Data is taken from form_config global variable
+        var form_options = form_config[form];
+        for (key in form_options) {
+            const form_data = form_options[key];
+            if (form_data.type === "selection" && form_data[form_element].value === value) {
+                return form_data;
             }
         }
 
-        throw `${formElement} Data not found`
+        throw `${form_element} Data not found`
     }
 
     /**
      * Set the given input with the specified value
      */
-    function set_input(id, value) {
+    function setInput(id, value) {
         document.getElementById(id).value = value;
     }
     /**
@@ -115,14 +115,14 @@
     /**
      * (Un)check the element with the given id
      */
-    function set_checkbox(id, checked) {
+    function setCheckbox(id, checked) {
         document.getElementById(id).checked = checked;
     }
 
     /**
      * Enable display of element if previously disabled, and disable if previously enabled
      */
-    function toggle_visibility(id) {
+    function toggleVisibility(id) {
         const elem = document.getElementById(id);
         elem.style.display = elem.style.display === 'none' ? 'block' : 'none';
     }
@@ -130,10 +130,10 @@
     /**
      * Rotate the triangle icon when the file options are toggled
      */
-    function toggle_extra_options(id) {
+    function toggleExtraOptions(id) {
         const triangle = document.getElementById(id);
         triangle.style.transform = triangle.style.transform === "rotate(90deg)" ? "rotate(0deg)" : "rotate(90deg)";
-        toggle_visibility('fileSection');
+        toggleVisibility('fileSection');
     }
 
     /**
@@ -141,11 +141,11 @@
      */
     function copyToClipboard() {
         const selected_source = document.querySelector('input[name="software_source"]:checked').value;
-        const generatedURL = new URL(`${window.location.href.split('?')[0]}`);
+        const generated_url = new URL(`${window.location.href.split('?')[0]}`);
         const params = new URLSearchParams();
         params.append('software_source', selected_source);
 
-        // Loop query_map, check if the element is filled and add it to the generatedURL
+        // Loop query_map, check if the element is filled and add it to the generated_url
         for (const [param, elem_id] of Object.entries(query_map.checkboxes)) {
             const elem = document.getElementById(elem_id);
             if (elem.getClientRects().length && elem.checked) {
@@ -159,10 +159,10 @@
                 params.append(param, elem.value);
             }
         }
-        generatedURL.search = params.toString();
+        generated_url.search = params.toString();
 
         const tooltip = document.querySelector('.tooltip');
-        navigator.clipboard.writeText(generatedURL).then(() => {
+        navigator.clipboard.writeText(generated_url).then(() => {
             tooltip.textContent = 'URL Copied!';
         }).catch(err => {
             console.error('Failed to copy URL: ', err);
@@ -178,7 +178,7 @@
     /**
      * Enable display of element if previously disabled, and disable if previously enabled
      */
-    function validate_repository_input(repoInput) {
+    function validateRepositoryInput(repoInput) {
         const repoPattern = /^https?:\/\/(?:github\.com|gitlab\.cern\.ch)\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)(\/|\.git)?$/.test(repoInput.value);
         if (repoInput.value && !repoPattern) {
             repoInput.style.backgroundColor = '#ffcccc';
@@ -284,38 +284,38 @@
      * Modifies the selection of Spark clusters and enables users to choose
      * to use the JupyterLab interface depending on the chosen platform
      */
-    function adjust_options() {
-        var platformOptions = document.getElementById('platformOptions');
-        var clusterOptions  = document.getElementById('clusterOptions');
-        var jupyterLabOption = document.getElementById("use-jupyterlab");
-        var useLocalPackagesOption = document.getElementById('use-local-packages');
+    function adjustOptions() {
+        var platform_options = document.getElementById('platformsOptions');
+        var clusters_options  = document.getElementById('clustersOptions');
+        var jupyter_lab_option = document.getElementById("use-jupyterlab");
+        var use_local_packages_option = document.getElementById('use-local-packages');
 
         /**
          * Store the chosen platform in a hidden form field, as disabled fields
          * are not sent in the request
          */ 
-        var hiddenPlatformOptions = document.getElementById('hiddenPlatformOptions');
+        var hidden_platform_options = document.getElementById('hiddenPlatformsOptions');
 
-        var isAlma = (platformOptions.selectedOptions[0] && platformOptions.selectedOptions[0].text.startsWith('AlmaLinux 9'));
-        var isNXCALS = (clusterOptions.selectedOptions[0] && clusterOptions.selectedOptions[0].text.startsWith('BE NXCALS (NXCals)'));
+        var is_alma = (platform_options.selectedOptions[0] && platform_options.selectedOptions[0].text.startsWith('AlmaLinux 9'));
+        var is_nxcals = (clusters_options.selectedOptions[0] && clusters_options.selectedOptions[0].text.startsWith('BE NXCALS (NXCals)'));
 
-        if (isAlma) {
+        if (is_alma) {
             /* On Alma9, make sure cluster selection is enabled and that users can
             select the JupyterLab interface */
-            clusterOptions.removeAttribute('disabled');
-            jupyterLabOption.removeAttribute('disabled');
-            useLocalPackagesOption.removeAttribute('disabled');
+            cluster_options.removeAttribute('disabled');
+            jupyter_lab_option.removeAttribute('disabled');
+            use_local_packages_option.removeAttribute('disabled');
         } else {
-            if (!isNXCALS) {
-                clusterOptions.setAttribute('disabled', '');
-                clusterOptions.selectedIndex = 0;
+            if (!is_nxcals) {
+                clusters_options.setAttribute('disabled', '');
+                clusters_options.selectedIndex = 0;
             }
 
             jupyterLabOption.setAttribute('disabled', '');
             useLocalPackagesOption.setAttribute('disabled', '');
         }
 
-        hiddenPlatformOptions.value = platformOptions.value;
+        hidden_platform_options.value = platform_options.value;
     }
 
     function adjust_platforms() {
@@ -428,7 +428,7 @@
         }
     }
 
-    window.onload = toggle_form;
+    window.onload = toggleForm;
 //-->
 </script>
 <div>
@@ -509,7 +509,7 @@
         <br>
 
         <div id="platformSection">
-            <label for="platformOptions">Platform <a href="#" onclick="toggle_visibility('platformDetails');"><span class='nbs'>more...</span></a>
+            <label for="platformsOptions">Platform <a href="#" onclick="toggleVisibility('platformDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="platformDetails">
                     <span class='nb'>The combination of compiler version and flags.</span>
                 </div>
@@ -520,7 +520,7 @@
         <br>
 
         <div id="scriptenvSection">
-            <label for="scriptenvOption">Environment script <a href="#" onclick="toggle_visibility('scriptenvDetails');"><span class='nbs'>more...</span></a>
+            <label for="scriptenvOption">Environment script <a href="#" onclick="toggleVisibility('scriptenvDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="scriptenvDetails">
                     <span class='nb'>User-provided bash script to define custom environment variables. The variable CERNBOX_HOME is resolved to the proper /eos/user/u/username directory.</span>
                 </div>
@@ -530,31 +530,24 @@
         <br>
     </div>
 
-    <!-- Custom environment configuration -->
+    <!-- Custom Environment configuration -->
     <div id="customenv_config" style="display: none;">
         <div id="repositorySection">
             <label for="repositoryOption">Repository 
-                <a href="#" onclick="toggle_visibility('repositoryDetails');"><span class='nbs'>more...</span></a>
+                <a href="#" onclick="toggleVisibility('repositoryDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="repositoryDetails">
                     <span class='nb'>URL of a public git repository containing a requirements.txt file.</span>
                 </div>
             </label>
             <br>
             <div style="display: flex;">
-                <input 
-                    type="text"
-                    id="repositoryOption"
-                    name="repository"
-                    style="flex-grow: 1; margin-left: 0; border: 1px solid #afafaf;"
-                    placeholder="e.g. https://gitlab.cern.ch/user/myrepo"
-                    oninput="validate_repository_input(this);"
-                />
+                <input type="text" id="repositoryOption" name="repository" placeholder="e.g. https://gitlab.cern.ch/user/myrepo" oninput="validateRepositoryInput(this);">
             </div>
         </div>
         <br>
 
         <div id="builderSection">
-            <label for="builderOptions">Builder <a href="#" onclick="toggle_visibility('builderDetails');"><span class='nbs'>more...</span></a>
+            <label for="builderOptions">Builder <a href="#" onclick="toggleVisibility('builderDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="builderDetails">
                     <span class='nb'>Program responsible for building the custom environment (generic or community-specific).</a></span>
                 </div>
@@ -569,7 +562,7 @@
         <h2>Session resources</h2>
 
         <div id="coresSection">
-            <label for="coresOptions">Number of cores <a href="#" onclick="toggle_visibility('coresDetails');"><span class='nbs'>more...</span></a>
+            <label for="coresOptions">Number of cores <a href="#" onclick="toggleVisibility('coresDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="coresDetails">
                     <span class='nb'>Amount of cores allocated to the container.</span>
                 </div>
@@ -579,7 +572,7 @@
         <br>
 
         <div id="memorySection">
-            <label for="memoryOptions">Memory <a href="#" onclick="toggle_visibility('memoryDetails');"><span class='nbs'>more...</span></a>
+            <label for="memoryOptions">Memory <a href="#" onclick="toggleVisibility('memoryDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="memoryDetails">
                     <span class='nb'>Amount of memory allocated to the container.</span>
                 </div>
@@ -592,9 +585,9 @@
     <!-- External computing resources -->
     <div id="external_res_config">
         <h2>External computing resources</h2>
-        
+
         <div id="clusterSection">
-            <label for="clusterOptions">Spark cluster <a href="#" onclick="toggle_visibility('clustersDetails');"><span class='nbs'>more...</span></a>
+            <label for="clustersOptions">Spark cluster <a href="#" onclick="toggleVisibility('clustersDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="clustersDetails">
                     <span class='nb'>Name of the Spark cluster to connect to from notebooks. See the <a target="_blank" href="https://hadoop-user-guide.web.cern.ch/">Hadoop User guide</a> and the <a target="_blank" href="https://sparktraining.web.cern.ch/">Spark training course</a></span>
                 </div>
@@ -604,7 +597,7 @@
         <br>
 
         <div id="condorSection">
-            <label for="condorOptions">HTCondor pool <a href="#" onclick="toggle_visibility('condorDetails');"><span class='nbs'>more...</span></a>
+            <label for="condorOptions">HTCondor pool <a href="#" onclick="toggleVisibility('condorDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="condorDetails">
                     <span class='nb'>Name of the HTCondor pool to use.</span>
                 </div>
@@ -617,11 +610,11 @@
     <!-- Extra Options -->
     <div id="extra_options_config">
         <!-- Toggle Extra Options Section -->
-        <h2 role="button" onclick="toggle_extra_options('extra_options');" style="display: flex; align-items: center; text-decoration: none;"><span id="extra_options">‣</span>Extra options</h2>
+        <h2 role="button" onclick="toggleExtraOptions('extra_options');" style="display: flex; align-items: center; text-decoration: none;"><span id="extra_options">‣</span>Extra options</h2>
 
         <!-- File path information text -->
         <div id="fileSection" style="display: none;">
-            <label for="fileOption">File path <a href="#" onclick="toggle_visibility('fileDetails');"><span class='nbs'>more...</span></a>
+            <label for="fileOption">File path <a href="#" onclick="toggleVisibility('fileDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="fileDetails">
                     <span id="lcg-details" class='nb'>Path of the file to be opened after the session is launched, relative to CERNBOX_HOME.</span>
                     <span id="customenv-details" class='nb'>Path of the file to be opened after the session is launched, relative to the root of the git repository.</span>
