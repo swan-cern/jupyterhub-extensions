@@ -285,6 +285,8 @@
 
         // Hide the extra options section if JupyterLab is not selected
         setVisible('extra_options_config', jupyter_lab_option.checked);
+        // Remember last value of jupyterlab checkbox option each time it gets changed
+        previous_jupyterlab = jupyter_lab_option.checked;
     }
 
     /**
