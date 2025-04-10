@@ -237,6 +237,57 @@
     }
 
     /**
+     * Modifies the selection of Spark clusters and enables users to choose
+     * to use the JupyterLab interface depending on the chosen platform
+     */
+    function adjustOptions() {
+        const platform_options = document.getElementById('platformsOptions');
+        const cluster_options  = document.getElementById('clustersOptions');
+        const jupyter_lab_option = document.getElementById('use-jupyterlab');
+        const use_local_packages_option = document.getElementById('use-local-packages');
+
+        /**
+         * Store the chosen platform in a hidden form field, as disabled fields
+         * are not sent in the request
+         */ 
+        const hidden_platform_options = document.getElementById('hiddenPlatformsOptions');
+
+        const is_alma = (platform_options.selectedOptions[0] && platform_options.selectedOptions[0].text.startsWith('AlmaLinux 9'));
+        const is_nxcals = (cluster_options.selectedOptions[0] && cluster_options.selectedOptions[0].text.startsWith('BE NXCALS (NXCals)'));
+
+        if (is_alma) {
+            /* On Alma9, make sure cluster selection is enabled and that users can
+            select the JupyterLab interface */
+            setDisabledMany([cluster_options, jupyter_lab_option, use_local_packages_option], false);
+        } else {
+            if (!is_nxcals) {
+                setDisabled(cluster_options, true);
+                cluster_options.selectedIndex = 0;
+            }
+
+            setDisabledMany([jupyter_lab_option, use_local_packages_option], true);
+        }
+
+        hidden_platform_options.value = platform_options.value;
+    }
+
+    /**
+     * Disable the platform options if the user selects JupyterLab or local packages
+     * and show/hide the extra options section
+     */
+    function adjustPlatforms() {
+        const platform_options = document.getElementById('platformsOptions');
+        const jupyter_lab_option = document.getElementById('use-jupyterlab');
+        const use_local_packages_option = document.getElementById('use-local-packages');
+
+        // Disable the platform options if JupyterLab or local packages are selected
+        setDisabled(platform_options, jupyter_lab_option.checked || use_local_packages_option.checked);
+
+        // Hide the extra options section if JupyterLab is not selected
+        setVisible('extra_options_config', jupyter_lab_option.checked);
+    }
+
+    /**
      * Initialize the form populating the main dropdown (lcg stack/builder) and loading its options
      */
     function initializeForm() {
@@ -311,57 +362,6 @@
                 config_element.add(select_option);
             }
         }
-    }
-
-    /**
-     * Modifies the selection of Spark clusters and enables users to choose
-     * to use the JupyterLab interface depending on the chosen platform
-     */
-    function adjustOptions() {
-        const platform_options = document.getElementById('platformsOptions');
-        const cluster_options  = document.getElementById('clustersOptions');
-        const jupyter_lab_option = document.getElementById("use-jupyterlab");
-        const use_local_packages_option = document.getElementById('use-local-packages');
-
-        /**
-         * Store the chosen platform in a hidden form field, as disabled fields
-         * are not sent in the request
-         */ 
-        const hidden_platform_options = document.getElementById('hiddenPlatformsOptions');
-
-        const is_alma = (platform_options.selectedOptions[0] && platform_options.selectedOptions[0].text.startsWith('AlmaLinux 9'));
-        const is_nxcals = (cluster_options.selectedOptions[0] && cluster_options.selectedOptions[0].text.startsWith('BE NXCALS (NXCals)'));
-
-        if (is_alma) {
-            /* On Alma9, make sure cluster selection is enabled and that users can
-            select the JupyterLab interface */
-            setDisabledMany([cluster_options, jupyter_lab_option, use_local_packages_option], false);
-        } else {
-            if (!is_nxcals) {
-                setDisabled(cluster_options, true);
-                cluster_options.selectedIndex = 0;
-            }
-
-            setDisabledMany([jupyter_lab_option, use_local_packages_option], true);
-        }
-
-        hidden_platform_options.value = platform_options.value;
-    }
-
-    /**
-     * Disable the platform options if the user selects JupyterLab or local packages
-     * and show/hide the extra options section
-     */
-    function adjustPlatforms() {
-        const platform_options = document.getElementById('platformsOptions');
-        const jupyter_lab_option = document.getElementById('use-jupyterlab');
-        const use_local_packages_option = document.getElementById('use-local-packages');
-
-        // Disable the platform options if JupyterLab or local packages are selected
-        setDisabled(platform_options, jupyter_lab_option.checked || use_local_packages_option.checked);
-
-        // Hide the extra options section if JupyterLab is not selected
-        setVisible('extra_options_config', jupyter_lab_option.checked);
     }
 
     /**
