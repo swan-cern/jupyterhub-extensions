@@ -585,7 +585,7 @@
     </div>
 
     <!-- Custom environment configuration -->
-    <div id="customenv_config" style="display: none;">
+    <div id="customenv_config">
         <div id="repositorySection">
             <label for="repositoryOption">Repository 
                 <a href="#" onclick="toggleVisibility('repositoryDetails');"><span class='nbs'>more...</span></a>
@@ -599,7 +599,6 @@
                     type="text"
                     id="repositoryOption"
                     name="repository"
-                    style="flex-grow: 1; margin-left: 0; border: 1px solid #afafaf;"
                     placeholder="e.g. https://gitlab.cern.ch/user/myrepo"
                     oninput="validateRepositoryInput(this);"
                 />
