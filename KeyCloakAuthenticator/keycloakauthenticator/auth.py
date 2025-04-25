@@ -354,6 +354,24 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 if diff_refresh < 0:
                     # Refresh token not valid, need to re-authenticate again
                     self.log.info('Failed to refresh token as refresh token expired, took {}'.format(time.time() - start))
+
+                    body = parse.urlencode({
+                        'client_id': self.client_id,
+                        'client_secret': self.client_secret,
+                        'refresh_token': auth_state['refresh_token'],
+                    }).encode()
+
+                    try:
+                        await self.httpfetch(
+                            f"{self.oidc_issuer}/protocol/openid-connect/logout",
+                            method='POST',
+                            headers={'Content-Type': 'application/x-www-form-urlencoded'},
+                            body=body,
+                            label='keycloak hub logout'
+                        )
+                    except Exception as e:
+                        self.log.error(f'Logout request failed: {e}')
+
                     return False
 
                 else:
