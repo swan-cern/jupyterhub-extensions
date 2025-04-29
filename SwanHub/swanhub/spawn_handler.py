@@ -201,7 +201,7 @@ class SpawnHandler(JHSpawnHandler):
 
 
         if options.get(configs.software_source) == configs.customenv_special_type:
-            # Add the query parameters to the URL
+            # Add the query arguments to the URL
             query_params = {
                 "repo": options.get(configs.repository),
                 configs.builder: options.get(configs.builder),
