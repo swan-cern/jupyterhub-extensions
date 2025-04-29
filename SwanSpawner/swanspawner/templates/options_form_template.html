@@ -234,7 +234,6 @@
      */
     function accessTN(checked) {
         const url_params = (new URLSearchParams(window.location.search)).toString();
-        console.log(url_params);
         const next_url = checked ? '{{ ats_domain_name }}' : '{{ general_domain_name }}';
         window.location.host = `${next_url}/hub/spawn${url_params ? `?${url_params}` : ''}`;
     }
