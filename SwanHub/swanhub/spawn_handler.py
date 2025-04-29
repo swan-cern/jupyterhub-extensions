@@ -86,17 +86,15 @@ class SpawnHandler(JHSpawnHandler):
             self.finish(form)
             return
 
-        # By default, the super().get() starts spawning the session if any
-        # query arguments are specified. So, we need to explicitly check for
-        # the software_source query argument to re-render the form and fill
-        # it with the remaining query arguments.
-        if configs.software_source in self.request.query_arguments:
-            error_message = None
-            selected_software_source = self.request.query_arguments[configs.software_source][0].decode('utf8')
-            # Check if the selected software source is valid
-            if selected_software_source not in (configs.lcg_rel_field, configs.customenv_special_type):
-                error_message = f"Invalid software source: {selected_software_source}"
-            form = await self._render_form_wrapper(user, message=error_message)
+        # If the request contains query arguments provided via URL,
+        # parse and validate them. If successful, render the form
+        # with those arguments.
+        if self.request.query_arguments:
+            error_message, _ = self._validate_mandatory_options(configs, self.request.query_arguments)
+            if error_message is not None:
+                raise web.HTTPError(400, error_message)
+
+            form = await self._render_form_wrapper(user)
             self.finish(form)
             return
 
@@ -145,11 +143,10 @@ class SpawnHandler(JHSpawnHandler):
                 400, f"{spawner._log_name} is pending {spawner.pending}"
             )
 
-        form_options = {}
-        for key, byte_list in self.request.body_arguments.items():
-            form_options[key] = [bs.decode('utf8') for bs in byte_list]
-        for key, byte_list in self.request.files.items():
-            form_options["%s_file" % key] = byte_list
+        # Parse and validate options provided by user
+        error_message, form_options = self._validate_mandatory_options(configs, self.request.body_arguments)
+        if error_message is not None:
+            raise web.HTTPError(400, error_message)
 
         start_time_spawn = time.time()
 
@@ -249,6 +246,33 @@ class SpawnHandler(JHSpawnHandler):
                                     save_config=save_config
                                     )
 
+
+    def _validate_mandatory_options(self, configs: SpawnHandlersConfigs, raw_options: dict):
+        """
+        Some options are mandatory and need to be checked before rendering the form or spawning the session.
+        This function checks the mandatory options and returns an error message if any of them are invalid, along with
+        the decoded options.
+        """
+        decoded_options = {}
+        for key, byte_list in raw_options.items():
+            decoded_options[key] = [bs.decode('utf8') for bs in byte_list]
+        for key, byte_list in self.request.files.items():
+            decoded_options['%s_file' % key] = byte_list
+
+        # Check if the software source is either an LCG release or a custom environment
+        if configs.software_source in decoded_options:
+            selected_software_source = decoded_options[configs.software_source][0]
+            if selected_software_source not in (configs.lcg_rel_field, configs.customenv_special_type):
+                return f'Invalid software source: {selected_software_source}', decoded_options
+
+        # Check: TN access can only be requested for TN-enabled deployments
+        if configs.use_tn in decoded_options:
+            selected_use_tn = decoded_options[configs.use_tn][0].lower() == 'true'
+            if configs.tn_enabled != selected_use_tn:
+                return f'Invalid selection for TN access: {selected_use_tn}', decoded_options
+
+        # All good
+        return None, decoded_options
 
     def _log_spawn_metrics(self, user, options, spawn_duration_sec, spawn_exception=None):
         """
