@@ -73,6 +73,9 @@
       keyboard: false
     });
 
+    // Fill the checkbox if this is a cluster exposed to the TN
+    $('#use-tn').prop('checked', '{{ tn_enabled }}' === 'True');
+
     $('#spawn').on('click', function (e) {
       const form = document.getElementById('spawn_form');
 

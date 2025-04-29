@@ -245,6 +245,7 @@ class SpawnHandler(JHSpawnHandler):
                                         self.request.uri, {"_xsrf": self.xsrf_token.decode('ascii')}
                                     ),
                                     spawner=for_user.spawner,
+                                    tn_enabled=configs.tn_enabled,
                                     save_config=save_config
                                     )
 
