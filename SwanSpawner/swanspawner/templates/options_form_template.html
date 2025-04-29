@@ -233,14 +233,14 @@
      * Redirect to the TN access page, preserving all URL parameters
      */
     function accessTN(checked) {
-        let url_params = new URLSearchParams(window.location.search);
+        let url_args = new URLSearchParams(window.location.search);
         // URL arguments might be present or not. If they are, make sure use-tn reflects the
         // most recent selection of the user.
-        if (url_params.has('use-tn')) url_params.set('use-tn', checked);
-        url_params = url_params.toString();
+        if (url_args.has('use-tn')) url_args.set('use-tn', checked);
+        url_args = url_args.toString();
 
         const next_url = 'https://' + (checked ? '{{ ats_domain_name }}' : '{{ general_domain_name }}');
-        window.location.href = `${next_url}/hub/spawn${url_params ? `?${url_params}` : ''}`;
+        window.location.href = `${next_url}/hub/spawn${url_args ? `?${url_args}` : ''}`;
     }
 
     /**
@@ -384,11 +384,11 @@
     /**
      * Autofill the form according to the specified URL parameters
      */
-    function autofillURLParams(url_params, selected_source) {
+    function autofillURLParams(url_args, selected_source) {
         // Fill all checkboxes first (including the software source)
         for (const [argument, element] of Object.entries(query_map[selected_source].checkboxes)) {
             const previous_value = `${document.getElementById(element).checked}`;
-            let checked = (url_params.get(argument) || previous_value).toLowerCase() === 'true';
+            let checked = (url_args.get(argument) || previous_value).toLowerCase() === 'true';
             // Force the selection of the correct software source
             if (argument === 'use-'+selected_source) checked = true;
             if (argument === 'use-jupyterlab' && selected_source === lcg_source) previous_jupyterlab = checked;
@@ -397,7 +397,7 @@
 
         // Fill all selectors (lcg and builder are specially important cause they are used to populate the rest of the form)
         for (const [argument, element] of Object.entries(query_map[selected_source].selectors)) {
-            const selected = url_params.get(argument);
+            const selected = url_args.get(argument);
             if (selected) {
                 setInput(element, selected);
                 
@@ -414,7 +414,7 @@
 
         // Fill all inputs (scriptenv, repository and file)
         for (const [param, elem] of Object.entries(query_map[selected_source].inputs)) {
-            const selected = url_params.get(param) || "";
+            const selected = url_args.get(param) || "";
             setInput(elem, selected);
 
             // Validate the repository value coming from the URL (and color it red if invalid)
@@ -472,8 +472,8 @@
             document.getElementById('software_source_selection').style.display = 'none';
         }
 
-        const url_params = new URLSearchParams(window.location.search);
-        let selected_source = url_params.get('software_source');
+        const url_args = new URLSearchParams(window.location.search);
+        let selected_source = url_args.get('software_source');
         // If there are URL parameters and the form is being initialized for the first time, autofill the form, according to the selected source
         if (selected_source && !form_initialized) {
             // If only the customenv form is filled and lcg is left blank, fields like platforms and condor will stay untouched. As they are required components
@@ -487,7 +487,7 @@
             else if (selected_source === customenv_source) showCustomEnvForm();
             else throw new Error(`Unknown software source: ${selected_source}`);
 
-            autofillURLParams(url_params, selected_source);
+            autofillURLParams(url_args, selected_source);
         } else {
             selected_source = document.querySelector('input[name="software_source"]:checked').value;
             // Do the initial fillment of the form in order to get all the available software stacks (or builders)
