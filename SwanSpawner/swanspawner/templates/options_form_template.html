@@ -233,9 +233,14 @@
      * Redirect to the TN access page, preserving all URL parameters
      */
     function accessTN(checked) {
-        const url_params = (new URLSearchParams(window.location.search)).toString();
-        const next_url = checked ? '{{ ats_domain_name }}' : '{{ general_domain_name }}';
-        window.location.host = `${next_url}/hub/spawn${url_params ? `?${url_params}` : ''}`;
+        let url_params = new URLSearchParams(window.location.search);
+        // URL arguments might be present or not. If they are, make sure use-tn reflects the
+        // most recent selection of the user.
+        if (url_params.has('use-tn')) url_params.set('use-tn', checked);
+        url_params = url_params.toString();
+
+        const next_url = 'https://' + (checked ? '{{ ats_domain_name }}' : '{{ general_domain_name }}');
+        window.location.href = `${next_url}/hub/spawn${url_params ? `?${url_params}` : ''}`;
     }
 
     /**
