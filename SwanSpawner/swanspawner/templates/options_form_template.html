@@ -230,7 +230,7 @@
     }
 
     /**
-     * Redirect to the TN access page, preserving all URL parameters
+     * Redirect to the TN access page, preserving all URL arguments
      */
     function accessTN(checked) {
         let url_args = new URLSearchParams(window.location.search);
@@ -382,7 +382,7 @@
     }
 
     /**
-     * Autofill the form according to the specified URL parameters
+     * Autofill the form according to the specified URL arguments
      */
     function autofillURLParams(url_args, selected_source) {
         // Fill all checkboxes first (including the software source)
@@ -474,7 +474,7 @@
 
         const url_args = new URLSearchParams(window.location.search);
         let selected_source = url_args.get('software_source');
-        // If there are URL parameters and the form is being initialized for the first time, autofill the form, according to the selected source
+        // If there are URL arguments and the form is being initialized for the first time, autofill the form, according to the selected source
         if (selected_source && !form_initialized) {
             // If only the customenv form is filled and lcg is left blank, fields like platforms and condor will stay untouched. As they are required components
             // the form won't get submitted, so they need to be filled with the default values
