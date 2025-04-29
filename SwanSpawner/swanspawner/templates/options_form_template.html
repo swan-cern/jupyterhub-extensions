@@ -383,7 +383,8 @@
     function autofillURLParams(url_params, selected_source) {
         // Fill all checkboxes first (including the software source)
         for (const [argument, element] of Object.entries(query_map[selected_source].checkboxes)) {
-            let checked = (url_params.get(argument) || "").toLowerCase() === 'true';
+            const previous_value = `${document.getElementById(element).checked}`;
+            let checked = (url_params.get(argument) || previous_value).toLowerCase() === 'true';
             // Force the selection of the correct software source
             if (argument === 'use-'+selected_source) checked = true;
             if (argument === 'use-jupyterlab' && selected_source === lcg_source) previous_jupyterlab = checked;
