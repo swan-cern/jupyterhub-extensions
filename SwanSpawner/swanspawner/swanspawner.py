@@ -65,6 +65,18 @@ def define_SwanSpawner_from(base_class):
             help='Path to configuration file for options_form rendering.'
         )
 
+        general_domain_name = Unicode(
+            default_value='swan.cern.ch',
+            config=True,
+            help='Domain name of the general SwanHub instance.'
+        )
+
+        ats_domain_name = Unicode(
+            default_value='ats.swan.cern.ch',
+            config=True,
+            help='Domain name of the ATS SwanHub instance.'
+        )
+
         lcg_view_path = Unicode(
             default_value='/cvmfs/sft.cern.ch/lcg/views',
             config=True,
@@ -314,7 +326,7 @@ def define_SwanSpawner_from(base_class):
                 with open(self.options_form_config) as yaml_file:
                     options_form_config = yaml.safe_load(yaml_file)
 
-                return template.render(options_form_config=options_form_config)
+                return template.render(options_form_config=options_form_config, general_domain_name=self.general_domain_name, ats_domain_name=self.ats_domain_name)
             except Exception as ex:
                 self.log.error("Could not initialize form: %s", ex, exc_info=True)
                 raise RuntimeError(

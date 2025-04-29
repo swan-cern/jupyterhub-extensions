@@ -60,6 +60,7 @@
         "use-jupyterlab": [lcg_source, customenv_source],
         [`use-${lcg_source}`]: [lcg_source, customenv_source],
         [`use-${customenv_source}`]:[lcg_source, customenv_source],
+        "use-tn": [lcg_source, customenv_source],
     };
     const selectors = {
         [lcg_parent_field]: [lcg_source],
@@ -226,6 +227,16 @@
                 tooltip.style.backgroundColor = '#333';
             }, 3000);
         });
+    }
+
+    /**
+     * Redirect to the TN access page, preserving all URL parameters
+     */
+    function accessTN(checked) {
+        const url_params = (new URLSearchParams(window.location.search)).toString();
+        console.log(url_params);
+        const next_url = checked ? '{{ ats_domain_name }}' : '{{ general_domain_name }}';
+        window.location.host = `${next_url}/hub/spawn${url_params ? `?${url_params}` : ''}`;
     }
 
     /**
@@ -617,6 +628,19 @@
             <select id="builderOptions" name="builder" onchange="adjustForm(customenv_source);" required></select>
         </div>
         <br>
+    </div>
+
+    <div id="network_config" style="margin-bottom: 30px;">
+        <h2>Network</h2>
+
+        <div id="tnSection">
+            <input type="checkbox" id="use-tn" name="use-tn" onchange="accessTN(this.checked);" style="width: auto; height: auto; display: inline-block;">
+            <label style="width: auto; height: auto; display: inline-block;" for="use-tn">TN Access</label>
+            <a href="#" onclick="toggleVisibility('use-tnDetails');"><span class='nbs'>more...</span></a>
+            <div style="display:none;" id="use-tnDetails">
+                <span class='nb'>Request a user session that is exposed to the CERN Technical Network.</span>
+            </div>
+        </div>
     </div>
 
     <!-- Resources configuration -->
