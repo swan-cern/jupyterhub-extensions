@@ -1,230 +1,506 @@
 <style> .nb{ font-weight:normal } </style>
 <style> .nbs{ font-weight:normal; font-size:small } </style>
 <style> .news{ font-weight:normal; background-color:yellow } </style>
+<style>
+.clipboard-button {
+    float: right;
+    position: relative;
+    cursor: pointer;
+    width: fit-content;
+    border: 1px solid #0053A1;
+    border-radius: 8px;
+    padding: 5px;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+.clipboard-button:hover {
+    transform: scale(1.05);
+}
+.tooltip {
+    position: absolute;
+    right: 110%; top: 50%;
+    transform: translateY(-50%);
+    background-color: #333;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    white-space: nowrap;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.clipboard-button:hover .tooltip {
+    display: block;
+    opacity: 1;
+}
+#extra_options {
+    transition: transform 0.2s ease;
+    margin-right: 5px;
+}
+</style>
 <script type="text/javascript">
 <!--
 
-    var lcgFormConfig = {{ options_form_config }};
+    const form_config = {{ options_form_config }};
+    const enable_customenv_form = form_config['enable_customenv_form'];
 
-    var formInitialized = false;
+    let form_initialized = false, previous_jupyterlab = undefined;
+
+    const lcg_source = 'lcg', customenv_source = 'customenv';
+    const lcg_parent_field = 'lcg', builder_parent_field = 'builder';
+
+    // Define all the elements to their corresponding type
+    // Naming rules:
+    // checkboxes: use-<element>
+    // selectors: <element>Options
+    // inputs: <element>Option
+    // The elements are defined in the options_form_config yaml file
+    const checkboxes = {
+        "use-local-packages": [lcg_source],
+        "use-jupyterlab": [lcg_source, customenv_source],
+        [`use-${lcg_source}`]: [lcg_source, customenv_source],
+        [`use-${customenv_source}`]:[lcg_source, customenv_source],
+        "use-tn": [lcg_source, customenv_source],
+    };
+    const selectors = {
+        [lcg_parent_field]: [lcg_source],
+        [builder_parent_field]: [customenv_source],
+        "cores": [lcg_source, customenv_source],
+        "memory": [lcg_source, customenv_source],
+        "platforms": [lcg_source],
+        "clusters": [lcg_source, customenv_source],
+        "condor": [lcg_source],
+    };
+    const inputs = {
+        "scriptenv": [lcg_source],
+        "file": [lcg_source, customenv_source],
+        "repository": [customenv_source],
+    };
+
+    // build object with key: keyOptions pairs
+    const buildQueryPair = (element_type_dict, software_source) => {
+        const query_pair = {};
+        for (const [key, software_sources_list] of Object.entries(element_type_dict)) {
+            if (element_type_dict === checkboxes && software_sources_list.includes(software_source))
+                query_pair[key] = key;
+            else if (element_type_dict === selectors && software_sources_list.includes(software_source))
+                query_pair[key] = `${key}Options`;
+            else if (element_type_dict === inputs && software_sources_list.includes(software_source))
+                query_pair[key] = `${key}Option`;
+        }
+        return query_pair;
+    };
+
+    // Map all the elements to the configuration they are applied to
+    const query_map = {
+        lcg: {
+            checkboxes: buildQueryPair(checkboxes, lcg_source),
+            selectors: buildQueryPair(selectors, lcg_source),
+            inputs: buildQueryPair(inputs, lcg_source),
+        },
+        customenv: {
+            checkboxes: buildQueryPair(checkboxes, customenv_source),
+            selectors: buildQueryPair(selectors, customenv_source),
+            inputs: buildQueryPair(inputs, customenv_source),
+        }
+    };
+
+    const source_config = {
+        lcg: {
+            options_element: query_map[lcg_source].selectors[lcg_parent_field],
+            source_form: lcg_source + '_options',
+            form_element: lcg_parent_field,
+        },
+        customenv: {
+            options_element: query_map[customenv_source].selectors[builder_parent_field],
+            source_form: customenv_source + '_options',
+            form_element: builder_parent_field,
+        }
+    };
 
     /**
-     * Get LCG data dictionary for given lcgValue.
+     * Get Form data dictionary for given selected_value.
      */
-    function findLcgData(lcgValue) {
-        var lcgData;
-
-        // Data is taken from from lcgFormConfig global variable
-        var lcgFormOptions = lcgFormConfig['options'];
-        for (key in lcgFormOptions) {
-            lcgData = lcgFormOptions[key];
-            if (lcgData.type === "selection" && lcgData.lcg.value === lcgValue) {
-                return lcgData;
+    function findFormData(form, form_element, value) {
+        // Data is taken from form_config global variable
+        const form_options = form_config[form];
+        for (key in form_options) {
+            const form_data = form_options[key];
+            if (form_data.type === "selection" && form_data[form_element].value === value) {
+                return form_data;
             }
         }
 
-        throw "LCG Data not found"
+        throw `${form_element} Data not found`
+    }
+
+    /**
+     * Set the given input with the specified value
+     */
+    function setInput(id, value) {
+        document.getElementById(id).value = value;
+    }
+    /**
+     * (Un)check the element with the given id
+     */
+    function setCheckbox(id, checked) {
+        document.getElementById(id).checked = checked;
+    }
+
+    /**
+     * Set the visibility of the element (or a list of elements) with the given id(s)
+     */
+    function setVisible(id, visible) {
+        const elem = document.getElementById(id);
+        elem.style.display = visible ? 'block' : 'none';
+    }
+    function setVisibleMany(ids, visible) {
+        ids.forEach((id) => setVisible(id, visible));
+    }
+    
+    /**
+     * Disable a given element (or a list of elements)
+     */
+    function setDisabled(element, disabled) {
+        if (disabled === true) 
+            element.setAttribute('disabled', '');
+        else 
+            element.removeAttribute('disabled');
+    }
+    function setDisabledMany(elements, disabled) {
+        elements.forEach((elem) => setDisabled(elem, disabled));
     }
 
     /**
      * Enable display of element if previously disabled, and disable if previously enabled
      */
-    function toggle_visibility(id) {
-        var e = document.getElementById(id);
-        if(e.style.display == 'block')
-            e.style.display = 'none';
-        else
-            e.style.display = 'block';
+    function toggleVisibility(id) {
+        const elem = document.getElementById(id);
+        elem.style.display = elem.style.display === 'none' ? 'block' : 'none';
     }
 
     /**
-     * Renders a form based on config file
+     * Rotate the triangle icon when the file options are toggled
      */
-    function adjust_form() {
-        var selectLCG = document.getElementById('lcgReleaseOptions');
+    function toggleExtraOptions(id) {
+        const triangle = document.getElementById(id);
+        triangle.style.transform = triangle.style.transform === "rotate(90deg)" ? "rotate(0deg)" : "rotate(90deg)";
+        toggleVisibility('fileSection');
+    }
 
-        // if form has not been yet initialized, initialize
-        if (!formInitialized) {
-            formInitialized = true;
+    /**
+     * Copy the current form configuration to the clipboard
+     */
+    function copyToClipboard() {
+        const selected_source = document.querySelector('input[name="software_source"]:checked').value;
+        const generated_url = new URL(`${window.location.href.split('?')[0]}`);
+        const params = new URLSearchParams();
+        params.append('software_source', selected_source);
 
-            // set proper header for the whole form based on config
-            var optionsHeader = document.getElementById('optionsHeader');
-            var header = lcgFormConfig['header'];
-            if (header) {
-                optionsHeader.innerHTML = header;
-            }
-
-            // set LCG option in the rendered form - first LCG is default
-            var lcgFormOptions = lcgFormConfig['options'];
-            selectLCG.innerHTML = '';
-            var firstLCGSelected = false;
-            for( var i = 0 ; i < lcgFormOptions.length ; i++ ){
-                var lcgFormEntry = lcgFormOptions[i];
-
-                var selectLCGOption = document.createElement("option");
-                if (lcgFormEntry.type === "label") {
-                    selectLCGOption.disabled="disabled";
-                    selectLCGOption.style="border-bottom:1px solid rgba(153,153,153,.3); margin:-10px 0 4px 0";
-                    selectLCGOption.value=lcgFormEntry.label.value;
-                    selectLCGOption.text=lcgFormEntry.label.text;
-                } else {
-                    if (!firstLCGSelected) {
-                        firstLCGSelected = true;
-                        selectLCGOption.selected = true;
-                    }
-                    selectLCGOption.value=lcgFormEntry.lcg.value;
-                    selectLCGOption.text=lcgFormEntry.lcg.text;
-                }
-
-                selectLCG.add(selectLCGOption);
+        // Loop query_map, check if the element is filled and add it to the generated_url
+        for (const [param, elem_id] of Object.entries(query_map[selected_source].checkboxes)) {
+            const elem = document.getElementById(elem_id);
+            // Check if the element is present in the page and checked (exclude the software source selection)
+            if (elem.getClientRects().length && elem.checked && param !== 'use-'+lcg_source && param !== 'use-'+customenv_source) {
+                params.append(param, 'true');
             }
         }
-
-        // get currently selected LCG and extract that lcg configuration (lcgData)
-        var lcgValue = selectLCG.value;
-        var lcgData = findLcgData(lcgValue);
-
-        // adjust platforms option for lcg
-        var selectPlatform = document.getElementById('platformOptions');
-        selectPlatform.innerHTML = '';
-
-        for( var i = 0 ; i < lcgData.platforms.length ; i++ ){
-            var lcgPlatform = lcgData.platforms[i];
-
-            var selectPlatformOption = document.createElement("option");
-            selectPlatformOption.value = lcgPlatform.value;
-            selectPlatformOption.text = lcgPlatform.text;
-            if (i === 0) {
-                selectPlatformOption.selected = true;
+        // Do the same for selectors and inputs, simultaneously
+        for (const [param, elem_id] of Object.entries(query_map[selected_source].selectors).concat(Object.entries(query_map[selected_source].inputs))) {
+            const elem = document.getElementById(elem_id);
+            // Check if the element is present in the page and has a value
+            if (elem.getClientRects().length && elem.value && elem.value != 'none') {
+                params.append(param, elem.value);
             }
-
-            selectPlatform.add(selectPlatformOption);
         }
+        generated_url.search = params.toString();
 
-        // adjust cores option for lcg
-        var selectCores = document.getElementById('coresOptions');
-        selectCores.innerHTML = '';
+        const tooltip = document.querySelector('.tooltip');
+        navigator.clipboard.writeText(generated_url).then(() => {
+            tooltip.textContent = 'URL Copied!';
+        }).catch(err => {
+            console.error('Failed to copy URL: ', err);
+            tooltip.textContent = 'Failed to copy URL, try again!';
+        }).finally(() => {
+            setTimeout(() => {
+                tooltip.textContent = 'Generate URL';
+                tooltip.style.backgroundColor = '#333';
+            }, 3000);
+        });
+    }
 
-        for( var i = 0 ; i < lcgData.cores.length ; i++ ){
-            var lcgCores = lcgData.cores[i];
+    /**
+     * Redirect to the TN access page, preserving all URL arguments
+     */
+    function accessTN(checked) {
+        let url_args = new URLSearchParams(window.location.search);
+        // URL arguments might be present or not. If they are, make sure use-tn reflects the
+        // most recent selection of the user.
+        if (url_args.has('use-tn')) url_args.set('use-tn', checked);
+        url_args = url_args.toString();
 
-            var selectCoresOption = document.createElement("option");
-            selectCoresOption.value = lcgCores.value;
-            selectCoresOption.text = lcgCores.text;
-            if (i === 0) {
-                selectCoresOption.selected = true;
-            }
+        const next_url = 'https://' + (checked ? '{{ ats_domain_name }}' : '{{ general_domain_name }}');
+        window.location.href = `${next_url}/hub/spawn${url_args ? `?${url_args}` : ''}`;
+    }
 
-            selectCores.add(selectCoresOption);
-        }
-
-        // adjust memory option for lcg
-        var selectMemory = document.getElementById('memoryOptions');
-        selectMemory.innerHTML = '';
-
-        for( var i = 0 ; i < lcgData.memory.length ; i++ ){
-            var lcgMemory = lcgData.memory[i];
-
-            var selectMemoryOption = document.createElement("option");
-            selectMemoryOption.value = lcgMemory.value;
-            selectMemoryOption.text = lcgMemory.text;
-            if (i === 0) {
-                selectMemoryOption.selected = true;
-            }
-
-            selectMemory.add(selectMemoryOption);
-        }
-
-        // adjust clusters option for lcg
-        var selectCluster = document.getElementById('clusterOptions');
-        selectCluster.innerHTML = '';
-        // Make sure Spark cluster options are enabled on LCG release change
-        selectCluster.removeAttribute('disabled');
-
-        for( var i = 0 ; i < lcgData.clusters.length ; i++ ){
-            var lcgCluster = lcgData.clusters[i];
-
-            var selectClusterOption = document.createElement("option");
-            selectClusterOption.value = lcgCluster.value;
-            selectClusterOption.text = lcgCluster.text;
-            if (i === 0) {
-                selectClusterOption.selected = true;
-            }
-
-            selectCluster.add(selectClusterOption);
-        }
-
-        // adjust condor option for lcg
-        var selectCondor = document.getElementById('condorOptions');
-        selectCondor.innerHTML = '';
-
-        for( var i = 0 ; i < lcgData.condor.length ; i++ ){
-            var lcgCondor = lcgData.condor[i];
-
-            var selectCondorOption = document.createElement("option");
-            selectCondorOption.value = lcgCondor.value;
-            selectCondorOption.text = lcgCondor.text;
-            if (i === 0) {
-                selectCondorOption.selected = true;
-            }
-
-            selectCondor.add(selectCondorOption);
-        }
-
-        adjust_options();
+    /**
+     * Change field background color according to the validation result of repository value
+     */
+    function validateRepositoryInput(repo_input) {
+        const repo_pattern = /^https?:\/\/(?:github\.com|gitlab\.cern\.ch)\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)(\/|\.git)?$/.test(repo_input.value);
+        repo_input.style.backgroundColor = repo_input.value && !repo_pattern ? '#ffcccc' : '#ffffff';
     }
 
     /**
      * Modifies the selection of Spark clusters and enables users to choose
      * to use the JupyterLab interface depending on the chosen platform
      */
-    function adjust_options() {
-        var platformOptions = document.getElementById('platformOptions');
-        var clusterOptions  = document.getElementById('clusterOptions');
-        var jupyterLabOption = document.getElementById("use-jupyterlab");
-        var useLocalPackagesOption = document.getElementById('use-local-packages');
+    function adjustOptions() {
+        const platform_options = document.getElementById('platformsOptions');
+        const cluster_options  = document.getElementById('clustersOptions');
+        const jupyter_lab_option = document.getElementById('use-jupyterlab');
+        const use_local_packages_option = document.getElementById('use-local-packages');
 
         /**
          * Store the chosen platform in a hidden form field, as disabled fields
          * are not sent in the request
          */ 
-        var hiddenPlatformOptions = document.getElementById('hiddenPlatformOptions');
+        const hidden_platform_options = document.getElementById('hiddenPlatformsOptions');
 
-        var isAlma = platformOptions.selectedOptions[0].text.startsWith('AlmaLinux 9');
-        var isNXCALS = clusterOptions.selectedOptions[0].text.startsWith('BE NXCALS (NXCals)');
+        const is_alma = (platform_options.selectedOptions[0] && platform_options.selectedOptions[0].text.startsWith('AlmaLinux 9'));
+        const is_nxcals = (cluster_options.selectedOptions[0] && cluster_options.selectedOptions[0].text.startsWith('BE NXCALS (NXCals)'));
 
-        if (isAlma) {
+        if (is_alma) {
             /* On Alma9, make sure cluster selection is enabled and that users can
             select the JupyterLab interface */
-            clusterOptions.removeAttribute('disabled');
-            jupyterLabOption.removeAttribute('disabled');
-            useLocalPackagesOption.removeAttribute('disabled');
+            setDisabledMany([cluster_options, jupyter_lab_option, use_local_packages_option], false);
         } else {
-            if (!isNXCALS) {
-                clusterOptions.setAttribute('disabled', '');
-                clusterOptions.selectedIndex = 0;
+            if (!is_nxcals) {
+                setDisabled(cluster_options, true);
+                cluster_options.selectedIndex = 0;
             }
 
-            jupyterLabOption.setAttribute('disabled', '');
-            useLocalPackagesOption.setAttribute('disabled', '');
+            setDisabledMany([jupyter_lab_option, use_local_packages_option], true);
         }
 
-        hiddenPlatformOptions.value = platformOptions.value;
+        hidden_platform_options.value = platform_options.value;
     }
 
-    function adjust_platforms() {
-        var platformOptions = document.getElementById('platformOptions');
-        var jupyterLabOption = document.getElementById('use-jupyterlab');
-        var useLocalPackagesOption = document.getElementById('use-local-packages');
+    /**
+     * Disable the platform options if the user selects JupyterLab or local packages
+     * and show/hide the extra options section
+     */
+    function adjustPlatforms() {
+        const platform_options = document.getElementById('platformsOptions');
+        const jupyter_lab_option = document.getElementById('use-jupyterlab');
+        const use_local_packages_option = document.getElementById('use-local-packages');
 
-        if (jupyterLabOption.checked || useLocalPackagesOption.checked) {
-            platformOptions.setAttribute('disabled', '');
+        // Disable the platform options if JupyterLab or local packages are selected
+        setDisabled(platform_options, jupyter_lab_option.checked || use_local_packages_option.checked);
+
+        // Hide the extra options section if JupyterLab is not selected
+        setVisible('extra_options_config', jupyter_lab_option.checked);
+        // Remember last value of jupyterlab checkbox option each time it gets changed
+        previous_jupyterlab = jupyter_lab_option.checked;
+    }
+
+    /**
+     * Initialize the form populating the main dropdown (lcg stack/builder) and loading its options
+     */
+    function initializeForm() {
+        // Set proper header for the whole form based on config
+        const options_header = document.getElementById('optionsHeader');
+        const header = form_config['header'];
+        if (header) {
+            options_header.innerHTML = header;
+        }
+
+        // Loop through all source types and populate the main dropdown options (lcg -> lcg_release, customenv -> builder)
+        for (const [source, source_data] of Object.entries(source_config)) {
+            let first_form_optionselected = false;
+            const form_options = form_config[source_data.source_form];
+            const current_element = document.getElementById(source_data.options_element);
+            current_element.innerHTML = '';
+
+            for( let i = 0 ; i < form_options.length ; i++ ){
+                const form_entry = form_options[i];
+                const form_option = document.createElement("option");
+
+                if (form_entry.type === "label") {
+                    form_option.disabled = "disabled";
+                    form_option.style = "border-bottom:1px solid rgba(153,153,153,.3); margin:-10px 0 4px 0";
+                    form_option.value = form_entry.label.value;
+                    form_option.text = form_entry.label.text;
+                } else {
+                    if (!first_form_optionselected) {
+                        first_form_optionselected = true;
+                        form_option.selected = true;
+                    }
+                    form_option.value = form_entry[source_data.form_element].value;
+                    form_option.text = form_entry[source_data.form_element].text;
+                }
+
+                current_element.add(form_option);
+            }
+        }
+        form_initialized = true;
+    }
+
+    /**
+     * Renders a form based on config file
+     */
+    function adjustForm(selected_source) {
+        // Initialize the form if it hasn't been done yet
+        if (!form_initialized) initializeForm();
+
+        // Get currently selected source and extract its configuration (formData)
+        const selected_config = source_config[selected_source];
+        const selected_value = document.getElementById(selected_config.options_element).value;
+        const form_data = findFormData(selected_config.source_form, selected_config.form_element, selected_value);
+
+        // Populate the form according to main dropdown selection
+        for (const [config, element] of Object.entries(query_map[selected_source].selectors)) {
+            // Skip the parent field as it is already populated
+            if (config === lcg_parent_field || config == builder_parent_field) continue;
+
+            const config_element = document.getElementById(element);
+            config_element.innerHTML = '';
+
+            for( let i = 0 ; i < (form_data[config] || []).length ; i++ ){
+                const form_option = form_data[config][i];
+
+                const select_option = document.createElement("option");
+                select_option.value = form_option.value;
+                select_option.text = form_option.text;
+                if (i === 0) {
+                    select_option.selected = true;
+                }
+
+                config_element.add(select_option);
+            }
+        }
+    }
+
+    /**
+     * Autofill the form according to the specified URL arguments
+     */
+    function autofillURLParams(url_args, selected_source) {
+        // Fill all checkboxes first (including the software source)
+        for (const [argument, element] of Object.entries(query_map[selected_source].checkboxes)) {
+            const previous_value = `${document.getElementById(element).checked}`;
+            let checked = (url_args.get(argument) || previous_value).toLowerCase() === 'true';
+            // Force the selection of the correct software source
+            if (argument === 'use-'+selected_source) checked = true;
+            if (argument === 'use-jupyterlab' && selected_source === lcg_source) previous_jupyterlab = checked;
+            setCheckbox(element, checked);
+        }
+
+        // Fill all selectors (lcg and builder are specially important cause they are used to populate the rest of the form)
+        for (const [argument, element] of Object.entries(query_map[selected_source].selectors)) {
+            const selected = url_args.get(argument);
+            if (selected) {
+                setInput(element, selected);
+                
+                // Refill the remaining selectors according to the specified software stack/builder (each one has its platforms, resources etc)
+                if (argument === lcg_parent_field || argument === builder_parent_field) {
+                    adjustForm(selected_source);
+                    if (selected_source === lcg_source) {
+                        adjustOptions();
+                        adjustPlatforms();
+                    }
+                }
+            }
+        }
+
+        // Fill all inputs (scriptenv, repository and file)
+        for (const [param, elem] of Object.entries(query_map[selected_source].inputs)) {
+            const selected = url_args.get(param) || "";
+            setInput(elem, selected);
+
+            // Validate the repository value coming from the URL (and color it red if invalid)
+            if (param === 'repository') 
+                validateRepositoryInput(document.getElementById(elem));
+
+            // Toggle the extra options section if the file parameter is specified
+            if (param === 'file' && selected !== null  && selected !== '')
+                toggleExtraOptions('extra_options');
+        }
+        setVisible(selected_source+"-details", true);
+        // Hide the other details section
+        setVisible((selected_source === lcg_source ? customenv_source : lcg_source)+"-details", false);
+    }
+
+    /**
+     * Show the LCG form and hide the Custom Environment form
+     */
+    function showLCGForm() {
+        // Recover last value specified in LCG config; unblock jupyterlab option
+        const jupyter_lab_option = document.getElementById('use-jupyterlab');
+        jupyter_lab_option.checked = previous_jupyterlab !== undefined ? previous_jupyterlab : false;
+        setDisabled(jupyter_lab_option, false);
+
+        // Hide repository and builder; file section; details about customenv in file section
+        setVisibleMany(['customenv_config', 'extra_options_config', 'customenv-details'], false);
+        // Show LCG stack, use-local-packages, scriptenv and platforms; condor section; details about lcg in file section
+        setVisibleMany(['lcg_config', 'condorSection', 'lcg-details'], true);
+
+        adjustOptions();
+        adjustPlatforms();
+    }
+
+    /**
+     * Show the Custom Environment form and hide the LCG form
+     */
+    function showCustomEnvForm() {
+        // Save last value specified in LCG config; enable and block jupyterlab option
+        const jupyter_lab_option = document.getElementById('use-jupyterlab');
+        if (!form_initialized) previous_jupyterlab = jupyter_lab_option.checked;
+        jupyter_lab_option.checked = true;
+        setDisabled(jupyter_lab_option, true);
+
+        // Hide LCG stack, use-local-packages, scriptenv and platforms; condor section; details about customenvs in file section
+        setVisibleMany(['lcg_config', 'condorSection', 'lcg-details'], false);
+        // Show repository and builder; file section; details about LCG in file section
+        setVisibleMany(['customenv_config', 'extra_options_config', 'customenv-details'], true);
+    }
+
+    /**
+     * Modifies the displayed form according to the selected type of configuration (LCG or Custom Environments)
+     */
+    function toggleForm() {
+        if (enable_customenv_form !== "true") {
+            document.getElementById('software_source_selection').style.display = 'none';
+        }
+
+        const url_args = new URLSearchParams(window.location.search);
+        let selected_source = url_args.get('software_source');
+        // If there are URL arguments and the form is being initialized for the first time, autofill the form, according to the selected source
+        if (selected_source && !form_initialized) {
+            // If only the customenv form is filled and lcg is left blank, fields like platforms and condor will stay untouched. As they are required components
+            // the form won't get submitted, so they need to be filled with the default values
+            adjustForm(lcg_source);
+            // The customenv form needs to be initially filled in order to preserve the main dropdown and extract its options as well
+            adjustForm(customenv_source);
+
+            // Show the selected source form
+            if (selected_source === lcg_source) showLCGForm();
+            else if (selected_source === customenv_source) showCustomEnvForm();
+            else throw new Error(`Unknown software source: ${selected_source}`);
+
+            autofillURLParams(url_args, selected_source);
         } else {
-            platformOptions.removeAttribute('disabled');
+            selected_source = document.querySelector('input[name="software_source"]:checked').value;
+            // Do the initial fillment of the form in order to get all the available software stacks (or builders)
+            adjustForm(selected_source);
+
+            // Show the selected source form
+            if (selected_source === lcg_source) showLCGForm();
+            else if (selected_source === customenv_source) showCustomEnvForm();
+            else throw new Error(`Unknown software source: ${selected_source}`);
         }
     }
 
-    window.onload = adjust_form;
+    window.onload = toggleForm;
 //-->
 </script>
 <div>
@@ -234,85 +510,209 @@
     <label for="alma9">
     <span class='news' id="alma9">Try out our new experimental interface based on <b>JupyterLab</b> and let us know your feedback!</span>
     </label>
-    <br><br>
-    <label> User Interface <a href="#" onclick="toggle_visibility('userInterfaceDetails');"><span class='nbs'>more...</span></a></label>
-    <div style="display:none;" id="userInterfaceDetails">
-        <span class='nb'>JupyterLab is the latest web-based interactive development environment for notebooks, code and data. More information <a target="_blank" href="https://jupyterlab.readthedocs.io/en/stable/user/interface.html">here</a>.</span>
-    </div>
-    <div style="display: flex; align-items: center">
-      <input
-        id="use-jupyterlab"
-        type="checkbox"
-        name="use-jupyterlab"
-        value="checked"
-        style="display: inline; width: initial; margin: 0 8px 0 0"
-        onchange="adjust_platforms();"
-      />
-      <span> Try the new JupyterLab interface (experimental)</span>
-    </div>
     <br>
-    <label for="lcgReleaseOptions">Software stack <a href="#" onclick="toggle_visibility('lcgReleaseDetails');"><span class='nbs'>more...</span></a>
-    <div style="display:none;" id="lcgReleaseDetails">
-        <span class='nb'>The software stack to associate to the container. See the <a target="_blank" href="http://lcginfo.cern.ch/">LCG package info</a> page.</span>
+
+    <div class="clipboard-button" onclick="copyToClipboard()">
+        <i class="fa fa-clipboard"></i>
+        <span class="tooltip">Generate URL</span>
+    </div>
+
+    <!-- Source Type selection -->
+    <div id="software_sourceSection">
+        <h2>Software</h2>
+
+        <label> User Interface <a href="#" onclick="toggleVisibility('userInterfaceDetails');"><span class='nbs'>more...</span></a></label>
+        <div style="display:none;" id="userInterfaceDetails">
+            <span class='nb'>JupyterLab is the latest web-based interactive development environment for notebooks, code and data. More information <a target="_blank" href="https://jupyterlab.readthedocs.io/en/stable/user/interface.html">here</a>.</span>
+        </div>
+        <div style="display: flex; align-items: center">
+            <input
+                id="use-jupyterlab"
+                type="checkbox"
+                name="use-jupyterlab"
+                value="checked"
+                style="display: inline; width: initial; margin: 0 8px 0 0"
+                onchange="adjustPlatforms();"
+            />
+            <span> Try the new JupyterLab interface (experimental)</span>
+            <br>
+        </div>
         <br>
-        <span class='nb'>Additionally, it is possible to use Python packages installed by the user on CERNBox. More information <a target="_blank" href="https://swan.docs.cern.ch/advanced/install_packages/">here</a>.</span>
+
+        <div id="software_source_selection">
+            <label>Source <a href="#" onclick="toggleVisibility('sourceDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="sourceDetails">
+                    <span class='nb'>Software source: curated stack (LCG) or custom environment.</span>
+                </div>
+            </label>
+            <br>
+
+            <input type="radio" id="use-lcg" name="software_source" value="lcg" checked onchange="toggleForm();" style="width: auto; height: auto; display: inline-block;">
+            <label for="use-lcg" style="margin-right: 5%;">LCG</label>
+            <input type="radio" id="use-customenv" name="software_source" value="customenv" onchange="toggleForm();" style="width: auto; height: auto; display: inline-block;">
+            <label for="use-customenv">Custom Environment</label>
+            <br><br>
+        </div>
     </div>
-    </label>
-    <select id="lcgReleaseOptions" name="LCG-rel" onchange="adjust_form();">
-    </select>
-    <div style="display: flex; align-items: center">
-        <input
-          id="use-local-packages"
-          type="checkbox"
-          name="use-local-packages"
-          value="checked"
-          style="display: inline; width: initial; margin: 0 8px 0 0"
-          onchange="adjust_platforms();"
-        />
-        <span> Use Python packages installed on CERNBox</span>
-      </div>
-    <br>
-    <label for="platformOptions">Platform <a href="#" onclick="toggle_visibility('platformDetails');"><span class='nbs'>more...</span></a>
-    <div style="display:none;" id="platformDetails">
-       <span class='nb'>The combination of compiler version and flags.</span>
+
+    <!-- LCG configuration -->
+    <div id="lcg_config">
+        <div id="lcgSection">
+            <label for="lcgOptions">Software stack <a href="#" onclick="toggleVisibility('lcgDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="lcgDetails">
+                    <span class='nb'>The software stack to associate to the container. See the <a target="_blank" href="http://lcginfo.cern.ch/">LCG package info</a> page.</span>
+                    <br>
+                    <span class='nb'>Additionally, it is possible to use Python packages installed by the user on CERNBox. More information <a target="_blank" href="https://swan.docs.cern.ch/advanced/install_packages/">here</a>.</span>
+                </div>
+            </label>
+            <select id="lcgOptions" name="lcg" onchange="adjustForm(lcg_source);" required></select>
+            <div style="display: flex; align-items: center">
+                <input
+                  id="use-local-packages"
+                  type="checkbox"
+                  name="use-local-packages"
+                  value="checked"
+                  style="display: inline; width: initial; margin: 0 8px 0 0"
+                  onchange="adjustPlatforms();"
+                />
+                <span> Use Python packages installed on CERNBox</span>
+            </div>
+        </div>
+        <br>
+
+        <div id="platformSection">
+            <label for="platformsOptions">Platform <a href="#" onclick="toggleVisibility('platformDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="platformDetails">
+                    <span class='nb'>The combination of compiler version and flags.</span>
+                </div>
+            </label>
+            <select id="platformsOptions" name="platforms" onchange="adjustOptions();" required></select>
+            <input type="hidden" id="hiddenPlatformsOptions" name="platforms">
+        </div>
+        <br>
+
+        <div id="scriptenvSection">
+            <label for="scriptenvOption">Environment script <a href="#" onclick="toggleVisibility('scriptenvDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="scriptenvDetails">
+                    <span class='nb'>User-provided bash script to define custom environment variables. The variable CERNBOX_HOME is resolved to the proper /eos/user/u/username directory.</span>
+                </div>
+            </label>
+            <input type="text" id="scriptenvOption" name="scriptenv" placeholder="e.g. $CERNBOX_HOME/MySWAN/myscript.sh">
+        </div>
+        <br>
     </div>
-    </label>
-    <select id="platformOptions" onchange="adjust_options();"></select>
-    <input type="hidden" id="hiddenPlatformOptions" name="platform">
-    <br>
-    <label for="scriptenvOption">Environment script <a href="#" onclick="toggle_visibility('scriptenvDetails');"><span class='nbs'>more...</span></a>
-    <div style="display:none;" id="scriptenvDetails">
-       <span class='nb'>User-provided bash script to define custom environment variables. The variable CERNBOX_HOME is resolved to the proper /eos/user/u/username directory.</span>
+
+    <!-- Custom environment configuration -->
+    <div id="customenv_config">
+        <div id="repositorySection">
+            <label for="repositoryOption">Repository 
+                <a href="#" onclick="toggleVisibility('repositoryDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="repositoryDetails">
+                    <span class='nb'>URL of a git repository containing a requirements file.</span>
+                </div>
+            </label>
+            <br>
+            <div style="display: flex;">
+                <input 
+                    type="text"
+                    id="repositoryOption"
+                    name="repository"
+                    placeholder="e.g. https://gitlab.cern.ch/user/myrepo"
+                    oninput="validateRepositoryInput(this);"
+                />
+            </div>
+        </div>
+        <br>
+
+        <div id="builderSection">
+            <label for="builderOptions">Builder <a href="#" onclick="toggleVisibility('builderDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="builderDetails">
+                    <span class='nb'>Acc-Py release to build the custom environment.</a></span>
+                </div>
+            </label>
+            <select id="builderOptions" name="builder" onchange="adjustForm(customenv_source);" required></select>
+        </div>
+        <br>
     </div>
-    </label>
-    <input type="text" id="scriptenvOption" name="scriptenv" placeholder="e.g. $CERNBOX_HOME/MySWAN/myscript.sh">
-    <br>
-    <label for="coresOptions">Number of cores <a href="#" onclick="toggle_visibility('ncoresDetails');"><span class='nbs'>more...</span></a>
-    <div style="display:none;" id="ncoresDetails">
-       <span class='nb'>Number of cores to associate to the container.</span>
+
+    <div id="network_config" style="margin-bottom: 30px;">
+        <h2>Network</h2>
+
+        <div id="tnSection">
+            <input type="checkbox" id="use-tn" name="use-tn" onchange="accessTN(this.checked);" style="width: auto; height: auto; display: inline-block;">
+            <label style="width: auto; height: auto; display: inline-block;" for="use-tn">TN Access</label>
+            <a href="#" onclick="toggleVisibility('use-tnDetails');"><span class='nbs'>more...</span></a>
+            <div style="display:none;" id="use-tnDetails">
+                <span class='nb'>Request a user session that is exposed to the CERN Technical Network.</span>
+            </div>
+        </div>
     </div>
-    </label>
-    <select id="coresOptions" name="ncores"></select>
-    <br>
-    <label for="memoryOptions">Memory <a href="#" onclick="toggle_visibility('memoryDetails');"><span class='nbs'>more...</span></a>
-    <div style="display:none;" id="memoryDetails">
-       <span class='nb'>Amount of Memory allocated to the container.</span>
+
+    <!-- Resources configuration -->
+    <div id="resources_config">
+        <h2>Session resources</h2>
+
+        <div id="coresSection">
+            <label for="coresOptions">Number of cores <a href="#" onclick="toggleVisibility('coresDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="coresDetails">
+                    <span class='nb'>Amount of cores allocated to the container.</span>
+                </div>
+            </label>
+            <select id="coresOptions" name="cores" required></select>
+        </div>
+        <br>
+
+        <div id="memorySection">
+            <label for="memoryOptions">Memory <a href="#" onclick="toggleVisibility('memoryDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="memoryDetails">
+                    <span class='nb'>Amount of memory allocated to the container.</span>
+                </div>
+            </label>
+            <select id="memoryOptions" name="memory" required></select>
+        </div>
+        <br>
     </div>
-    </label>
-    <select id="memoryOptions" name="memory"></select>
-    <br>
-    <h2 for="computing-resources">External computing resources</h2>
-    <label for="clusterOptions">Spark cluster <a href="#" onclick="toggle_visibility('sparkClusterDetails');"><span class='nbs'>more...</span></a>
-    <div style="display:none;" id="sparkClusterDetails">
-        <span class='nb'>Name of the Spark cluster to connect to from notebooks. See the <a target="_blank" href="https://hadoop-user-guide.web.cern.ch/">Hadoop User guide</a> and the <a target="_blank" href="https://sparktraining.web.cern.ch/">Spark training course</a></span>
+
+    <!-- External computing resources -->
+    <div id="external_res_config">
+        <h2>External computing resources</h2>
+        
+        <div id="clusterSection">
+            <label for="clustersOptions">Spark cluster <a href="#" onclick="toggleVisibility('clustersDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="clustersDetails">
+                    <span class='nb'>Name of the Spark cluster to connect to from notebooks. See the <a target="_blank" href="https://hadoop-user-guide.web.cern.ch/">Hadoop User guide</a> and the <a target="_blank" href="https://sparktraining.web.cern.ch/">Spark training course</a></span>
+                </div>
+            </label>
+            <select id="clustersOptions" name="clusters" required></select>
+        </div>
+        <br>
+
+        <div id="condorSection">
+            <label for="condorOptions">HTCondor pool <a href="#" onclick="toggleVisibility('condorDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="condorDetails">
+                    <span class='nb'>Name of the HTCondor pool to use.</span>
+                </div>
+            </label>
+            <select id="condorOptions" name="condor" required></select>
+            <br>
+        </div>
     </div>
-    </label>
-    <select id="clusterOptions" name="spark-cluster"></select>
-    <br>
-    <label for="condorOptions">HTCondor pool <a href="#" onclick="toggle_visibility('condorDetails');"><span class='nbs'>more...</span></a>
-    <div style="display:none;" id="condorDetails">
-        <span class='nb'>Name of the HTCondor pool to use.</span>
+
+    <!-- Extra Options -->
+    <div id="extra_options_config">
+        <!-- Toggle Extra Options Section -->
+        <h2 role="button" onclick="toggleExtraOptions('extra_options');" style="display: flex; align-items: center; text-decoration: none;"><span id="extra_options">‣</span>Extra options</h2>
+
+        <!-- File path information text -->
+        <div id="fileSection" style="display: none;">
+            <label for="fileOption">File path <a href="#" onclick="toggleVisibility('fileDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="fileDetails">
+                    <span id="lcg-details" class='nb'>Path of the file to be opened after the session is launched, relative to CERNBOX_HOME.</span>
+                    <span id="customenv-details" class='nb'>Path of the file to be opened after the session is launched, relative to the root of the git repository.</span>
+                </div>
+            </label>
+            <input type="text" id="fileOption" name="file">
+        </div>
+        <br>
     </div>
-    </label>
-    <select id="condorOptions" name="condor-pool"></select>
 </div>

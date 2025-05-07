@@ -15,11 +15,33 @@ class SpawnHandlersConfigs(SingletonConfigurable):
         Singleton class where all the configurations are stored
     """
 
-    lcg_rel_field = 'LCG-rel'
+    software_source = 'software_source'
 
-    spark_cluster_field = 'spark-cluster'
+    builder = 'builder'
+
+    builder_version = 'builder_version'
+
+    repository = 'repository'
+
+    lcg_rel_field = 'lcg'
+
+    spark_cluster_field = 'clusters'
 
     user_script_env_field = 'scriptenv'
+
+    file = 'file'
+
+    use_jupyterlab_field = 'use-jupyterlab'
+
+    use_tn_field = 'use-tn'
+
+    customenv_special_type = 'customenv'
+
+    tn_enabled = Bool(
+        default_value=False,
+        config=True,
+        help="True if this SWAN deployment is exposed to the Technical Network."
+    )
 
     local_home = Bool(
         default_value=False,

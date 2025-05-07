@@ -115,6 +115,7 @@
 
     var urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('changeconfig')) {
+      urlParams.delete('changeconfig');
 
       $('#swan-loader .text').text('Shutting down your session');
 
@@ -124,7 +125,7 @@
 
       api.stop_server(user, {
         success: function () {
-          window.location.replace('{{base_url}}spawn');
+          window.location.replace('{{base_url}}spawn?' + urlParams.toString());
         },
         error: function () {
           $('#swan-loader .text').html('<p class="extra">There was an error shutting down your session.<br>Try again later.<br><a href="{{base_url}}">Click here to return to SWAN</a></p>');
