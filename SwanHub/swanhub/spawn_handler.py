@@ -266,8 +266,8 @@ class SpawnHandler(JHSpawnHandler):
                 return f'Invalid software source: {selected_software_source}', decoded_options
 
         # Check: TN access can only be requested for TN-enabled deployments
-        if configs.use_tn in decoded_options:
-            selected_use_tn = decoded_options[configs.use_tn][0].lower() in ('true', 'on')
+        if configs.use_tn_field in decoded_options:
+            selected_use_tn = decoded_options[configs.use_tn_field][0].lower() in ('true', 'on')
             if configs.tn_enabled != selected_use_tn:
                 return f'Invalid selection for TN access: {selected_use_tn}', decoded_options
 

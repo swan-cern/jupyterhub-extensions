@@ -33,7 +33,7 @@ class SpawnHandlersConfigs(SingletonConfigurable):
 
     use_jupyterlab_field = 'use-jupyterlab'
 
-    use_tn = 'use-tn'
+    use_tn_field = 'use-tn'
 
     customenv_special_type = 'customenv'
 
