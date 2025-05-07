@@ -50,11 +50,9 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
                 raise RuntimeError('The user selected the CentOS7 platform, but no CentOS7 image was configured')
             self.image = image
 
-        # An Accpy user image is configured by default via the chart
-        # settings. For now, we're using the accpy_image for all customenv
-        # sessions, for avoiding the installation of the extension in the swan
-        # image. This is a temporary solution.
-        if self.user_options[self.software_source] == self.customenv_special_type: # and self.user_options[self.builder] == 'accpy':
+        # If the user selected an Acc-Py based custom environment,
+        # use the corresponding image.
+        if self.user_options[self.software_source] == self.customenv_special_type and self.user_options[self.builder] == 'accpy':
             image = self.accpy_image
             if not image:
                 raise RuntimeError('The user selected an Acc-Py environment, but no Acc-Py image was configured')
