@@ -221,22 +221,22 @@ def define_SwanSpawner_from(base_class):
                     ROOT_LCG_VIEW_PATH       = self.lcg_view_path
                 ))
 
+                # Append path of user packages installed on CERNBox to PYTHONPATH
+                if self.user_options.get(self.use_local_packages_field) == 'checked':
+                    env.update(dict(
+                        SWAN_USE_LOCAL_PACKAGES = 'true'
+                    ))
+
+                # Enable configuration for CERN HTCondor pool
+                if self.user_options.get(self.condor_pool, 'none') != 'none':
+                    env.update(dict(
+                        CERN_HTCONDOR = 'true'
+                    ))
+
             # Enable JupyterLab interface
             if self.user_options[self.use_jupyterlab_field] == 'checked':
                 env.update(dict(
                     SWAN_USE_JUPYTERLAB = 'true'
-                ))
-
-            # Append path of user packages installed on CERNBox to PYTHONPATH
-            if self.user_options.get(self.use_local_packages_field) == 'checked':
-                env.update(dict(
-                    SWAN_USE_LOCAL_PACKAGES = 'true'
-                ))
-
-            # Enable configuration for CERN HTCondor pool
-            if self.user_options.get(self.condor_pool, 'none') != 'none':
-                env.update(dict(
-                    CERN_HTCONDOR = 'true'
                 ))
 
             return env
