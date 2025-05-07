@@ -148,7 +148,7 @@ def define_SwanSpawner_from(base_class):
             options[self.user_memory]               = formdata[self.user_memory][0]
             options[self.spark_cluster_field]       = formdata.get(self.spark_cluster_field, ['none'])[0]
             options[self.use_jupyterlab_field]      = formdata.get(self.use_jupyterlab_field, 'unchecked')[0]
-            # File to be opened when the session gets started (specified only as query parameter)
+            # File to be opened when the session gets started
             options[self.file]                      = formdata.get(self.file, [''])[0]
 
             if options[self.software_source] == self.customenv_special_type:
