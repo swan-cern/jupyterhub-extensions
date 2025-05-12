@@ -43,6 +43,8 @@
 
     const form_config = {{ options_form_config }};
     const enable_customenv_form = form_config['enable_customenv_form'];
+    const enable_generate_url_form = form_config['enable_generate_url_form'];
+    const enable_network_form = form_config['enable_network_form'];
 
     let form_initialized = false, previous_jupyterlab = undefined;
 
@@ -470,6 +472,12 @@
     function toggleForm() {
         if (enable_customenv_form !== "true") {
             document.getElementById('software_source_selection').style.display = 'none';
+        }
+        if (enable_generate_url_form !== "true") {
+            document.getElementById('clipboard_config').style.display = 'none';
+        }
+        if (enable_network_form !== "true") {
+            document.getElementById('network_config').style.display = 'none';
         }
 
         const url_args = new URLSearchParams(window.location.search);
