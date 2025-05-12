@@ -2,7 +2,7 @@
 <style> .nbs{ font-weight:normal; font-size:small } </style>
 <style> .news{ font-weight:normal; background-color:yellow } </style>
 <style>
-.clipboard-button {
+#clipboard_config {
     float: right;
     position: relative;
     cursor: pointer;
@@ -12,7 +12,7 @@
     padding: 5px;
     transition: transform 0.2s ease, border-color 0.2s ease;
 }
-.clipboard-button:hover {
+#clipboard_config:hover {
     transform: scale(1.05);
 }
 .tooltip {
@@ -29,7 +29,7 @@
     opacity: 0;
     transition: opacity 0.2s ease;
 }
-.clipboard-button:hover .tooltip {
+#clipboard_config:hover .tooltip {
     display: block;
     opacity: 1;
 }
@@ -512,7 +512,7 @@
     </label>
     <br>
 
-    <div class="clipboard-button" onclick="copyToClipboard()">
+    <div id="clipboard_config" onclick="copyToClipboard()">
         <i class="fa fa-clipboard"></i>
         <span class="tooltip">Generate URL</span>
     </div>
