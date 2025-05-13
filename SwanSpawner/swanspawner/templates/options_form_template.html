@@ -381,6 +381,10 @@
                 config_element.add(select_option);
             }
         }
+        if (selected_source === lcg_source) {
+            adjustOptions();
+            adjustPlatforms();
+        }
     }
 
     /**
@@ -406,10 +410,6 @@
                 // Refill the remaining selectors according to the specified software stack/builder (each one has its platforms, resources etc)
                 if (argument === lcg_parent_field || argument === builder_parent_field) {
                     adjustForm(selected_source);
-                    if (selected_source === lcg_source) {
-                        adjustOptions();
-                        adjustPlatforms();
-                    }
                 }
             }
         }
