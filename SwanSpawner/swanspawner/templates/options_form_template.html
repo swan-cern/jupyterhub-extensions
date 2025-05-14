@@ -320,7 +320,7 @@
         // Loop through all source types and populate the main dropdown options (lcg -> lcg_release, customenv -> builder)
         for (const [source, source_data] of Object.entries(source_config)) {
             let first_form_optionselected = false;
-            const form_options = form_config[source_data.source_form];
+            const form_options = form_config[source_data.source_form] || [];
             const current_element = document.getElementById(source_data.options_element);
             current_element.innerHTML = '';
 
