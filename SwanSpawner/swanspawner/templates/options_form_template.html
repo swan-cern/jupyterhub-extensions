@@ -296,7 +296,7 @@
      * Disable the platform options if the user selects JupyterLab or local packages
      * and show/hide the extra options section
      */
-    function adjustPlatforms() {
+    function adjustPlatforms(by_click=false) {
         const platform_options = document.getElementById('platformsOptions');
         const jupyter_lab_option = document.getElementById('use-jupyterlab');
         const use_local_packages_option = document.getElementById('use-local-packages');
@@ -306,8 +306,10 @@
 
         // Hide the extra options section if JupyterLab is not selected
         setVisible('extra_options_config', jupyter_lab_option.checked);
-        // Remember last value of jupyterlab checkbox option each time it gets changed
-        previous_jupyterlab = jupyter_lab_option.checked;
+        // Remember last value of jupyterlab checkbox option each time it gets changed by clicking
+        if (by_click === true) {
+            previous_jupyterlab = jupyter_lab_option.checked;
+        }
     }
 
     /**
@@ -544,7 +546,7 @@
                 name="use-jupyterlab"
                 value="checked"
                 style="display: inline; width: initial; margin: 0 8px 0 0"
-                onchange="adjustPlatforms();"
+                onchange="adjustPlatforms(true);"
             />
             <span> Try the new JupyterLab interface (experimental)</span>
             <br>
@@ -585,7 +587,7 @@
                   name="use-local-packages"
                   value="checked"
                   style="display: inline; width: initial; margin: 0 8px 0 0"
-                  onchange="adjustPlatforms();"
+                  onchange="adjustPlatforms(true);"
                 />
                 <span> Use Python packages installed on CERNBox</span>
             </div>
