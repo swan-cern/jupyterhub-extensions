@@ -155,6 +155,8 @@
     function setVisible(id, visible) {
         const elem = document.getElementById(id);
         elem.style.display = visible ? 'block' : 'none';
+        // Enable all inputs if the element is visible, and disable them if it is not visible
+        elem.querySelectorAll('input, select, textarea, button').forEach(input => setDisabled(input, !visible));
     }
     function setVisibleMany(ids, visible) {
         ids.forEach((id) => setVisible(id, visible));
