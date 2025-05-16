@@ -125,7 +125,7 @@
      */
     function findFormData(form, form_element, value) {
         // Data is taken from form_config global variable
-        const form_options = form_config[form];
+        const form_options = form_config[form] || [];
         for (key in form_options) {
             const form_data = form_options[key];
             if (form_data.type === "selection" && form_data[form_element].value === value) {
@@ -133,7 +133,8 @@
             }
         }
 
-        throw `${form_element} Data not found`
+        console.error(`${form_element} Data not found`);
+        return {};
     }
 
     /**
@@ -193,11 +194,10 @@
     }
 
     /**
-     * Copy the current form configuration to the clipboard
+     * Auxiliary function to gather all the current selected values in the form
      */
-    function copyToClipboard() {
-        const selected_source = document.querySelector('input[name="software_source"]:checked').value;
-        const generated_url = new URL(`${window.location.href.split('?')[0]}`);
+    function gatherFormOptions(selected_source) {
+        selected_source = selected_source || lcg_source;
         const params = new URLSearchParams();
         params.append('software_source', selected_source);
 
@@ -217,7 +217,16 @@
                 params.append(param, elem.value);
             }
         }
-        generated_url.search = params.toString();
+        return params;
+    }
+
+    /**
+     * Copy the current form configuration to the clipboard
+     */
+    function copyToClipboard() {
+        const selected_source = document.querySelector('input[name="software_source"]:checked').value;
+        const generated_url = new URL(`${window.location.href.split('?')[0]}`);
+        generated_url.search = gatherFormOptions(selected_source).toString();
 
         const tooltip = document.getElementById('tooltip');
         navigator.clipboard.writeText(generated_url).then(() => {
@@ -237,14 +246,11 @@
      * Redirect to the TN access page, preserving all URL arguments
      */
     function accessTN(checked) {
-        let url_args = new URLSearchParams(window.location.search);
-        // URL arguments might be present or not. If they are, make sure use-tn reflects the
-        // most recent selection of the user.
-        if (url_args.has('use-tn')) url_args.set('use-tn', checked);
-        url_args = url_args.toString();
+        const selected_source = document.querySelector('input[name="software_source"]:checked').value;
+        const current_form_options = gatherFormOptions(selected_source).toString();
 
         const next_url = 'https://' + (checked ? '{{ ats_domain_name }}' : '{{ general_domain_name }}');
-        window.location.href = `${next_url}/hub/spawn${url_args ? `?${url_args}` : ''}`;
+        window.location.href = `${next_url}/hub/spawn${current_form_options ? `?${current_form_options}` : ''}`;
     }
 
     /**
@@ -366,25 +372,27 @@
         const selected_value = document.getElementById(selected_config.options_element).value;
         const form_data = findFormData(selected_config.source_form, selected_config.form_element, selected_value);
 
-        // Populate the form according to main dropdown selection
-        for (const [config, element] of Object.entries(query_map[selected_source].selectors)) {
-            // Skip the parent field as it is already populated
-            if (config === lcg_parent_field || config == builder_parent_field) continue;
-
-            const config_element = document.getElementById(element);
-            config_element.innerHTML = '';
-
-            for( let i = 0 ; i < (form_data[config] || []).length ; i++ ){
-                const form_option = form_data[config][i];
-
-                const select_option = document.createElement("option");
-                select_option.value = form_option.value;
-                select_option.text = form_option.text;
-                if (i === 0) {
-                    select_option.selected = true;
+        if (Object.keys(form_data).length !== 0) {
+            // Populate the form according to main dropdown selection
+            for (const [config, element] of Object.entries(query_map[selected_source].selectors)) {
+                // Skip the parent field as it is already populated
+                if (config === lcg_parent_field || config == builder_parent_field) continue;
+    
+                const config_element = document.getElementById(element);
+                config_element.innerHTML = '';
+    
+                for( let i = 0 ; i < (form_data[config] || []).length ; i++ ){
+                    const form_option = form_data[config][i];
+    
+                    const select_option = document.createElement("option");
+                    select_option.value = form_option.value;
+                    select_option.text = form_option.text;
+                    if (i === 0) {
+                        select_option.selected = true;
+                    }
+    
+                    config_element.add(select_option);
                 }
-
-                config_element.add(select_option);
             }
         }
         if (selected_source === lcg_source) {
@@ -488,25 +496,26 @@
 
         const url_args = new URLSearchParams(window.location.search);
         let selected_source = url_args.get('software_source');
+        let fill_form = true;
+        if (selected_source === customenv_source && enable_customenv_form !== "true") {
+            selected_source = lcg_source;
+            fill_form = false;
+        }
+
         // If there are URL arguments and the form is being initialized for the first time, autofill the form, according to the selected source
         if (selected_source && !form_initialized) {
             // If only the customenv form is filled and lcg is left blank, fields like platforms and condor will stay untouched. As they are required components
             // the form won't get submitted, so they need to be filled with the default values
             adjustForm(lcg_source);
             // The customenv form needs to be initially filled in order to preserve the main dropdown and extract its options as well
-            if (enable_customenv_form === "true") adjustForm(customenv_source);
+            adjustForm(customenv_source);
 
-            let fill_form = true;
             // Show the selected source form
             if (selected_source === lcg_source) showLCGForm();
-            else if (selected_source === customenv_source) {
-                if (enable_customenv_form === "true") showCustomEnvForm();
-                else fill_form = false;
-            }
+            else if (selected_source === customenv_source) showCustomEnvForm();
             else throw new Error(`Unknown software source: ${selected_source}`);
 
             if (fill_form) autofillURLParams(url_args, selected_source);
-            else showLCGForm();
         } else {
             selected_source = document.querySelector('input[name="software_source"]:checked').value;
             // Do the initial fillment of the form in order to get all the available software stacks (or builders)
@@ -514,9 +523,7 @@
 
             // Show the selected source form
             if (selected_source === lcg_source) showLCGForm();
-            else if (selected_source === customenv_source) {
-                if (enable_customenv_form === "true") showCustomEnvForm();
-            }
+            else if (selected_source === customenv_source) showCustomEnvForm();
             else throw new Error(`Unknown software source: ${selected_source}`);
         }
     }
