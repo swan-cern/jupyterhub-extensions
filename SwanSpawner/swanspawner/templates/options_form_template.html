@@ -15,7 +15,7 @@
 #clipboard_config:hover {
     transform: scale(1.05);
 }
-.tooltip {
+#tooltip {
     position: absolute;
     right: 110%; top: 50%;
     transform: translateY(-50%);
@@ -29,7 +29,7 @@
     opacity: 0;
     transition: opacity 0.2s ease;
 }
-#clipboard_config:hover .tooltip {
+#clipboard_config:hover #tooltip {
     display: block;
     opacity: 1;
 }
@@ -219,7 +219,7 @@
         }
         generated_url.search = params.toString();
 
-        const tooltip = document.querySelector('.tooltip');
+        const tooltip = document.getElementById('tooltip');
         navigator.clipboard.writeText(generated_url).then(() => {
             tooltip.textContent = 'URL Copied!';
         }).catch(err => {
@@ -528,7 +528,7 @@
 
     <div id="clipboard_config" onclick="copyToClipboard()">
         <i class="fa fa-clipboard"></i>
-        <span class="tooltip">Generate URL</span>
+        <span id="tooltip">Generate URL</span>
     </div>
 
     <!-- Source Type selection -->
