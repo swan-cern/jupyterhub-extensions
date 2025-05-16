@@ -447,37 +447,27 @@
     }
 
     /**
-     * Show the LCG form and hide the Custom Environment form
+     * Show the correct form according to the selected source
      */
-    function showLCGForm() {
-        // Recover last value specified in LCG config; unblock jupyterlab option
+    function showForm(selected_source) {
         const jupyter_lab_option = document.getElementById('use-jupyterlab');
-        jupyter_lab_option.checked = previous_jupyterlab !== undefined ? previous_jupyterlab : false;
-        setDisabled(jupyter_lab_option, false);
+        const is_lcg = selected_source === lcg_source, is_customenv = selected_source === customenv_source;
+        if (is_lcg) {
+            // Recover last value specified in LCG config; unblock jupyterlab option
+            jupyter_lab_option.checked = previous_jupyterlab !== undefined ? previous_jupyterlab : false;
 
-        // Hide repository and builder; file section; details about customenv in file section
-        setVisibleMany(['customenv_config', 'extra_options_config', 'customenv-details'], false);
-        // Show LCG stack, use-local-packages, scriptenv and platforms; condor section; details about lcg in file section
-        setVisibleMany(['lcg_config', 'condorSection', 'lcg-details'], true);
+            adjustOptions();
+            adjustPlatforms();
+        } else if (is_customenv) {
+            // Save last value specified in LCG config; enable and block jupyterlab option
+            if (!form_initialized) previous_jupyterlab = jupyter_lab_option.checked;
+            jupyter_lab_option.checked = true;
+            
+        }
 
-        adjustOptions();
-        adjustPlatforms();
-    }
-
-    /**
-     * Show the Custom Environment form and hide the LCG form
-     */
-    function showCustomEnvForm() {
-        // Save last value specified in LCG config; enable and block jupyterlab option
-        const jupyter_lab_option = document.getElementById('use-jupyterlab');
-        if (!form_initialized) previous_jupyterlab = jupyter_lab_option.checked;
-        jupyter_lab_option.checked = true;
-        setDisabled(jupyter_lab_option, true);
-
-        // Hide LCG stack, use-local-packages, scriptenv and platforms; condor section; details about customenvs in file section
-        setVisibleMany(['lcg_config', 'condorSection', 'lcg-details'], false);
-        // Show repository and builder; file section; details about LCG in file section
-        setVisibleMany(['customenv_config', 'extra_options_config', 'customenv-details'], true);
+        setDisabled(jupyter_lab_option, is_customenv);
+        setVisibleMany(['lcg_config', 'condorSection', 'lcg-details'], is_lcg);
+        setVisibleMany(['customenv_config', 'extra_options_config', 'customenv-details'], is_customenv);
     }
 
     /**
@@ -510,21 +500,14 @@
             // The customenv form needs to be initially filled in order to preserve the main dropdown and extract its options as well
             adjustForm(customenv_source);
 
-            // Show the selected source form
-            if (selected_source === lcg_source) showLCGForm();
-            else if (selected_source === customenv_source) showCustomEnvForm();
-            else throw new Error(`Unknown software source: ${selected_source}`);
-
+            showForm(selected_source);
             if (fill_form) autofillURLParams(url_args, selected_source);
         } else {
             selected_source = document.querySelector('input[name="software_source"]:checked').value;
             // Do the initial fillment of the form in order to get all the available software stacks (or builders)
             adjustForm(selected_source);
 
-            // Show the selected source form
-            if (selected_source === lcg_source) showLCGForm();
-            else if (selected_source === customenv_source) showCustomEnvForm();
-            else throw new Error(`Unknown software source: ${selected_source}`);
+            showForm(selected_source);
         }
     }
 
