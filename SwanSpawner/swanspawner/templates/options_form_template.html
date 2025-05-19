@@ -485,30 +485,34 @@
         }
 
         const url_args = new URLSearchParams(window.location.search);
-        let selected_source = url_args.get('software_source');
-        let fill_form = true;
+
+        // Detect if URL arguments are present and the software source is not selected
+        if (!url_args.has('software_source') && url_args.size > 0) {
+            console.error('URL arguments are present but no software source is selected.');
+            adjustForm(lcg_source);
+            showForm(lcg_source);
+            return;
+        }
+
+        // True if we have to fill form with URL arguments
+        let autofilling = !form_initialized && url_args.size > 0;
+        let selected_source = document.querySelector('input[name="software_source"]:checked').value;
+
+        // If the form is supposed to be autofilled, get the software source from the URL arguments
+        if (autofilling) selected_source = url_args.get('software_source');
+
+        // Do not allow the fillment of the customenv form if it is disabled (show the standard LCG form instead)
         if (selected_source === customenv_source && enable_customenv_form !== "true") {
             selected_source = lcg_source;
-            fill_form = false;
+            autofilling = false;
         }
 
+        // Prefill and show the form according to the selected source
+        adjustForm(selected_source);
+        showForm(selected_source);
+        
         // If there are URL arguments and the form is being initialized for the first time, autofill the form, according to the selected source
-        if (selected_source && !form_initialized) {
-            // If only the customenv form is filled and lcg is left blank, fields like platforms and condor will stay untouched. As they are required components
-            // the form won't get submitted, so they need to be filled with the default values
-            adjustForm(lcg_source);
-            // The customenv form needs to be initially filled in order to preserve the main dropdown and extract its options as well
-            adjustForm(customenv_source);
-
-            showForm(selected_source);
-            if (fill_form) autofillURLParams(url_args, selected_source);
-        } else {
-            selected_source = document.querySelector('input[name="software_source"]:checked').value;
-            // Do the initial fillment of the form in order to get all the available software stacks (or builders)
-            adjustForm(selected_source);
-
-            showForm(selected_source);
-        }
+        if (autofilling) autofillURLParams(url_args, selected_source);
     }
 
     window.onload = toggleForm;
