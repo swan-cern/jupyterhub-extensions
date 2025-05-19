@@ -404,7 +404,7 @@
     /**
      * Autofill the form according to the specified URL arguments
      */
-    function autofillURLParams(url_args, selected_source) {
+    function autofillURLArgs(url_args, selected_source) {
         // Fill all checkboxes first (including the software source)
         for (const [argument, element] of Object.entries(query_map[selected_source].checkboxes)) {
             const previous_value = `${document.getElementById(element).checked}`;
@@ -518,7 +518,7 @@
         showForm(selected_source);
         
         // If there are URL arguments and the form is being initialized for the first time, autofill the form, according to the selected source
-        if (autofilling) autofillURLParams(url_args, selected_source);
+        if (autofilling) autofillURLArgs(url_args, selected_source);
     }
 
     window.onload = toggleForm;
