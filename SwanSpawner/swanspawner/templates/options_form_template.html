@@ -471,9 +471,9 @@
     }
 
     /**
-     * Modifies the displayed form according to the selected type of configuration (LCG or Custom Environments)
+     * Hide features that are not enabled yet
      */
-    function toggleForm() {
+    function hideFeatures() {
         if (enable_customenv_form !== "true") {
             document.getElementById('software_source_selection').style.display = 'none';
         }
@@ -483,7 +483,13 @@
         if (enable_network_form !== "true") {
             document.getElementById('network_config').style.display = 'none';
         }
+    }
 
+    /**
+     * Modifies the displayed form according to the selected type of configuration (LCG or Custom Environments)
+     */
+    function toggleForm() {
+        hideFeatures();
         const url_args = new URLSearchParams(window.location.search);
 
         // Detect if URL arguments are present and the software source is not selected
