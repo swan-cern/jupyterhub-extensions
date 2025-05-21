@@ -44,7 +44,7 @@ class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
     )
 
     k8s_config_script = Unicode(
-        default_value='/cvmfs/sft.cern.ch/lcg/etc/hadoop-confext/k8s-setconf.sh',
+        default_value='/cvmfs/sft.cern.ch/lcg/etc/hadoop-confext/k8s-swan-setconf.sh',
         config=True,
         help='Path in CVMFS of the script to configure a K8s cluster.'
     )
