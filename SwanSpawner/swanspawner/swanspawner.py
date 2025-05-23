@@ -77,6 +77,12 @@ def define_SwanSpawner_from(base_class):
             help='Domain name of the ATS SwanHub instance.'
         )
 
+        ats_role = Unicode(
+            default_value='swan-ats',
+            config=True,
+            help='Role to allow creation of ATS sessions.'
+        )
+
         lcg_view_path = Unicode(
             default_value='/cvmfs/sft.cern.ch/lcg/views',
             config=True,
