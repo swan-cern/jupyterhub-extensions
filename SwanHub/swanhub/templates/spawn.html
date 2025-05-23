@@ -76,7 +76,7 @@
     // Fill the checkbox if this is a cluster exposed to the TN
     window.onpageshow = (event) => {
       // This is a back-forward navigation
-      $('#use-tn').prop('checked', '{{ tn_enabled }}' === 'True');
+      document.getElementById('use-tn').checked = '{{ tn_enabled }}' === 'True';
     };
 
     $('#spawn').on('click', function (e) {
