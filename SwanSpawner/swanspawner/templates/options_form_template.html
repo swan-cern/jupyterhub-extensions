@@ -491,17 +491,17 @@
     function toggleForm() {
         hideFeatures();
         const url_args = new URLSearchParams(window.location.search);
+        // True if we have to fill form with URL arguments
+        let autofilling = !form_initialized && url_args.size > 0;
 
         // Detect if URL arguments are present and the software source is not selected
-        if (!url_args.has('software_source') && url_args.size > 0) {
-            console.error('URL arguments are present but no software source is selected.');
+        if (!url_args.has('software_source') && autofilling) {
+            console.warn('URL arguments are present but no software source is selected, please check.');
             adjustForm(lcg_source);
             showForm(lcg_source);
             return;
         }
 
-        // True if we have to fill form with URL arguments
-        let autofilling = !form_initialized && url_args.size > 0;
         let selected_source = document.querySelector('input[name="software_source"]:checked').value;
 
         // If the form is supposed to be autofilled, get the software source from the URL arguments
