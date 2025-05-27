@@ -73,11 +73,6 @@
       keyboard: false
     });
 
-    // Fill the checkbox if this is a cluster exposed to the TN
-    window.onpageshow = (event) => {
-      // This is a back-forward navigation
-      document.getElementById('use-tn').checked = '{{ tn_enabled }}' === 'True';
-    };
 
     $('#spawn').on('click', function (e) {
       const form = document.getElementById('spawn_form');
@@ -91,6 +86,11 @@
 
     modal.on('shown.bs.modal', function () {
       $('#spawn').focus();
+
+      // Fill the checkbox if this is a cluster exposed to the TN
+      const tnCheckbox = document.getElementById('use-tn');
+      if (tnCheckbox) tnCheckbox.checked = '{{ tn_enabled }}' === 'True';
+      else console.warn("'use-tn' is not defined, cannot set use-tn checkbox");
     });
 
     modal.on('hidden.bs.modal', function () {
