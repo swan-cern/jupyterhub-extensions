@@ -39,16 +39,16 @@ from datetime import timezone
 from functools import partial
 
 try:
-    from urllib.parse import quote
+    from urllib.parse import quote, urlencode
 except ImportError:
-    from urllib import quote
+    from urllib import quote, urlencode
 
 import dateutil.parser
 
 from tornado.gen import coroutine, multi
 from tornado.locks import Semaphore
 from tornado.log import app_log
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+from tornado.httpclient import AsyncHTTPClient, HTTPRequest,HTTPClientError
 from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.options import define, options, parse_command_line
 
@@ -346,6 +346,123 @@ def cull_idle(
             else:
                 if not disable_hooks: check_ticket(name)
 
+@coroutine
+def check_blocked_users(url, api_token, client_id, client_secret, auth_url, audience, authz_api_url):
+    """Detect blocked users.
+
+    Detect blocked users and cull their servers.
+    """
+    # Step 1: Get Token for Authorization Service APIs (no Token Exchange permissions - too powerful)
+    token_req = HTTPRequest(
+        url=auth_url,
+        method="POST",
+        headers={'Content-Type': 'application/x-www-form-urlencoded'},
+        body="grant_type=client_credentials&client_id=%s&client_secret=%s&audience=%s"
+            % (quote(client_id), quote(client_secret), quote(audience)),
+    )
+
+    client = AsyncHTTPClient()
+
+    try:
+        token_resp = yield client.fetch(token_req)
+        token_data = json.loads(token_resp.body.decode("utf-8"))
+        access_token = token_data["access_token"]
+    except Exception:
+        app_log.exception("Failed to get access token for blocked user check")
+        return
+
+    # Step 2: Get users of SWAN
+    auth_header = {'Authorization': 'token %s' % api_token}
+    req = HTTPRequest(url=url + '/users', headers=auth_header)
+
+    try:
+        resp = yield client.fetch(req)
+        users = json.loads(resp.body.decode('utf8', 'replace'))
+    except Exception:
+        app_log.exception("Failed to get user list for blocked user check")
+        return
+
+    # Step 3: Check each user - Get their identity from the Authorization Service API using the obtained token as Bearer
+    for user in users:
+        app_log.info("Checking if user %s is blocked", user['name'])
+        query = urlencode([("field", "upn"), ("field", "blocked"), ("field", "activeUser")])
+        id_url = f"{authz_api_url}/{quote(user['name'])}?{query}"
+        id_req = HTTPRequest(
+            url=id_url,
+            headers={
+                "Authorization": "Bearer %s" % access_token,
+                "Accept": "text/plain",
+            }
+        )
+
+        try:
+            id_resp = yield client.fetch(id_req)
+            identity_data = json.loads(id_resp.body.decode("utf-8")).get("data", {})
+            is_blocked = identity_data.get("blocked")
+            is_active = identity_data.get("activeUser")
+        except HTTPClientError as e:
+            if e.code == 404:
+                app_log.info(f"User {user['name']} not found for blocked user check, skipping.")
+                continue
+            else:
+                app_log.warning(f"Failed to check identity for {user['name']}: {e}")
+                continue
+
+        if is_blocked or not is_active:
+            app_log.warning("User %s is blocked or disabled. Terminating their sessions.", user['name'])
+
+            auth_header = {'Authorization': f'token {api_token}'}
+
+            # shutdown servers first.
+            # Hub doesn't allow deleting users with running servers.
+            # jupyterhub 0.9 always provides a 'servers' model.
+            # 0.8 only does this when named servers are enabled.
+
+            # collect user's server
+            if 'servers' in user:
+                servers = user['servers']
+            else:
+                servers = {}
+                if user.get('server'):
+                    servers[''] = {
+                        'last_activity': user.get('last_activity'),
+                        'pending': user.get('pending'),
+                        'url': user['server'],
+                    }
+
+            # delete servers
+            delete_futures = []
+            for server_name in servers:
+                if server_name:
+                    delete_url = f"{url}/users/{quote(user['name'])}/servers/{quote(server_name)}"
+                else:
+                    delete_url = f"{url}/users/{quote(user['name'])}/server"
+
+                req = HTTPRequest(url=delete_url, method="DELETE", headers=auth_header)
+                delete_futures.append(client.fetch(req))
+
+            # wait for all delete requests to complete
+            results = yield multi(delete_futures)
+
+            for i, server_name in enumerate(servers):
+                try:
+                    resp = results[i]
+                    if resp.code in (204, 202):
+                        app_log.info("Deleted server '%s' for user %s", server_name, user['name'])
+                    else:
+                        app_log.warning("Unexpected response deleting server %s for user %s: %s",
+                                        server_name, user['name'], resp.code)
+                except Exception:
+                    app_log.exception("Failed to delete server %s for user %s", server_name, user['name'])
+
+            # delete the user
+            try:
+                user_delete_url = f"{url}/users/{quote(user['name'])}"
+                user_delete_req = HTTPRequest(url=user_delete_url, method="DELETE", headers=auth_header)
+                yield client.fetch(user_delete_req)
+                app_log.info("Successfully deleted user %s", user['name'])
+            except Exception:
+                app_log.exception("Failed to delete user %s", user['name'])
 
 def main():
     define(
@@ -381,6 +498,12 @@ def main():
     )
     define('hooks_dir', default="/srv/jupyterhub/culler", help="Path to the directory for the krb tickets script (check_ticket.sh)")
     define('disable_hooks', default=False, help="The user's home is a temporary scratch directory and we should not check krb tickets")
+    define('auth_url', default='', help="URL to fetch CERN access token")
+    define('auth_client_id', default=os.environ.get('AUTH_CLIENT_ID'), help="Client ID for blocked user check")
+    define('auth_client_secret', default=os.environ.get('AUTH_CLIENT_SECRET'), help="Client secret for blocked user check")
+    define('audience', default='', help="Audience for CERN access token")
+    define('auth_check_interval', default=0, help="The interval (in seconds) for checking blocked users")
+    define('authz_api_url', default='', help="URL to fetch user identity from authorization service")
 
 
     parse_command_line()
@@ -414,6 +537,24 @@ def main():
     # schedule periodic cull
     pc = PeriodicCallback(cull, 1e3 * options.cull_every)
     pc.start()
+
+    blocked_check = partial(
+        check_blocked_users,
+        url=options.url,
+        api_token=api_token,
+        auth_url = options.auth_url,
+        client_id=options.auth_client_id,
+        client_secret=options.auth_client_secret,
+        audience = options.audience,
+        authz_api_url=options.authz_api_url,
+    )
+    # schedule first cull immediately
+    # because PeriodicCallback doesn't start until the end of the first interval
+    loop.add_callback(blocked_check)
+    # schedule periodic cull
+    pc_blocked = PeriodicCallback(blocked_check, 1e3 * options.auth_check_interval)
+    pc_blocked.start()
+    
     try:
         loop.start()
     except KeyboardInterrupt:
