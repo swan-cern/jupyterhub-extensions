@@ -73,6 +73,14 @@
       keyboard: false
     });
 
+    /*
+    * This function keeps the "use-tn" checkbox in sync, whether the cluster is exposed to the TN or not.
+    */
+    function updateUseTnCheckbox() {
+      const tnCheckbox = document.getElementById('use-tn');
+      if (tnCheckbox) tnCheckbox.checked = '{{ tn_enabled }}' === 'True';
+      else console.warn("'use-tn' is not defined, cannot set use-tn checkbox");
+    }
 
     $('#spawn').on('click', function (e) {
       const form = document.getElementById('spawn_form');
@@ -86,11 +94,7 @@
 
     modal.on('shown.bs.modal', function () {
       $('#spawn').focus();
-
-      // Fill the checkbox if this is a cluster exposed to the TN
-      const tnCheckbox = document.getElementById('use-tn');
-      if (tnCheckbox) tnCheckbox.checked = '{{ tn_enabled }}' === 'True';
-      else console.warn("'use-tn' is not defined, cannot set use-tn checkbox");
+      updateUseTnCheckbox();
     });
 
     modal.on('hidden.bs.modal', function () {
@@ -114,6 +118,11 @@
       }
       message.show();
     });
+
+    // This runs when user comes back via browser history (e.g. Back button)
+    window.onpageshow = function(event) {
+      updateUseTnCheckbox();
+    };
   });
 
 </script>
