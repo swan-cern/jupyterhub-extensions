@@ -411,7 +411,10 @@
             let checked = (url_args.get(argument) || previous_value).toLowerCase() === 'true';
             // Force the selection of the correct software source
             if (argument === 'use-'+selected_source) checked = true;
-            if (argument === 'use-jupyterlab' && selected_source === lcg_source) previous_jupyterlab = checked;
+            if (argument === 'use-jupyterlab') {
+                if (selected_source === customenv_source) checked = true;
+                else previous_jupyterlab = checked;
+            }
             setCheckbox(element, checked);
         }
 
