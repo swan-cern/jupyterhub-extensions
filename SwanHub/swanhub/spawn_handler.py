@@ -217,8 +217,13 @@ class SpawnHandler(JHSpawnHandler):
             next_url = url_concat(url_path_join("user", user.escaped_name, "customenvs", server_name), query_params)
         else: # LCG release
             next_url = self.get_next_url(user, default=url_path_join(self.hub.base_url, "spawn-pending", user.escaped_name, server_name))
-            if options.get(configs.file) and options[configs.use_jupyterlab_field] == 'checked':
-                next_url = url_path_join("user", user.escaped_name, "lab", "tree", *options[configs.file].split('/'))
+            if options[configs.use_jupyterlab_field] == 'checked':
+                # Open in SWAN (we have "next" argument)
+                if 'next' in self.request.query_arguments:
+                    next_url += f"&{configs.use_jupyterlab_field}={options[configs.use_jupyterlab_field]}"
+                # User requested to open a file
+                elif options.get(configs.file):
+                    next_url = url_path_join("user", user.escaped_name, "lab", "tree", *options[configs.file].split('/'))
 
         self.redirect(next_url)
 
