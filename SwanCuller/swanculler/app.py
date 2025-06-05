@@ -394,7 +394,7 @@ def check_blocked_users(url, api_token, client_id, client_secret, auth_url, audi
     # Step 3: Check each user - Get their identity from the Authorization Service API using the obtained token as Bearer
     for user in users:
         app_log.info("Checking if user %s is blocked", user['name'])
-        query = urlencode([("field", "upn"), ("field", "blocked"), ("field", "activeUser")])
+        query = urlencode([("field", "upn"), ("field", "blocked")])
         id_url = f"{authz_api_url}/{quote(user['name'])}?{query}"
         id_req = HTTPRequest(
             url=id_url,
@@ -408,7 +408,6 @@ def check_blocked_users(url, api_token, client_id, client_secret, auth_url, audi
             id_resp = yield client.fetch(id_req)
             identity_data = json.loads(id_resp.body.decode("utf-8")).get("data", {})
             is_blocked = identity_data.get("blocked")
-            is_active = identity_data.get("activeUser")
         except HTTPClientError as e:
             if e.code == 404:
                 app_log.info(f"User {user['name']} not found for blocked user check, skipping.")
@@ -417,8 +416,8 @@ def check_blocked_users(url, api_token, client_id, client_secret, auth_url, audi
                 app_log.warning(f"Failed to check identity for {user['name']}: {e}")
                 continue
 
-        if is_blocked or not is_active:
-            app_log.warning("User %s is blocked or disabled. Terminating their sessions.", user['name'])
+        if is_blocked:
+            app_log.warning("User %s is blocked. Terminating their sessions.", user['name'])
 
             # collect user's server
             if 'servers' in user:
@@ -540,7 +539,7 @@ def main():
     )
     # schedule first blocked user check
     loop.add_callback(blocked_check)
-    # schedule periodic blocked user check (e.g., for expired or revoked access)
+    # schedule periodic blocked user check
     pc_blocked = PeriodicCallback(blocked_check, 1e3 * options.auth_check_interval)
     pc_blocked.start()
     
