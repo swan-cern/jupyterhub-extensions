@@ -97,7 +97,7 @@ def delete_server(user_name, server_name, url, auth_header, fetch):
         # culling a named server
         delete_url = url + "/users/%s/servers/%s" % (
             quote(user_name),
-            quote(user_name),
+            quote(server_name),
         )
     else:
         delete_url = url + '/users/%s/server' % quote(user_name)
