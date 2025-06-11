@@ -394,20 +394,24 @@ def check_blocked_users(url, api_token, client_id, client_secret, auth_url, audi
     # Step 3: Check each user - Get their identity from the Authorization Service API using the obtained token as Bearer
     for user in users:
         app_log.info("Checking if user %s is blocked", user['name'])
-        query = urlencode([("field", "upn"), ("field", "blocked")])
-        id_url = f"{authz_api_url}/{quote(user['name'])}?{query}"
+        query = urlencode([("field", "uniqueIdentifier"), ("field", "blocked"), ("field", "disabled")])
+        id_url = f"{authz_api_url}/{quote(user['name'])}/accounts?{query}"
         id_req = HTTPRequest(
             url=id_url,
             headers={
                 "Authorization": "Bearer %s" % access_token,
-                "Accept": "text/plain",
+                "Accept": "*/*",
             }
         )
 
         try:
             id_resp = yield client.fetch(id_req)
-            identity_data = json.loads(id_resp.body.decode("utf-8")).get("data", {})
-            is_blocked = identity_data.get("blocked")
+            data = json.loads(id_resp.body.decode("utf-8")).get("data", [])
+            if not data:
+                app_log.warning(f"No identity data returned for user {user['name']}")
+                continue
+            is_blocked = data[0].get("blocked", False)
+            is_disabled = data[0].get("disabled", False)
         except HTTPClientError as e:
             if e.code == 404:
                 app_log.info(f"User {user['name']} not found for blocked user check, skipping.")
@@ -416,7 +420,7 @@ def check_blocked_users(url, api_token, client_id, client_secret, auth_url, audi
                 app_log.warning(f"Failed to check identity for {user['name']}: {e}")
                 continue
 
-        if is_blocked:
+        if is_blocked or is_disabled:
             app_log.warning("User %s is blocked. Terminating their sessions.", user['name'])
 
             # collect user's server
@@ -451,7 +455,6 @@ def check_blocked_users(url, api_token, client_id, client_secret, auth_url, audi
                     app_log.exception("Failed to delete server %s for user %s", server_name, user['name'])
 
             yield delete_user(user['name'], url, auth_header, client.fetch)
-            return True
 
 def main():
     define(
