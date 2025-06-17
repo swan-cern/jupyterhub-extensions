@@ -38,8 +38,8 @@
 <script type="text/javascript">
 require(["jquery"], function ($) {
   $('#swan-options .btn-secondary').on('click', function() {
-    const query_params = window.location.href.split('?')[1];
-    window.location = '{{base_url}}home?changeconfig' + (query_params ? '&' + query_params : '');
+    const query_params = window.location.search ? '&' + window.location.search.substring(1) : '';
+    window.location.replace('{{base_url}}home?changeconfig' + query_params);
   });
 
   $('#swan-options .btn-primary').on('click', function() {
