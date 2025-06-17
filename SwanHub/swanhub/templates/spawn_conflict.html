@@ -43,7 +43,7 @@ require(["jquery"], function ($) {
   });
 
   $('#swan-options .btn-primary').on('click', function() {
-    window.location = '{{base_url}}'.split('/')[0] + "{{ next_url }}";
+    window.location.replace(window.location.origin + "/{{ next_url }}");
   });
 });
 
