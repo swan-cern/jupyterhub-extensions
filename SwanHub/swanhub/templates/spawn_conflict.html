@@ -37,13 +37,6 @@
 {{ super() }}
 <script type="text/javascript">
 require(["jquery"], function ($) {
-  $("#refresh").click(function () {
-    window.location.reload();
-  });
-  setTimeout(function () {
-    window.location.reload();
-  }, 5000);
-
   $('#swan-options .btn-secondary').on('click', function() {
     const query_params = window.location.href.split('?')[1];
     window.location = '{{base_url}}home?changeconfig' + (query_params ? '&' + query_params : '');
