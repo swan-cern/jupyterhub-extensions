@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 import logging
 import re
-from threading import Lock, Thread
-from time import sleep
+from threading import Lock, Thread, Event
+from time import sleep, time
 from typing import Union
 
-from kubernetes import client, config
-from kubernetes.client.models import V1NodeStatus
+from kubernetes import client, config, watch
+from kubernetes.client.models import V1NodeStatus, V1Pod
 from kubernetes.client.rest import ApiException
 
 @dataclass
@@ -20,6 +20,7 @@ class _GPUInfo:
     resource_name: str
     product_name: str
     count: int = 0
+    available: int = 0
 
 class AvailableGPUs:
     '''
@@ -29,6 +30,8 @@ class AvailableGPUs:
     a partition of a GPU card (e.g. "A100 fragment (5 GB)" ).
     '''
     UPDATE_INTERVAL = 60 * 10  # 10 minutes
+    NAMESPACE = 'swan'
+    CONTAINER_NAME = 'notebook'
 
     def __init__(self, events_role: str):
         self._events_role = events_role
@@ -36,9 +39,15 @@ class AvailableGPUs:
         self._api = client.CoreV1Api()
         self._gpus = {}
         self._cordoned_gpu_nodes = []
+        self._stop_event = Event()
+        self._live_gpu_usage = {}
         self._configure_logger()
+        # node
         self._thread = Thread(target=self._update_gpu_info, daemon=True)
         self._thread.start()
+        # pod
+        self._watcher_thread = Thread(target=self._watch_pod_events, daemon=True)
+        self._watcher_thread.start()
         self._lock = Lock()
 
     def get_info(self, description: str) -> Union[_GPUInfo, None]:
@@ -81,6 +90,73 @@ class AvailableGPUs:
         while True:
             self._update_allocatable_gpu_flavours()
             sleep(self.UPDATE_INTERVAL)
+    
+    def _watch_pod_events(self) -> None:
+        '''
+        Watches for pod creation and deletion events in the SWAN namespace that involve GPU resources.
+        '''
+        w = watch.Watch()
+        while not self._stop_event.is_set():
+            try:
+                for event in w.stream(
+                    self._api.list_namespaced_pod,
+                    namespace=self.NAMESPACE,
+                    timeout_seconds=300,
+                    _request_timeout=310
+                ):
+                    if self._stop_event.is_set():
+                        break
+
+                    event_type = event['type']
+                    pod = event['object']
+
+                    if not self._pod_uses_gpu(pod):
+                        continue
+
+                    self._logger.info(f'GPU pod event: {event_type} - {pod.metadata.name}')
+
+                    if event_type == 'ADDED':
+                        self._update_usage_for_pod(pod, op='add')
+                    elif event_type == 'DELETED':
+                        self._update_usage_for_pod(pod, op='remove')
+            except Exception as e:
+                self._logger.error(f'Error in pod event watcher: {e}', exc_info=True)
+                self._stop_event.wait(10)
+
+    def _pod_uses_gpu(self, pod: V1Pod) -> bool:
+        '''
+        Check if a pod requests GPU resources.
+        '''
+        if not pod.spec or not pod.spec.containers:
+            return False
+                
+        for container in pod.spec.containers:
+            if container.resources and container.resources.requests:
+                for resource_name in container.resources.requests:
+                    if resource_name.startswith('nvidia.com/'):
+                        return True
+        return False
+
+    def _update_usage_for_pod(self, pod: V1Pod, op: str) -> None:
+        '''
+        Increments or decrements the GPU usage count for each GPU resource requested by the pod.
+        '''
+        change = 1 if op == 'add' else -1
+
+        with self._lock:
+            for container in pod.spec.containers:
+                if container.name != self.CONTAINER_NAME:
+                    continue
+                for resource_name, quantity in container.resources.requests.items():
+                    if resource_name.startswith('nvidia.com/'):
+                        qty = int(quantity) * change
+                        self._live_gpu_usage[resource_name] = self._live_gpu_usage.get(resource_name, 0) + qty
+                        # Update only the matching GPU info
+                        for gpu_info in self._gpus.values():
+                            if gpu_info.resource_name == resource_name:
+                                used = self._live_gpu_usage.get(resource_name, 0)
+                                gpu_info.available = max(0, gpu_info.count - used)
+                                break
 
     def _update_allocatable_gpu_flavours(self) -> None:
         '''
@@ -121,6 +197,11 @@ class AvailableGPUs:
         with self.get_lock():
             self._gpus = gpus
             self._cordoned_gpu_nodes = cordoned_gpu_nodes
+            for description, gpu_info in gpus.items():
+                # Get current usage for this GPU resource
+                used = self._live_gpu_usage.get(gpu_info.resource_name, 0)
+                gpu_info.available = max(0, gpu_info.count - used)
+                self._logger.info(f'GPU {description}: total={gpu_info.count}, used={used}, available={gpu_info.available}')
 
         self._logger.info('Allocatable GPU flavours and their counts: ' \
                           f'{[(flavour,gpu_info.count) for flavour,gpu_info in self._gpus.items()]}')

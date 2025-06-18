@@ -122,6 +122,55 @@
         }
     };
 
+     /**
+     * Populate GPU options with availability information
+     */
+    function populateGPUOptions() {
+        const selectGpu = document.getElementById('gpuOptions');
+        const selectLCG = document.getElementById('lcgOptions');
+        
+        const gpuFlavours = dynamicFormInfo['gpu_flavours'] || [];
+        console.log('gpuFlavours:', gpuFlavours);
+        
+        // Clear existing options
+        selectGpu.innerHTML = '';
+
+        // Sort GPU flavours: available ones first, then by name
+        const sortedGpus = gpuFlavours.sort((a, b) => {
+            if (a.available > 0 && b.available === 0) return -1;
+            if (a.available === 0 && b.available > 0) return 1;
+            return a.name.localeCompare(b.name);
+        });
+
+        let gpuSelected = false;
+
+        // Add GPU options with availability info
+        sortedGpus.forEach((gpu, index) => {
+            const option = document.createElement("option");
+            option.value = gpu.name;
+
+            if (gpu.available > 0 && !gpuSelected) {
+                option.selected = true;
+                gpuSelected = true;
+                const availabilityText = `(${gpu.available}/${gpu.total} available)`;
+                option.text = `${gpu.name} ${availabilityText}`;
+            }
+
+            if (gpu.available === 0) {
+                option.disabled = true;
+                option.text = `${gpu.name} (Currently Unavailable)`;
+                option.style.color = '#999';
+            }
+
+            // Add visual indicator class
+            option.className = gpu.available > 0 ? 'gpu-available' : 'gpu-unavailable';
+            selectGpu.add(option);
+        });
+
+        // Enable the select element
+        selectGpu.removeAttribute('disabled');
+    }
+
     /**
      * Get Form data dictionary for given selected_value.
      */
@@ -403,36 +452,17 @@
                 
                 // Enable GPU selection only if CUDA stack is used
                 if (selectLCG.selectedOptions[0] && selectLCG.selectedOptions[0].value.includes('cuda')) {
-                    var gpuFlavours = dynamicFormInfo['gpu_flavours'];
-                    
-                    selectGpu.innerHTML = '';
-                    for (var i = 0; i < gpuFlavours.length; i++) {
-                        var flavour = gpuFlavours[i];
-                        
-                        var selectGpuOption = document.createElement("option");
-                        selectGpuOption.value = flavour;
-                        selectGpuOption.text = flavour;
-                        if (i === 0) {
-                            selectGpuOption.selected = true;
-                        }
-                        
-                        selectGpu.add(selectGpuOption);
-                    }
-                    
-                    selectGpu.removeAttribute('disabled');
+                    populateGPUOptions();
                 } else {
-                    selectGpu.setAttribute('disabled', '');
-                }
-                
-                // If no GPU flavour is shown, just show None
-                if (selectGpu.length == 0) {
+                    selectGpu.innerHTML = '';
                     var selectGpuOption = document.createElement("option");
                     selectGpuOption.value = 'none';
                     selectGpuOption.text = 'None';
                     selectGpu.add(selectGpuOption);
+                    selectGpu.setAttribute('disabled', '');
                 }
             }
-        }
+        }    
         if (selected_source === lcg_source) {
             adjustOptions();
             adjustPlatforms();

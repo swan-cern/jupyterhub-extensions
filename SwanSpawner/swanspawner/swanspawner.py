@@ -156,8 +156,9 @@ def define_SwanSpawner_from(base_class):
             options[self.lcg_rel_field]             = formdata[self.lcg_rel_field][0]
             options[self.platform_field]            = formdata[self.platform_field][0]
             options[self.user_script_env_field]     = formdata[self.user_script_env_field][0]
-            options[self.spark_cluster_field]       = formdata[self.spark_cluster_field][0] if self.spark_cluster_field in formdata.keys() else 'none'
+            options[self.spark_cluster_field]       = formdata.get(self.spark_cluster_field, ['none'])[0]
             options[self.condor_pool]               = formdata[self.condor_pool][0]
+            options[self.software_source]           = formdata[self.software_source][0]
             options[self.user_n_cores]              = formdata[self.user_n_cores][0]
             options[self.user_memory]               = formdata[self.user_memory][0]
             options[self.gpu]                       = formdata.get(self.gpu, ['none'])[0]

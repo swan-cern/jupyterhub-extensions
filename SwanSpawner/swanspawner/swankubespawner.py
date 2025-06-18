@@ -112,8 +112,18 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
         """
         Adds dynamic GPU information to render as part of the options form
         """
-        gpu_flavours = self.gpus.get_gpu_flavours()
+        gpu_flavours_raw = self.gpus.get_gpu_flavours()
         # Sort flavours by count so the most common one appears first in the list,
         # and therefore is rendered first in the form.
-        self._dynamic_form_info['gpu_flavours'] = sorted(gpu_flavours, key=lambda x: gpu_flavours.get(x).count, reverse=True)
+        gpu_flavours = []
+        for flavour, gpu_info in gpu_flavours_raw.items():
+            gpu_flavours.append({
+                'name': flavour,
+                'available': gpu_info.available,
+                'total': gpu_info.count,
+                'resource_name': gpu_info.resource_name,
+                'enabled': gpu_info.available > 0
+            })
+        gpu_flavours.sort(key=lambda x: (not x['enabled'], x['name']))
+        self._dynamic_form_info['gpu_flavours'] = sorted(gpu_flavours, key=lambda x: x['total'], reverse=True)
         return super()._render_templated_options_form(spawner)
