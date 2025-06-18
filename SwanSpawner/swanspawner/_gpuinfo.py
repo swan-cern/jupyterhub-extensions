@@ -16,10 +16,12 @@ class _GPUInfo:
     - Name of the resource in k8s (e.g. nvidia.com/gpu)
     - Name of the product in k8s (e.g. NVIDIA-A100-PCIE-40GB)
     - Number of current instances of the flavour
+    - Number of currently free instances of the flavour
     '''
     resource_name: str
     product_name: str
     count: int = 0
+    free: int = 0
 
 class AvailableGPUs:
     '''
@@ -27,8 +29,11 @@ class AvailableGPUs:
     available GPU flavours in the k8s cluster at regular intervals.
     A GPU flavour can correspond to a GPU model (e.g. "Tesla T4") or to
     a partition of a GPU card (e.g. "A100 fragment (5 GB)" ).
+    It also check how many GPUs are currently free out of the available ones.
     '''
     UPDATE_INTERVAL = 60 * 10  # 10 minutes
+    NAMESPACE = 'swan'
+    CONTAINER_NAME = 'notebook'
 
     def __init__(self, events_role: str):
         self._events_role = events_role
@@ -41,14 +46,72 @@ class AvailableGPUs:
         self._thread.start()
         self._lock = Lock()
 
+    def _update_free_gpu_flavours(self) -> None:
+        '''
+        Set the number of free GPU by checking current running GPU pods.
+        This calculates the initial free count by subtracting used GPUs from total available.
+        '''
+        try:
+            # Get all running pods in the namespace that request GPU
+            user_gpu_pods = self._api.list_namespaced_pod(
+                namespace=self.NAMESPACE,
+                label_selector='gpu'
+            ).items
+            gpu_usage_by_resource = {}
+
+            for pod in user_gpu_pods:
+                if pod.spec.node_name in self._cordoned_gpu_nodes:
+                    continue
+                container = next((c for c in pod.spec.containers if c.name == self.CONTAINER_NAME), None)
+                if container is None:
+                    raise RuntimeError(f"_update_free_gpu_flavours: Expected container named '{self.CONTAINER_NAME}' not found in pod.spec.containers")
+                for resource_name, quantity in container.resources.requests.items():
+                    if resource_name.startswith('nvidia.com/'):
+                        try:
+                            used_gpu_count = int(quantity)
+                            gpu_usage_by_resource[resource_name] = (
+                                gpu_usage_by_resource.get(resource_name, 0) + used_gpu_count
+                            )
+                        except ValueError:
+                            self._logger.error(
+                                f'Could not parse GPU quantity "{quantity}" for resource "{resource_name}" '
+                                f'in pod {pod.metadata.name}, container {container.name}'
+                            )
+            # Update free GPU counts
+            with self._lock:
+                for description, gpu_info in self._gpus.items():
+                    used_count = gpu_usage_by_resource.get(gpu_info.resource_name, 0)
+                    gpu_info.free = max(0, gpu_info.count - used_count)
+                    self._logger.info(f'{description} -> Used: {used_count}, '
+                                    f'Total: {gpu_info.count}, Free: {gpu_info.free}')
+
+            self._logger.info('Final currently free GPU state: ' + 
+                            ', '.join([f'{desc}: {info.free}/{info.count}' 
+                                        for desc, info in self._gpus.items()]))
+
+        except ApiException as e:
+            self._logger.error(f'Error initializing currently free GPU: {e}')
+        except Exception as e:
+            self._logger.exception(f'Unexpected error during currently free GPU check: {e}')
+
     def get_info(self, description: str) -> Union[_GPUInfo, None]:
         return self._gpus.get(description, None)
 
-    def get_gpu_flavours(self) -> dict:
+    def get_available_gpu_flavours(self) -> dict:
         '''
         Returns information about available GPU flavours.
         '''
         return self._gpus
+
+    def get_free_gpu_flavours(self) -> dict:
+        '''
+        Return only GPU flavours with free > 0.
+        '''
+        return {
+            name: gpu 
+            for name, gpu in self._gpus.items()
+            if gpu.free > 0
+        }
 
     def get_cordoned_gpu_nodes(self) -> list:
         '''
@@ -76,10 +139,12 @@ class AvailableGPUs:
 
     def _update_gpu_info(self) -> None:
         '''
-        Updates the internal information about available GPU flavours.
+        Updates the internal information about available GPU flavours 
+        and the free instances of the flavour.
         '''
         while True:
             self._update_allocatable_gpu_flavours()
+            self._update_free_gpu_flavours()
             sleep(self.UPDATE_INTERVAL)
 
     def _update_allocatable_gpu_flavours(self) -> None:
