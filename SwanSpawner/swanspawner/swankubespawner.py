@@ -108,12 +108,23 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
                     except ApiException as e:
                         self.log.error('Error deleting secret {namespace}:{hadoop_secret_name}: {e}')
 
+            # free GPU update
+            try:
+                gpu_flavour = self.user_options.get('gpu')
+                if gpu_flavour:
+                    self.gpus._check_free_gpu()
+                    self.log.info(f"Update free GPU count for {gpu_flavour} after user stop.")
+            except Exception as e:
+                self.log.error(f"Failed to update free GPU count: {e}")
+
     def _render_templated_options_form(self, spawner):
         """
         Adds dynamic GPU information to render as part of the options form
         """
         gpu_flavours = self.gpus.get_gpu_flavours()
+        free_gpu_flavours = self.gpus.get_free_flavours()
         # Sort flavours by count so the most common one appears first in the list,
         # and therefore is rendered first in the form.
         self._dynamic_form_info['gpu_flavours'] = sorted(gpu_flavours, key=lambda x: gpu_flavours.get(x).count, reverse=True)
+        self._dynamic_form_info['free_gpu_flavours'] = list(free_gpu_flavours.keys())
         return super()._render_templated_options_form(spawner)

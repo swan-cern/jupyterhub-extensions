@@ -403,36 +403,39 @@
                 
                 // Enable GPU selection only if CUDA stack is used
                 if (selectLCG.selectedOptions[0] && selectLCG.selectedOptions[0].value.includes('cuda')) {
-                    var gpuFlavours = dynamicFormInfo['gpu_flavours'];
-                    
+                    const gpuFlavours = dynamicFormInfo['gpu_flavours'] || [];
+                    const freeGpuFlavours = dynamicFormInfo['free_gpu_flavours'] || [];
+
                     selectGpu.innerHTML = '';
-                    for (var i = 0; i < gpuFlavours.length; i++) {
-                        var flavour = gpuFlavours[i];
+                    gpuFlavours.forEach(flavourName => {
+                        const selectGpuOption = document.createElement("option");
+                        selectGpuOption.value = flavourName;
+                        selectGpuOption.text = flavourName;
                         
-                        var selectGpuOption = document.createElement("option");
-                        selectGpuOption.value = flavour;
-                        selectGpuOption.text = flavour;
-                        if (i === 0) {
-                            selectGpuOption.selected = true;
+                        // Check if this flavor is free/available
+                        const isAvailable = freeGpuFlavours.includes(flavourName);
+                        
+                        if (!isAvailable) {
+                            selectGpuOption.disabled = true;
+                            selectGpuOption.text += ' (Unavailable)';
+                            selectGpuOption.style.color = '#888';
                         }
                         
                         selectGpu.add(selectGpuOption);
-                    }
-                    
-                    selectGpu.removeAttribute('disabled');
+                        // Remove disabled attribute if it exists
+                        selectGpu.removeAttribute('disabled');
+                    });
+
                 } else {
-                    selectGpu.setAttribute('disabled', '');
-                }
-                
-                // If no GPU flavour is shown, just show None
-                if (selectGpu.length == 0) {
+                    selectGpu.innerHTML = '';
                     var selectGpuOption = document.createElement("option");
                     selectGpuOption.value = 'none';
                     selectGpuOption.text = 'None';
                     selectGpu.add(selectGpuOption);
+                    selectGpu.setAttribute('disabled', '');
                 }
             }
-        }
+        }    
         if (selected_source === lcg_source) {
             adjustOptions();
             adjustPlatforms();
