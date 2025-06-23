@@ -193,12 +193,13 @@ class SpawnHandler(JHSpawnHandler):
             self.set_login_cookie(user)
 
 
+        opening_file = options.get(configs.file, '').replace('../', '').replace('..\\', '')
         if options.get(configs.software_source) == configs.customenv_special_type:
             # Add the query arguments to the URL
             query_params = {
                 configs.repository: options.get(configs.repository),
                 configs.builder: options.get(configs.builder),
-                configs.file: options.get(configs.file, ''),
+                configs.file: opening_file,
             }
             # If the builder has a version, pass it as an argument of the query
             if options.get(configs.builder_version):
@@ -215,8 +216,8 @@ class SpawnHandler(JHSpawnHandler):
                 if 'next' in self.request.query_arguments:
                     next_url += f"&{configs.use_jupyterlab_field}={options[configs.use_jupyterlab_field]}"
                 # User requested to open a file
-                elif options.get(configs.file):
-                    next_url = url_path_join("user", user.escaped_name, "lab", "tree", *options[configs.file].split('/'))
+                elif opening_file:
+                    next_url = url_path_join("user", user.escaped_name, "lab", "tree", *opening_file.split('/'))
 
         self.redirect(next_url)
 
