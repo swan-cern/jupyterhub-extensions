@@ -215,7 +215,8 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 client_secret = self.client_secret,
                 subject_token = token,
                 audience = service_name,
-                requested_token_type = 'urn:ietf:params:oauth:token-type:access_token'
+                requested_token_type = 'urn:ietf:params:oauth:token-type:access_token',
+                subject_token_type = 'urn:ietf:params:oauth:token-type:access_token'
             )
             data = parse.urlencode(values)
 
