@@ -42,6 +42,7 @@
 <!--
 
     const form_config = {{ options_form_config }};
+    var dynamicFormInfo = {{ dynamic_form_info }};
     const enable_customenv_form = form_config['enable_customenv_form'];
     const enable_generate_url_form = form_config['enable_generate_url_form'];
     const enable_network_form = form_config['enable_network_form'];
@@ -72,6 +73,7 @@
         "platforms": [lcg_source],
         "clusters": [lcg_source, customenv_source],
         "condor": [lcg_source],
+        "gpu": [lcg_source],
     };
     const inputs = {
         "scriptenv": [lcg_source],
@@ -394,7 +396,46 @@
                     config_element.add(select_option);
                 }
             }
-        }
+            // Special handling for GPU after form population
+            if (selected_source === lcg_source) {
+                const selectLCG = document.getElementById('lcgOptions');
+                const selectGpu = document.getElementById('gpuOptions');
+                
+                // Enable GPU selection only if CUDA stack is used
+                if (selectLCG.selectedOptions[0] && selectLCG.selectedOptions[0].value.includes('cuda')) {
+                    const gpuFlavours = dynamicFormInfo['gpu_flavours'] || [];
+                    const freeGpuFlavours = dynamicFormInfo['free_gpu_flavours'] || [];
+
+                    selectGpu.innerHTML = '';
+                    gpuFlavours.forEach(flavourName => {
+                        const selectGpuOption = document.createElement("option");
+                        selectGpuOption.value = flavourName;
+                        selectGpuOption.text = flavourName;
+                        
+                        // Check if this flavor is free/available
+                        const isAvailable = freeGpuFlavours.includes(flavourName);
+                        
+                        if (!isAvailable) {
+                            selectGpuOption.disabled = true;
+                            selectGpuOption.text += ' (Unavailable)';
+                            selectGpuOption.style.color = '#888';
+                        }
+                        
+                        selectGpu.add(selectGpuOption);
+                        // Remove disabled attribute if it exists
+                        selectGpu.removeAttribute('disabled');
+                    });
+
+                } else {
+                    selectGpu.innerHTML = '';
+                    var selectGpuOption = document.createElement("option");
+                    selectGpuOption.value = 'none';
+                    selectGpuOption.text = 'None';
+                    selectGpu.add(selectGpuOption);
+                    selectGpu.setAttribute('disabled', '');
+                }
+            }
+        }    
         if (selected_source === lcg_source) {
             adjustOptions();
             adjustPlatforms();
@@ -670,19 +711,20 @@
                 <span class='nb'>Request a user session that is exposed to the CERN Technical Network.</span>
             </div>
         </div>
+
     </div>
 
     <!-- Resources configuration -->
     <div id="resources_config">
-        <h2>Session resources</h2>
+        <h2 for="session-resources">Session resources</h2>
 
         <div id="coresSection">
-            <label for="coresOptions">Number of cores <a href="#" onclick="toggleVisibility('coresDetails');"><span class='nbs'>more...</span></a>
+                <label for="coresOptions">CPU <a href="#" onclick="toggleVisibility('coresDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="coresDetails">
-                    <span class='nb'>Amount of cores allocated to the container.</span>
+                    <span class='nb'>Number of CPU cores to associate to the container.</span>
                 </div>
             </label>
-            <select id="coresOptions" name="cores" required></select>
+            <select id="coresOptions" name="cores"></select>
         </div>
         <br>
 
@@ -695,6 +737,16 @@
             <select id="memoryOptions" name="memory" required></select>
         </div>
         <br>
+
+        <div id="gpuSection">
+            <label for="gpuOptions">GPU <a href="#" onclick="toggleVisibility('gpuDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="gpuDetails">
+                    <span class='nb'>GPU model or flavour to attach to the container.</span>
+                </div>
+            </label>
+            <select id="gpuOptions" name="gpu"></select>
+        </div>
+        <br>
     </div>
 
     <!-- External computing resources -->
@@ -702,8 +754,8 @@
         <h2>External computing resources</h2>
         
         <div id="clusterSection">
-            <label for="clustersOptions">Spark cluster <a href="#" onclick="toggleVisibility('clustersDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="clustersDetails">
+            <label for="clustersOptions">Spark cluster <a href="#" onclick="toggleVisibility('sparkClusterDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="sparkClusterDetails">
                     <span class='nb'>Name of the Spark cluster to connect to from notebooks. See the <a target="_blank" href="https://hadoop-user-guide.web.cern.ch/">Hadoop User guide</a> and the <a target="_blank" href="https://sparktraining.web.cern.ch/">Spark training course</a></span>
                 </div>
             </label>
