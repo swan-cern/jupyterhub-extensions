@@ -174,8 +174,8 @@ class AvailableGPUs:
             gpu_model = self._get_simplified_gpu_model(product_name)
 
             # Check MIG
-            mig_config = labels.get('nvidia.com/mig.config', 'disabled')
-            if mig_config == 'disabled':
+            mig_config = labels.get('nvidia.com/mig.config', 'all-disabled')
+            if mig_config == 'all-disabled':
                 # Not partitioned or not partitionable, store info for full card
                 self._process_full_card(gpus, gpu_model, product_name, status, labels)
             else:
