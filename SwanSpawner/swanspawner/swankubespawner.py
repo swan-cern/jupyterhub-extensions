@@ -126,5 +126,5 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
         # Sort flavours by count so the most common one appears first in the list,
         # and therefore is rendered first in the form.
         self._dynamic_form_info['gpu_flavours'] = list(gpu_flavours.keys())
-        self._dynamic_form_info['free_gpu_flavours'] = sorted(free_gpu_flavours, key=lambda x: free_gpu_flavours.get(x, 0),reverse=True)
+        self._dynamic_form_info['free_gpu_flavours'] = sorted(free_gpu_flavours, key=lambda x: free_gpu_flavours[x].free, reverse=True)
         return super()._render_templated_options_form(spawner)
