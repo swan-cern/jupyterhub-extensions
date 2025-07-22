@@ -400,21 +400,32 @@
             if (selected_source === lcg_source) {
                 const selectLCG = document.getElementById('lcgOptions');
                 const selectGpu = document.getElementById('gpuOptions');
+                selectGpu.innerHTML = '';
+
+                const noneOption = document.createElement("option");
+                noneOption.value = '';
+                noneOption.text = 'None';
                 
                 // Enable GPU selection only if CUDA stack is used
                 if (selectLCG.selectedOptions[0] && selectLCG.selectedOptions[0].value.includes('cuda')) {
+                    setDisabled(selectGpu, false)
+
                     const gpuFlavours = dynamicFormInfo['gpu_flavours'] || [];
                     const freeGpuFlavours = dynamicFormInfo['free_gpu_flavours'] || [];
                     const addedFlavours = new Set();
 
                     // Free GPU sorted by availability
-                    freeGpuFlavours.forEach(flavourName => {
-                        const option = document.createElement("option");
-                        option.value = flavourName;
-                        option.text = flavourName;
-                        selectGpu.add(option);
-                        addedFlavours.add(flavourName);
-                    });
+                    if (freeGpuFlavours.length === 0) {
+                        selectGpu.add(noneOption);
+                    } else {
+                        freeGpuFlavours.forEach(flavourName => {
+                            const option = document.createElement("option");
+                            option.value = flavourName;
+                            option.text = flavourName;
+                            selectGpu.add(option);
+                            addedFlavours.add(flavourName);
+                        });
+                    }
 
                     // The rest of the flavours (disabled)
                     gpuFlavours.forEach(flavourName => {
@@ -423,20 +434,13 @@
                             option.value = flavourName;
                             option.text = `${flavourName} (Unavailable)`;
                             option.disabled = true;
-                            option.style.color = '#888';
                             selectGpu.add(option);
                         }
                     });
 
-                    selectGpu.removeAttribute('disabled');
-
                 } else {
-                    selectGpu.innerHTML = '';
-                    var selectGpuOption = document.createElement("option");
-                    selectGpuOption.value = 'none';
-                    selectGpuOption.text = 'None';
-                    selectGpu.add(selectGpuOption);
-                    selectGpu.setAttribute('disabled', '');
+                    selectGpu.add(noneOption);
+                    setDisabled(selectGpu, true)
                 }
             }
         }    
