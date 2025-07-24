@@ -40,6 +40,7 @@ class AvailableGPUs:
         config.load_incluster_config()
         self._api = client.CoreV1Api()
         self._gpus = {}
+        self._node_to_flavor = {}
         self._cordoned_gpu_nodes = []
         self._configure_logger()
         self._thread = Thread(target=self._update_gpu_info, daemon=True)
@@ -53,10 +54,14 @@ class AvailableGPUs:
         '''
         try:
             # Get all running pods in the namespace that request GPU
-            user_gpu_pods = self._api.list_namespaced_pod(
-                namespace=self.NAMESPACE,
-                label_selector='gpu'
-            ).items
+            user_gpu_pods = [
+                pod for pod in self._api.list_namespaced_pod(
+                    namespace=self.NAMESPACE,
+                    label_selector='gpu'
+                ).items
+                if pod.status.phase in ['Running', 'Pending']
+            ]
+
             gpu_usage_by_resource = {}
 
             for pod in user_gpu_pods:
@@ -69,9 +74,9 @@ class AvailableGPUs:
                     if resource_name.startswith('nvidia.com/'):
                         try:
                             used_gpu_count = int(quantity)
-                            gpu_usage_by_resource[resource_name] = (
-                                gpu_usage_by_resource.get(resource_name, 0) + used_gpu_count
-                            )
+                            description = self._node_to_flavor.get(pod.spec.node_name)
+                            key = (resource_name, description) 
+                            gpu_usage_by_resource[key] = gpu_usage_by_resource.get(key, 0) + used_gpu_count
                         except ValueError:
                             self._logger.error(
                                 f'Could not parse GPU quantity "{quantity}" for resource "{resource_name}" '
@@ -80,7 +85,8 @@ class AvailableGPUs:
             # Update free GPU counts
             with self._lock:
                 for description, gpu_info in self._gpus.items():
-                    used_count = gpu_usage_by_resource.get(gpu_info.resource_name, 0)
+                    key = (gpu_info.resource_name, description)
+                    used_count = gpu_usage_by_resource.get(key, 0)
                     gpu_info.free = max(0, gpu_info.count - used_count)
                     self._logger.info(f'{description} -> Used: {used_count}, '
                                     f'Total: {gpu_info.count}, Free: {gpu_info.free}')
@@ -177,10 +183,10 @@ class AvailableGPUs:
             mig_config = labels.get('nvidia.com/mig.config', 'all-disabled')
             if mig_config == 'all-disabled':
                 # Not partitioned or not partitionable, store info for full card
-                self._process_full_card(gpus, gpu_model, product_name, status, labels)
+                self._process_full_card(gpus, gpu_model, product_name, status, labels, node.metadata.name)
             else:
                 # Partitioned, store fragment info
-                self._process_partitions(gpus, gpu_model, product_name, status)
+                self._process_partitions(gpus, gpu_model, product_name, status, node.metadata.name)
 
         # Fully replace the stored information (in mutual exclusion)
         with self.get_lock():
@@ -208,7 +214,8 @@ class AvailableGPUs:
                            gpu_model: str,
                            product_name: str,
                            node_status: V1NodeStatus,
-                           node_labels: dict) -> None:
+                           node_labels: dict,
+                           node_name: str) -> None:
         '''
         Gets information about allocatable GPU cards
         '''
@@ -219,6 +226,7 @@ class AvailableGPUs:
         count = int(node_status.allocatable[resource_name])
         if count > 0:
             description = f'{gpu_model} ({memory} GB)'
+            self._node_to_flavor[node_name] = description
             gpu_info = gpus.get(description, _GPUInfo(resource_name, product_name))
             gpu_info.count += count
             gpus[description] = gpu_info
@@ -227,7 +235,8 @@ class AvailableGPUs:
                             gpus: dict,
                             gpu_model: str,
                             product_name: str,
-                            node_status: V1NodeStatus) -> None:
+                            node_status: V1NodeStatus, 
+                            node_name: str) -> None:
         '''
         Gets information about allocatable GPU partitions
         '''
@@ -237,6 +246,7 @@ class AvailableGPUs:
             if m and int(count) > 0:
                 memory = m.group(1)
                 description = f'{gpu_model} partition ({memory} GB)'
+                self._node_to_flavor[node_name] = description
                 gpu_info = gpus.get(description, _GPUInfo(resource_name, product_name))
                 gpu_info.count += int(count)
                 gpus[description] = gpu_info
