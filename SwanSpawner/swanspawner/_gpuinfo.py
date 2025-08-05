@@ -35,8 +35,9 @@ class AvailableGPUs:
     NAMESPACE = 'swan'
     CONTAINER_NAME = 'notebook'
 
-    def __init__(self, events_role: str):
+    def __init__(self, events_role: str, lhcb_role: str):
         self._events_role = events_role
+        self._lhcb_role = lhcb_role
         config.load_incluster_config()
         self._api = client.CoreV1Api()
         self._gpus = {}
@@ -105,13 +106,46 @@ class AvailableGPUs:
 
     def get_available_gpu_flavours(self) -> dict:
         '''
-        Returns information about available GPU flavours.
+        Returns information about available GPU flavours in normal pool.
         '''
-        return self._gpus
+        try:
+            lhcb_nodes = self._api.list_node(label_selector=self._lhcb_role).items
+            lhcb_node_names = {node.metadata.name for node in lhcb_nodes}
+
+            excluded_flavors = set()
+            for (node_name, resource_name), description in self._node_to_flavor.items():
+                if node_name in lhcb_node_names:
+                    excluded_flavors.add(description)
+            return {
+                name: gpu
+                for name, gpu in self._gpus.items()
+                if name not in excluded_flavors
+            }
+        except Exception:
+            self._logger.exception("Failed to filter LHCB flavours")
+            return self._gpus
 
     def get_free_gpu_flavours(self) -> dict:
         '''
-        Return only GPU flavours with free > 0.
+        Return only GPU flavours with free > 0 in normal pool.
+        '''
+        available_flavours = self.get_available_gpu_flavours()
+        return {
+            name: gpu
+            for name, gpu in available_flavours.items()
+            if gpu.free > 0
+        }
+    
+    def get_lhcb_gpu_flavours(self) -> dict:
+        '''
+        Return GPU flavours visible to LHCb users: both normal GPU flavours 
+        and those on virtual nodes labeled with LHCB role.
+        '''
+        return self._gpus
+
+    def get_free_lhcb_gpu_flavours(self) -> dict:
+        '''
+        Return only free GPU flavours that are on LHCB nodes.
         '''
         return {
             name: gpu 
@@ -161,13 +195,15 @@ class AvailableGPUs:
         try:
             # Filter out GPU nodes reserved for a SWAN event, if any
             gpu_nodes = self._api.list_node(label_selector = f'nvidia.com/gpu.present=true,!{self._events_role}').items
+            virtual_gpu_nodes = self._api.list_node(label_selector = f'liqo.io/type=virtual-node,!{self._events_role}').items
+            all_gpu_nodes = list(virtual_gpu_nodes) + list(gpu_nodes)
         except ApiException as e:
             self._logger.error('Error getting list of GPU nodes', e)
             return
 
         gpus = {}
         cordoned_gpu_nodes = []
-        for node in gpu_nodes:
+        for node in all_gpu_nodes:
             if node.spec.unschedulable:
                 # Node is cordoned, ignore its GPU
                 cordoned_gpu_nodes.append(node.metadata.name)

@@ -117,6 +117,7 @@ def define_SwanSpawner_from(base_class):
                 self.options_form = self._render_templated_options_form
             # Dictionary with dynamic information to insert in the options form
             self._dynamic_form_info = {}
+            self._is_swan_events = False
 
         def _popup_error(self, options: dict, invalid_selection: str) -> None:
             """ Raise an error if the selection is invalid """
@@ -344,7 +345,12 @@ def define_SwanSpawner_from(base_class):
             try:
                 with open(self.options_form_config) as yaml_file:
                     options_form_config = yaml.safe_load(yaml_file)
-                return template.render(options_form_config=options_form_config, dynamic_form_info=json.dumps(self._dynamic_form_info), general_domain_name=self.general_domain_name, ats_domain_name=self.ats_domain_name)
+                return template.render(
+                    options_form_config=options_form_config, 
+                    dynamic_form_info=json.dumps(self._dynamic_form_info), 
+                    general_domain_name=self.general_domain_name, 
+                    ats_domain_name=self.ats_domain_name,
+                    user_is_swan_events=json.dumps(self._is_swan_events))
             except Exception as ex:
                 self.log.error("Could not initialize form: %s", ex, exc_info=True)
                 raise RuntimeError(
