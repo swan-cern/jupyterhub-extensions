@@ -74,7 +74,7 @@ class AvailableGPUs:
                     if resource_name.startswith('nvidia.com/'):
                         try:
                             used_gpu_count = int(quantity)
-                            description = self._node_to_flavor.get(pod.spec.node_name)
+                            description = self._node_to_flavor.get((pod.spec.node_name, resource_name))
                             key = (resource_name, description) 
                             gpu_usage_by_resource[key] = gpu_usage_by_resource.get(key, 0) + used_gpu_count
                         except ValueError:
@@ -226,7 +226,7 @@ class AvailableGPUs:
         count = int(node_status.allocatable[resource_name])
         if count > 0:
             description = f'{gpu_model} ({memory} GB)'
-            self._node_to_flavor[node_name] = description
+            self._node_to_flavor[(node_name, resource_name)] = description
             gpu_info = gpus.get(description, _GPUInfo(resource_name, product_name))
             gpu_info.count += count
             gpus[description] = gpu_info
@@ -246,7 +246,7 @@ class AvailableGPUs:
             if m and int(count) > 0:
                 memory = m.group(1)
                 description = f'{gpu_model} partition ({memory} GB)'
-                self._node_to_flavor[node_name] = description
+                self._node_to_flavor[(node_name, resource_name)] = description
                 gpu_info = gpus.get(description, _GPUInfo(resource_name, product_name))
                 gpu_info.count += int(count)
                 gpus[description] = gpu_info
