@@ -299,6 +299,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             try:
                 decoded_token = self._decode_token(user['auth_state']['access_token'])
                 user_roles = self.claim_roles_key(self, decoded_token)
+                user['auth_state']['roles'] = list(user_roles) 
             except:
                 self.log.error("Unable to retrieve the roles, denying access.", exc_info=True)
                 return None
