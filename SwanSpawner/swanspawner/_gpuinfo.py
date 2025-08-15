@@ -35,13 +35,16 @@ class AvailableGPUs:
     NAMESPACE = 'swan'
     CONTAINER_NAME = 'notebook'
 
-    def __init__(self, events_role: str):
+    def __init__(self, events_role: str, lhcb_role: str):
         self._events_role = events_role
+        self._lhcb_role = lhcb_role
         config.load_incluster_config()
         self._api = client.CoreV1Api()
         self._gpus = {}
         self._node_to_flavor = {}
         self._cordoned_gpu_nodes = []
+        self._lhcb_nodes = set()
+        self._events_nodes = set()
         self._configure_logger()
         self._thread = Thread(target=self._update_gpu_info, daemon=True)
         self._thread.start()
@@ -102,20 +105,76 @@ class AvailableGPUs:
 
     def get_info(self, description: str) -> Union[_GPUInfo, None]:
         return self._gpus.get(description, None)
+    
+    def _role_flags(self, roles: list[str]) -> tuple[bool, bool, bool]:
+        """
+        Returns a tuple of booleans: (is_lhcb, is_swan_events, is_normal)
+        """
+        is_lhcb = self._lhcb_role in roles
+        is_swan_events = self._events_role in roles
+        is_normal = not is_lhcb and not is_swan_events
+        return is_lhcb, is_swan_events, is_normal
 
-    def get_available_gpu_flavours(self) -> dict:
-        '''
-        Returns information about available GPU flavours.
-        '''
-        return self._gpus
+    
+    def _get_allowed_flavors_for_role(self, is_lhcb: bool, is_swan_events: bool, is_normal: bool) -> set[str]:
+        """
+        Determine which GPU flavors are visible based on user roles.
+        """
+        allowed_flavors = set()
+        
+        with self._lock:
+            for (node_name, resource_name), description in self._node_to_flavor.items():
+                # Skip cordoned nodes
+                if node_name in self._cordoned_gpu_nodes:
+                    continue
+                
+                has_lhcb_label = node_name in self._lhcb_nodes
+                has_events_label = node_name in self._events_nodes
+                
+                if is_swan_events:
+                    # Events users can only see nodes with events role label
+                    if has_events_label:
+                        allowed_flavors.add(description)
+                elif is_lhcb:
+                    # LHCb users see all nodes except events nodes
+                    if not has_events_label:
+                        allowed_flavors.add(description)
+                elif is_normal:
+                    # Normal users see all except lhcb and events nodes
+                    if not has_lhcb_label and not has_events_label:
+                        allowed_flavors.add(description)
+        
+        return allowed_flavors
 
-    def get_free_gpu_flavours(self) -> dict:
-        '''
-        Return only GPU flavours with free > 0.
-        '''
+    def get_available_gpu_flavours(self, roles: list[str]) -> dict:
+        """
+        Returns information about available GPU flavours, filtering based on user roles.
+        """
+        is_lhcb, is_swan_events, is_normal = self._role_flags(roles)
+        
+        try:
+            allowed_flavors = self._get_allowed_flavors_for_role(is_lhcb, is_swan_events, is_normal)
+
+            with self._lock:
+                return {
+                    name: gpu
+                    for name, gpu in self._gpus.items()
+                    if name in allowed_flavors
+                }
+                
+        except Exception:
+            self._logger.exception("[get_available_gpu_flavours]: Failed to filter GPU flavours")
+            # Return all GPUs as fallback
+            return self._gpus.copy()
+
+    def get_free_gpu_flavours(self, roles: list[str]) -> dict:
+        """
+        Return only GPU flavours with free > 0, filtering based on user roles.
+        """
+        available_flavours = self.get_available_gpu_flavours(roles)
         return {
-            name: gpu 
-            for name, gpu in self._gpus.items()
+            name: gpu
+            for name, gpu in available_flavours.items()
             if gpu.free > 0
         }
 
@@ -153,21 +212,49 @@ class AvailableGPUs:
             self._update_free_gpu_flavours()
             sleep(self.UPDATE_INTERVAL)
 
+    def _update_node_label_cache(self) -> None:
+        """
+        Cache node labels for role-based filtering.
+        Returns tuple of (lhcb_nodes, events_nodes).
+        """
+        try:
+            # Get nodes with LHCb label
+            lhcb_node_list = self._api.list_node(label_selector=self._lhcb_role).items
+            lhcb_nodes = {node.metadata.name for node in lhcb_node_list}
+            
+            # Get nodes with events label  
+            events_node_list = self._api.list_node(label_selector=self._events_role).items
+            events_nodes = {node.metadata.name for node in events_node_list}
+        
+            self._logger.info(f'Cached node labels - LHCb nodes: {len(lhcb_nodes)}, Events nodes: {len(events_nodes)}')
+
+            self._lhcb_nodes = lhcb_nodes
+            self._events_nodes = events_nodes
+
+        except ApiException as e:
+            self._logger.error(f'Error caching node labels for role filtering: {e}')
+
+
     def _update_allocatable_gpu_flavours(self) -> None:
         '''
         Interrogates k8s to obtain the information about GPU flavours available
-        in the cluster.
+        in the cluster and caches node label information.
         '''
+        # Cache node label information
+        self._update_node_label_cache()
+
         try:
             # Filter out GPU nodes reserved for a SWAN event, if any
-            gpu_nodes = self._api.list_node(label_selector = f'nvidia.com/gpu.present=true,!{self._events_role}').items
+            gpu_nodes = self._api.list_node(label_selector = f'nvidia.com/gpu.present=true').items
+            virtual_gpu_nodes = self._api.list_node(label_selector = f'liqo.io/type=virtual-node').items
+            all_gpu_nodes = virtual_gpu_nodes + gpu_nodes
         except ApiException as e:
             self._logger.error('Error getting list of GPU nodes', e)
             return
 
         gpus = {}
         cordoned_gpu_nodes = []
-        for node in gpu_nodes:
+        for node in all_gpu_nodes:
             if node.spec.unschedulable:
                 # Node is cordoned, ignore its GPU
                 cordoned_gpu_nodes.append(node.metadata.name)
