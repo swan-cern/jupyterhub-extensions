@@ -28,8 +28,9 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
     )
     # Constant that sets a role name for participants of SWAN events
     SWAN_EVENTS_ROLE = 'swan-events'
+    LHCB_SWAN_ROLE = 'lhcb-swan-users'
 
-    gpus = AvailableGPUs(SWAN_EVENTS_ROLE)
+    gpus = AvailableGPUs(SWAN_EVENTS_ROLE, LHCB_SWAN_ROLE)
 
     async def start(self):
         """Perform extra configurations required for SWAN session spawning in
@@ -117,12 +118,25 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
                 except Exception as e:
                     self.log.error(f"Failed to update free GPU count: {e}")
 
-    def _render_templated_options_form(self, spawner):
+    async def _get_user_roles(self, spawner):
+        """Fetch user roles from auth state"""
+        try:
+            auth_state = await spawner.user.get_auth_state()
+            user_roles = set(auth_state.get("roles", []))
+        except Exception as e:
+            self.log.error("Failed to retrieve user roles from auth_state: %s", e, exc_info=True)
+            user_roles = set()
+        return user_roles
+
+    async def _render_templated_options_form(self, spawner):
         """
         Adds dynamic GPU information to render as part of the options form
         """
-        gpu_flavours = self.gpus.get_available_gpu_flavours()
-        free_gpu_flavours = self.gpus.get_free_gpu_flavours()
+        # Determine user type based on roles
+        user_roles = await self._get_user_roles(spawner)
+        gpu_flavours = self.gpus.get_available_gpu_flavours(user_roles)
+        free_gpu_flavours = self.gpus.get_free_gpu_flavours(user_roles)
+
         # Sort flavours by count so the most common one appears first in the list,
         # and therefore is rendered first in the form.
         self._dynamic_form_info['gpu_flavours'] = list(gpu_flavours.keys())
