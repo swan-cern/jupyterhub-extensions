@@ -284,7 +284,7 @@ def define_SwanSpawner_from(base_class):
                 if exit_return_code.isdigit():
                     value_cleaned = exit_return_code
                 else:
-                    result = re.search('ExitCode=(\d+)', exit_return_code)
+                    result = re.search(r'ExitCode=(\d+)', exit_return_code)
                     if not result:
                         raise Exception("unknown exit code format for this Spawner")
                     value_cleaned = result.group(1)
