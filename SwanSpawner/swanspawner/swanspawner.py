@@ -374,7 +374,7 @@ def define_SwanSpawner_from(base_class):
             self.log_metric(
                 self.user.name,
                 self.this_host,
-                ".".join(["exit_container_code"]),
+                "exit_container_code",
                 container_exit_code
             )
 
@@ -399,7 +399,7 @@ def define_SwanSpawner_from(base_class):
                 self.log_metric(
                     self.user.name,
                     self.this_host,
-                    ".".join(["exit_container_code"]),
+                    "exit_container_code",
                     value_cleaned
                 )
 
@@ -430,7 +430,7 @@ def define_SwanSpawner_from(base_class):
             self.log_metric(
                 self.user.name,
                 self.this_host,
-                ".".join(["start_container_duration_sec"]),
+                "start_container_duration_sec",
                 time.time() - start_time_start_container
             )
 
