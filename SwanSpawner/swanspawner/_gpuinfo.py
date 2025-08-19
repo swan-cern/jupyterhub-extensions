@@ -263,7 +263,10 @@ class AvailableGPUs:
             status = node.status
             labels = node.metadata.labels
 
-            product_name = labels['nvidia.com/gpu.product']
+            product_name = labels.get('nvidia.com/gpu.product')
+            if not product_name:
+                self._logger.info(f"Skipping node {node.metadata.name} - no GPU product label")
+                continue
             gpu_model = self._get_simplified_gpu_model(product_name)
 
             # Check MIG
