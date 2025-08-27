@@ -183,7 +183,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 # All good, let's finish
                 self.log.info('KeycloakAuthenticator fully configured')
                 break
-            except:
+            except Exception:
                 self.log.error("Failure to retrieve the openid configuration, will try again in 1 min (auth calls will fail)", exc_info=True)
                 await asyncio.sleep(60)
 
@@ -300,7 +300,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 decoded_token = self._decode_token(user['auth_state']['access_token'])
                 user_roles = self.claim_roles_key(self, decoded_token)
                 user['auth_state']['roles'] = list(user_roles) 
-            except:
+            except Exception:
                 self.log.error("Unable to retrieve the roles, denying access.", exc_info=True)
                 return None
 
@@ -313,7 +313,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 return None
             try:
                 user['auth_state']['exchanged_tokens'] = await self._exchange_tokens(user['auth_state']['access_token'])
-            except:
+            except Exception:
                 self.log.error("Failed to exchange tokens during authenticate.", exc_info=True)
                 return None
 
@@ -367,7 +367,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                     auth_state['refresh_token'] = refresh_token
                     try:
                         auth_state['exchanged_tokens'] = await self._exchange_tokens(access_token)
-                    except:
+                    except Exception:
                         self.log.error("Failed to exchange tokens during refresh, took %s seconds" % (time.time()-start), exc_info=True)
 
                         return False
@@ -380,7 +380,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             except HTTPError as e:
                 self.log.error("Failure calling the renew endpoint: %s (code: %s)" % (e.read(), e.code))
 
-            except:
+            except Exception:
                 self.log.error("Failed to refresh the oAuth tokens, took %s seconds" % (time.time()-start), exc_info=True)
 
             return False
