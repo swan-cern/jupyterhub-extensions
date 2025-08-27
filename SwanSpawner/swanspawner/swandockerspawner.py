@@ -311,6 +311,6 @@ class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
                         s2.connect(sockname)
                         s.accept()
                         return sockname[1]
-            except:
+            except Exception:
                 if i == n_tries - 1:
                     raise
