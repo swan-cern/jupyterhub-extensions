@@ -242,7 +242,7 @@ class AvailableGPUs:
         '''
         # Look for MIG partitions in the allocatable resources list
         for resource_name,count in node_status.allocatable.items():
-            m = re.match('nvidia.com/mig-\d+g.(\d+)gb', resource_name) # e.g. nvidia.com/mig-1g.5gb
+            m = re.match(r'nvidia.com/mig-\d+g.(\d+)gb', resource_name) # e.g. nvidia.com/mig-1g.5gb
             if m and int(count) > 0:
                 memory = m.group(1)
                 description = f'{gpu_model} partition ({memory} GB)'
