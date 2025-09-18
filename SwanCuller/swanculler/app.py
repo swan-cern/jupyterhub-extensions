@@ -55,6 +55,11 @@ from tornado.options import define, options, parse_command_line
 # Start SWAN code
 from subprocess import call
 
+# Global variables
+# The users list is shared between the functions that check for idle
+# sessions and the one that validates wether a user is blocked
+users = []
+
 def check_ticket(username):
     app_log.info("Checking ticket for user %s", username)
     call(['sudo', '--preserve-env=SWAN_DEV', "%s/check_ticket.sh" % options.hooks_dir, username])
@@ -143,6 +148,8 @@ def cull_idle(
         fetch = client.fetch
 
     resp = yield fetch(req)
+
+    global users
     users = json.loads(resp.body.decode('utf8', 'replace'))
     futures = []
 
@@ -380,18 +387,7 @@ def check_blocked_users(url, api_token, client_id, client_secret, auth_url, audi
         app_log.exception("Failed to get access token for blocked user check")
         return
 
-    # Step 2: Get users of SWAN
-    auth_header = {'Authorization': 'token %s' % api_token}
-    req = HTTPRequest(url=url + '/users', headers=auth_header)
-
-    try:
-        resp = yield client.fetch(req)
-        users = json.loads(resp.body.decode('utf8', 'replace'))
-    except Exception:
-        app_log.exception("Failed to get user list for blocked user check")
-        return
-
-    # Step 3: Check each user - Get their identity from the Authorization Service API using the obtained token as Bearer
+    # Step 2: Check each user - Get their identity from the Authorization Service API using the obtained token as Bearer
     for user in users:
         app_log.info("Checking if user %s is blocked", user['name'])
         query = urlencode([("field", "uniqueIdentifier"), ("field", "blocked"), ("field", "disabled")])
