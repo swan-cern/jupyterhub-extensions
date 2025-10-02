@@ -254,6 +254,7 @@ class AvailableGPUs:
 
         gpus = {}
         cordoned_gpu_nodes = []
+        node_to_flavor = {}
         for node in all_gpu_nodes:
             if node.spec.unschedulable:
                 # Node is cordoned, ignore its GPU
@@ -273,15 +274,16 @@ class AvailableGPUs:
             mig_config = labels.get('nvidia.com/mig.config', 'all-disabled')
             if mig_config == 'all-disabled':
                 # Not partitioned or not partitionable, store info for full card
-                self._process_full_card(gpus, gpu_model, product_name, status, labels, node.metadata.name)
+                self._process_full_card(gpus, gpu_model, product_name, node_to_flavor, status, labels, node.metadata.name)
             else:
                 # Partitioned, store fragment info
-                self._process_partitions(gpus, gpu_model, product_name, status, node.metadata.name)
+                self._process_partitions(gpus, gpu_model, product_name, node_to_flavor, status, node.metadata.name)
 
         # Fully replace the stored information (in mutual exclusion)
         with self.get_lock():
             self._gpus = gpus
             self._cordoned_gpu_nodes = cordoned_gpu_nodes
+            self._node_to_flavor = node_to_flavor
 
         self._logger.info('Allocatable GPU flavours and their counts: ' \
                           f'{[(flavour,gpu_info.count) for flavour,gpu_info in self._gpus.items()]}')
@@ -303,6 +305,7 @@ class AvailableGPUs:
                            gpus: dict,
                            gpu_model: str,
                            product_name: str,
+                           node_to_flavor: dict,
                            node_status: V1NodeStatus,
                            node_labels: dict,
                            node_name: str) -> None:
@@ -316,7 +319,7 @@ class AvailableGPUs:
         count = int(node_status.allocatable[resource_name])
         if count > 0:
             description = f'{gpu_model} ({memory} GB)'
-            self._node_to_flavor[(node_name, resource_name)] = description
+            node_to_flavor[(node_name, resource_name)] = description
             gpu_info = gpus.get(description, _GPUInfo(resource_name, product_name))
             gpu_info.count += count
             gpus[description] = gpu_info
@@ -325,6 +328,7 @@ class AvailableGPUs:
                             gpus: dict,
                             gpu_model: str,
                             product_name: str,
+                            node_to_flavor: dict,
                             node_status: V1NodeStatus, 
                             node_name: str) -> None:
         '''
@@ -336,7 +340,7 @@ class AvailableGPUs:
             if m and int(count) > 0:
                 memory = m.group(1)
                 description = f'{gpu_model} partition ({memory} GB)'
-                self._node_to_flavor[(node_name, resource_name)] = description
+                node_to_flavor[(node_name, resource_name)] = description
                 gpu_info = gpus.get(description, _GPUInfo(resource_name, product_name))
                 gpu_info.count += int(count)
                 gpus[description] = gpu_info
