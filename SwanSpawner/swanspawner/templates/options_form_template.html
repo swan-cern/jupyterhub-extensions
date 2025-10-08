@@ -259,8 +259,8 @@
      * Change field background color according to the validation result of repository value
      */
     function validateRepositoryInput(repo_input) {
-        const httpPattern = /^https?:\/\/(?:github\.com|gitlab\.cern\.ch)\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)(\/|\.git)?$/;
-        const sshPattern  = /^(?:ssh:\/\/git@(?:gitlab\.cern\.ch)(?::\d+)?\/|git@github\.com:)([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)(\/|\.git)?$/;
+        const httpPattern = /^https?:\/\/(?:github\.com|gitlab\.cern\.ch)(?:\/[a-zA-Z0-9._-]+)+(?:\/|\.git)?$/;
+        const sshPattern  = /^(?:ssh:\/\/git@(?:gitlab\.cern\.ch)(?::\d+)?\/|git@github\.com:)(?:[a-zA-Z0-9._-]+\/)+[a-zA-Z0-9._-]+(?:\/|\.git)?$/;
 
         const isValid = httpPattern.test(repo_input.value) || sshPattern.test(repo_input.value);
 
