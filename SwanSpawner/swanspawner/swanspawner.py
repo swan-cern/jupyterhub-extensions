@@ -54,6 +54,14 @@ def define_SwanSpawner_from(base_class):
 
         condor_pool = 'condor'
 
+        rucio_instance = 'rucio'
+
+        rucio_rse = 'rucioRSE'
+        
+        rucio_rse_mount_path = 'rse_mount_path'
+        
+        rucio_path_begins_at = 'path_begins_at'
+
         file = 'file'
 
         customenv_special_type = 'customenv'
@@ -139,9 +147,93 @@ def define_SwanSpawner_from(base_class):
             Ensure the validity of the minor options selected by the user,
             to prevent the acceptance of malicious / erroneous values
             """
+            # Skip validation for certain nested configuration attributes and metadata fields          
             for attr, available_options in selection.items():
-                if type(available_options) == list and options.get(attr) not in (_.get('value') for _ in available_options):
+                # Skip attributes that are not actual form selections
+                if attr == self.rucio_instance:
+                    self._validate_rucio_options(selection, options)
+                elif attr in [self.rucio_rse, self.rucio_rse_mount_path, self.rucio_path_begins_at]:
+                    continue
+                # Only validate if available_options is a list of options
+                elif type(available_options) == list and options.get(attr) not in (_.get('value') for _ in available_options):
                     self._popup_error(options, attr)
+
+        def _validate_rucio_options(self, selection: dict, formdata: dict) -> dict:
+            """
+            Validate and extract Rucio-related options from the form data.
+            Returns a dictionary with validated Rucio options.
+            """
+            rucio_options = {}
+            
+            # Get Rucio instance selection
+            rucio_instance = formdata.get(self.rucio_instance, ['none'])
+            self.log.error(f'Validating Rucio instance selection: {rucio_instance}')
+            rucio_options[self.rucio_instance] = rucio_instance
+            
+            # If no Rucio instance selected, set defaults and return
+            if rucio_instance == 'none':
+                rucio_options[self.rucio_rse] = 'none'
+                rucio_options[self.rucio_rse_mount_path] = ''
+                rucio_options[self.rucio_path_begins_at] = '0'
+                return rucio_options
+            
+            # Get Rucio configuration from selection
+            rucio_instances = selection.get('rucio', [])
+            if not rucio_instances:
+                raise ValueError('Rucio configuration not found in YAML for selected LCG stack')
+            
+            # Find the selected Rucio instance configuration
+            selected_rucio_inst = next(
+                (inst for inst in rucio_instances if inst['value'] == rucio_instance), 
+                None
+            )
+            
+            if not selected_rucio_inst:
+                raise ValueError(f'Invalid Rucio instance: {rucio_instance}')
+            
+            # Validate RSE selection
+            selected_rse = formdata.get(self.rucio_rse, ['none'])
+            rse_options = selected_rucio_inst.get('rse_options', [])
+            
+            # Validate that the selected RSE is in the available options
+            valid_rses = [rse['value'] for rse in rse_options]
+            if selected_rse not in valid_rses:
+                raise ValueError(
+                    f'Invalid RSE selection: {selected_rse} for Rucio instance: {rucio_instance}. '
+                    f'Valid options are: {", ".join(valid_rses)}'
+                )
+            
+            # Find the selected RSE configuration to get mount path and path_begins_at
+            selected_rse_config = next(
+                (rse for rse in rse_options if rse['value'] == selected_rse),
+                None
+            )
+            
+            if not selected_rse_config:
+                raise ValueError(f'RSE configuration not found for: {selected_rse}')
+            
+            # Extract RSE-specific attributes
+            rucio_options[self.rucio_rse] = selected_rse
+            rucio_options[self.rucio_rse_mount_path] = selected_rse_config.get('rse_mount_path', '')
+            rucio_options[self.rucio_path_begins_at] = str(selected_rse_config.get('path_begins_at', 0))
+            
+            # Validate that we received the expected hidden field values (as a sanity check)
+            form_mount_path = formdata.get(self.rucio_rse_mount_path, [''])
+            form_path_begins = formdata.get(self.rucio_path_begins_at, ['0'])
+            
+            if form_mount_path and form_mount_path != rucio_options[self.rucio_rse_mount_path]:
+                self.log.warning(
+                    f'Mount path mismatch: form={form_mount_path}, '
+                    f'expected={rucio_options[self.rucio_rse_mount_path]}'
+                )
+            
+            if form_path_begins and form_path_begins != rucio_options[self.rucio_path_begins_at]:
+                self.log.warning(
+                    f'Path begins at mismatch: form={form_path_begins}, '
+                    f'expected={rucio_options[self.rucio_path_begins_at]}'
+                )
+            
+            return rucio_options
 
         def options_from_form(self, formdata: dict) -> dict:
             """
@@ -159,6 +251,11 @@ def define_SwanSpawner_from(base_class):
             options[self.spark_cluster_field]       = formdata.get(self.spark_cluster_field, ['none'])[0]
             options[self.use_jupyterlab_field]      = formdata.get(self.use_jupyterlab_field, 'unchecked')[0]
             options[self.gpu]                       = formdata.get(self.gpu, ['none'])[0]
+            options[self.rucio_instance]            = formdata.get(self.rucio_instance, ['none'])[0]
+            options[self.rucio_rse]                 = formdata.get(self.rucio_rse, ['none'])[0]
+            options[self.rucio_rse_mount_path]      = formdata.get(self.rucio_rse_mount_path, [''])[0]
+            options[self.rucio_path_begins_at]      = formdata.get(self.rucio_path_begins_at, ['0'])[0]
+
             # File to be opened when the session gets started
             options[self.file]                      = formdata.get(self.file, [''])[0]
 
@@ -242,6 +339,16 @@ def define_SwanSpawner_from(base_class):
                 if self.user_options.get(self.condor_pool, 'none') != 'none':
                     env.update(dict(
                         CERN_HTCONDOR = 'true'
+                    ))
+
+                # Enable Rucio extension
+                if self.user_options.get(self.rucio_instance, 'none') != 'none':
+                    env.update(dict(
+                        SWAN_USE_RUCIO = 'true',
+                        SWAN_RUCIO_INSTANCE = self.user_options[self.rucio_instance],
+                        SWAN_RUCIO_RSE = self.user_options[self.rucio_rse],
+                        SWAN_RUCIO_RSE_PATH = self.user_options[self.rucio_rse_mount_path],
+                        SWAN_RUCIO_RSE_PATH_BEGINS_AT = self.user_options[self.rucio_path_begins_at]
                     ))
 
             # Enable JupyterLab interface
