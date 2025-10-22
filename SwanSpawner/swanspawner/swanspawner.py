@@ -54,6 +54,10 @@ def define_SwanSpawner_from(base_class):
 
         condor_pool = 'condor'
 
+        rucio_instance = 'rucio'
+
+        rucio_rse = 'rucioRSE'
+
         file = 'file'
 
         customenv_special_type = 'customenv'
@@ -181,6 +185,18 @@ def define_SwanSpawner_from(base_class):
                 options[self.platform_field]            = formdata[self.platform_field][0]
                 options[self.user_script_env_field]     = formdata[self.user_script_env_field][0]
                 options[self.condor_pool]               = formdata[self.condor_pool][0]
+                # Rucio options
+                options[self.rucio_instance]               = formdata[self.rucio_instance][0]
+                rucio_instance = options[self.rucio_instance]
+                # Conditionally get RSE based on Rucio instance selection
+                if rucio_instance != 'none':
+                    rse_options = options_form_config['rucio']
+                    selected_rse = formdata.get(self.rucio_rse, ['none'])[0]
+                    if selected_rse not in [rse['value'] for rse in rse_options if rse['value'] != 'none']:
+                        raise ValueError(f'Invalid RSE selection: {selected_rse}')
+                    options[self.rucio_rse] = selected_rse
+                else:
+                    options[self.rucio_rse] = 'none'
                 options[self.use_local_packages_field]  = formdata.get(self.use_local_packages_field, 'unchecked')[0]
 
                 selection = self._get_selection(options_form_config, options, self.lcg_rel_field)
@@ -242,6 +258,12 @@ def define_SwanSpawner_from(base_class):
                 if self.user_options.get(self.condor_pool, 'none') != 'none':
                     env.update(dict(
                         CERN_HTCONDOR = 'true'
+                    ))
+
+                # Enable Rucio extension
+                if self.user_options.get(self.rucio_instance, 'none') != 'none':
+                    env.update(dict(
+                        SWAN_USE_RUCIO = 'true'
                     ))
 
             # Enable JupyterLab interface
