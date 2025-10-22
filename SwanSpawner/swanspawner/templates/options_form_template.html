@@ -37,6 +37,10 @@
     transition: transform 0.2s ease;
     margin-right: 5px;
 }
+.checkbox-locked {
+    pointer-events: none;
+    opacity: 0.6;
+}
 </style>
 <script type="text/javascript">
 <!--
@@ -74,6 +78,8 @@
         "clusters": [lcg_source, customenv_source],
         "condor": [lcg_source],
         "gpu": [lcg_source],
+        "rucio": [lcg_source],
+        "rse": [lcg_source],
     };
     const inputs = {
         "scriptenv": [lcg_source],
@@ -276,7 +282,6 @@
         const cluster_options  = document.getElementById('clustersOptions');
         const jupyter_lab_option = document.getElementById('use-jupyterlab');
         const use_local_packages_option = document.getElementById('use-local-packages');
-
         /**
          * Store the chosen platform in a hidden form field, as disabled fields
          * are not sent in the request
@@ -450,9 +455,11 @@
                     config_element.add(select_option);
                 }
             }
-            // Special handling for GPU after form population
-            if (selected_source === lcg_source) {
+            
+            // For LCG source, handle both GPU and Rucio options
+            if (selected_source === lcg_source) {       
                 handleGpuOptions();
+                handleRucioOptions();
             }
         }    
         if (selected_source === lcg_source) {
@@ -460,6 +467,110 @@
             adjustPlatforms();
         }
     }
+
+    /**
+     * Handle Rucio instance and RSE options based on form configuration
+     */
+    function handleRucioOptions() {
+    const rucioSelect = document.getElementById('rucioOptions');
+    const rseSelect = document.getElementById('rseOptions');
+        
+    const selected_config = source_config[lcg_source];
+    const selected_value = document.getElementById(selected_config.options_element).value;
+    const form_data = findFormData(selected_config.source_form, selected_config.form_element, selected_value);
+
+    const rucioInstances = form_data['rucio'] || [];
+    rucioSelect.innerHTML = '';
+    
+    rucioInstances.forEach(instance => {
+        const opt = document.createElement('option');
+        opt.value = instance.value;
+        opt.text = instance.text;
+        rucioSelect.add(opt);
+    });
+    
+    if (!rucioSelect.hasAttribute('data-listener-attached')) {
+        rucioSelect.addEventListener('change', updateRseOptions);
+        rucioSelect.setAttribute('data-listener-attached', 'true');
+    }
+    
+    updateRseOptions();
+}
+
+function updateRseOptions() {
+    const rucioSelect = document.getElementById('rucioOptions');
+    const rseSelect = document.getElementById('rseOptions');
+    const jupyterLabCheckbox = document.getElementById('use-jupyterlab');
+    const rseMountPathInput = document.getElementById('rseMountPathInput');
+    const pathBeginsAtInput = document.getElementById('pathBeginsAtInput');
+
+    const selectedRucio = rucioSelect.value;
+
+    const selected_config = source_config[lcg_source];
+    const selected_value = document.getElementById(selected_config.options_element).value;
+    const form_data = findFormData(selected_config.source_form, selected_config.form_element, selected_value);
+    
+    const rucioInstances = form_data['rucio'] || [];
+    const selectedInstance = rucioInstances.find(inst => inst.value === selectedRucio);
+
+    rseSelect.innerHTML = '';
+    
+    if (selectedInstance && selectedInstance.rse_options && selectedInstance.rse_options.length > 0) {
+        selectedInstance.rse_options.forEach(rse => {
+            const opt = document.createElement('option');
+            opt.value = rse.value;
+            opt.text = rse.text;
+            // Store RSE attributes as data attributes
+            opt.setAttribute('data-mount-path', rse.rse_mount_path || '');
+            opt.setAttribute('data-path-begins-at', rse.path_begins_at || '0');
+            rseSelect.add(opt);
+        });
+        setDisabled(rseSelect, false);
+        
+        // Update hidden fields with first option's values
+        updateRseAttributes();
+        
+        // Add event listener to update hidden fields when RSE changes
+        if (!rseSelect.hasAttribute('data-listener-attached')) {
+            rseSelect.addEventListener('change', updateRseAttributes);
+            rseSelect.setAttribute('data-listener-attached', 'true');
+        }
+    } else {
+        const noneOpt = document.createElement('option');
+        noneOpt.value = 'none';
+        noneOpt.text = 'None';
+        rseSelect.add(noneOpt);
+        setDisabled(rseSelect, true);
+        
+        // Clear hidden fields
+        rseMountPathInput.value = '';
+        pathBeginsAtInput.value = '';
+    }
+
+    // Auto-check and lock JupyterLab checkbox when Rucio is selected
+    if (selectedRucio && selectedRucio.toLowerCase() !== 'none') {
+        jupyterLabCheckbox.checked = true;
+        jupyterLabCheckbox.classList.add('checkbox-locked');
+        adjustPlatforms(true);
+    } else {
+        jupyterLabCheckbox.classList.remove('checkbox-locked');
+    }
+}
+
+// /**
+//  * Update hidden fields with RSE-specific attributes
+//  */
+function updateRseAttributes() {
+    const rseSelect = document.getElementById('rseOptions');
+    const rseMountPathInput = document.getElementById('rseMountPathInput');
+    const pathBeginsAtInput = document.getElementById('pathBeginsAtInput');
+    
+    const selectedOption = rseSelect.selectedOptions[0];
+    if (selectedOption) {
+        rseMountPathInput.value = selectedOption.getAttribute('data-mount-path') || '';
+        pathBeginsAtInput.value = selectedOption.getAttribute('data-path-begins-at') || '0';
+    }
+}
 
     /**
      * Autofill the form according to the specified URL arguments
@@ -514,6 +625,7 @@
      */
     function showForm(selected_source) {
         const jupyter_lab_option = document.getElementById('use-jupyterlab');
+
         const is_lcg = selected_source === lcg_source, is_customenv = selected_source === customenv_source;
         if (is_lcg) {
             // Recover last value specified in LCG config; unblock jupyterlab option
@@ -529,7 +641,7 @@
         }
 
         setDisabled(jupyter_lab_option, is_customenv);
-        setVisibleMany(['lcg_config', 'condorSection', 'lcg-details'], is_lcg);
+        setVisibleMany(['lcg_config', 'condorSection', 'data_management_config', 'lcg-details'], is_lcg);
         setVisibleMany(['customenv_config', 'extra_options_config', 'customenv-details'], is_customenv);
     }
 
@@ -585,8 +697,7 @@
     }
 
     window.onload = toggleForm;
-//-->
-</script>
+    </script>
 <div>
     <label for="placeholder">
     <span class='nb' id="optionsHeader">Specify the configuration parameters for the SWAN container that will be created for you.</span>
@@ -788,6 +899,30 @@
                 </div>
             </label>
             <select id="condorOptions" name="condor" required></select>
+            <br>
+        </div>
+    </div>
+
+    <!-- Rucio Data Management -->
+    <div id="data_management_config">
+        <h2>Data Management with Rucio</h2>
+
+        <div id="rucioSection">
+            <label for="rucioOptions">Rucio Instance <a href="#" onclick="toggleVisibility('rucioDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="rucioDetails">
+                    <span class='nb'>Name of the Rucio instance to connect to from notebooks.</span>
+                </div>
+            </label>
+            <select id="rucioOptions" name="rucio" onchange="updateRseOptions()"></select>
+            <br>
+            <label for="rseOptions">Rucio RSE <a href="#" onclick="toggleVisibility('rucioRSEDetails');"><span class='nbs'>more...</span></a>
+                <div style="display:none;" id="rucioRSEDetails">
+                    <span class='nb'>Rucio Storage Element to mount in the session.</span>
+                </div>
+            </label>
+            <select id="rseOptions" name="rucioRSE"></select>
+            <input type="hidden" id="rseMountPathInput" name="rse_mount_path">
+            <input type="hidden" id="pathBeginsAtInput" name="path_begins_at">
             <br>
         </div>
     </div>
