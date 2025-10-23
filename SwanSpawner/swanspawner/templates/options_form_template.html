@@ -81,6 +81,8 @@
         "scriptenv": [lcg_source],
         "file": [lcg_source, customenv_source],
         "repository": [customenv_source],
+        "rse_mount_path": [lcg_source],
+        "path_begins_at": [lcg_source],
     };
 
     // build object with key: keyOptions pairs
@@ -501,6 +503,8 @@ function updateRseOptions() {
     const rucioSelect = document.getElementById('rucioOptions');
     const rseSelect = document.getElementById('rucioRSEOptions');
     const jupyterLabCheckbox = document.getElementById('use-jupyterlab');
+    const rseMountPathInput = document.getElementById('rseMountPathInput');
+    const pathBeginsAtInput = document.getElementById('pathBeginsAtInput');
     
     const selectedRucio = rucioSelect.value;
     console.log('Selected Rucio value:', selectedRucio);
@@ -521,9 +525,21 @@ function updateRseOptions() {
             const opt = document.createElement('option');
             opt.value = rse.value;
             opt.text = rse.text;
+            // Store RSE attributes as data attributes
+            opt.setAttribute('data-mount-path', rse.rse_mount_path || '');
+            opt.setAttribute('data-path-begins-at', rse.path_begins_at || '0');
             rseSelect.add(opt);
         });
         setDisabled(rseSelect, false);
+        
+        // Update hidden fields with first option's values
+        updateRseAttributes();
+        
+        // Add event listener to update hidden fields when RSE changes
+        if (!rseSelect.hasAttribute('data-listener-attached')) {
+            rseSelect.addEventListener('change', updateRseAttributes);
+            rseSelect.setAttribute('data-listener-attached', 'true');
+        }
     } else {
         console.log('No RSE options found, adding "None" option and disabling select');
         const noneOpt = document.createElement('option');
@@ -531,6 +547,10 @@ function updateRseOptions() {
         noneOpt.text = 'None';
         rseSelect.add(noneOpt);
         setDisabled(rseSelect, true);
+        
+        // Clear hidden fields
+        rseMountPathInput.value = '';
+        pathBeginsAtInput.value = '';
     }
 
     if (selectedRucio && selectedRucio.toLowerCase() !== 'none') {
@@ -539,6 +559,22 @@ function updateRseOptions() {
         console.log('JupyterLab checkbox auto-checked');
     } else {
         console.log('JupyterLab checkbox not auto-checked');
+    }
+}
+
+// /**
+//  * Update hidden fields with RSE-specific attributes
+//  */
+function updateRseAttributes() {
+    const rseSelect = document.getElementById('rucioRSEOptions');
+    const rseMountPathInput = document.getElementById('rseMountPathInput');
+    const pathBeginsAtInput = document.getElementById('pathBeginsAtInput');
+    
+    const selectedOption = rseSelect.selectedOptions[0];
+    if (selectedOption) {
+        rseMountPathInput.value = selectedOption.getAttribute('data-mount-path') || '';
+        pathBeginsAtInput.value = selectedOption.getAttribute('data-path-begins-at') || '0';
+        console.log('Updated RSE attributes:', rseMountPathInput.value, pathBeginsAtInput.value);
     }
 }
 
@@ -610,7 +646,7 @@ function updateRseOptions() {
         }
 
         setDisabled(jupyter_lab_option, is_customenv);
-        setVisibleMany(['lcg_config', 'condorSection', 'lcg-details'], is_lcg);
+        setVisibleMany(['lcg_config', 'condorSection', 'rucioSection', 'lcg-details'], is_lcg);
         setVisibleMany(['customenv_config', 'extra_options_config', 'customenv-details'], is_customenv);
     }
 
@@ -618,6 +654,11 @@ function updateRseOptions() {
      * Hide features that are not enabled yet
      */
     function hideFeatures() {
+        console.log('Hiding disabled features: ', {
+            enable_customenv_form: enable_customenv_form,
+            enable_generate_url_form: enable_generate_url_form,
+            enable_network_form: enable_network_form,
+        });
         if (enable_customenv_form !== "true") {
             document.getElementById('software_source_selection').style.display = 'none';
         }
@@ -795,7 +836,7 @@ function updateRseOptions() {
                     <span class='nb'>Acc-Py release to build the custom environment.</a></span>
                 </div>
             </label>
-            <select id="builderOptions" name="builder" onchange="adjustForm(customenv_source);" ></select>
+            <select id="builderOptions" name="builder" onchange="adjustForm(customenv_source);"></select>
         </div>
         <br>
     </div>
@@ -843,7 +884,7 @@ function updateRseOptions() {
                     <span class='nb'>GPU model or flavour to attach to the container.</span>
                 </div>
             </label>
-            <select id="gpuOptions" name="gpu" required></select>
+            <select id="gpuOptions" name="gpu"></select>
         </div>
         <br>
     </div>
@@ -883,14 +924,17 @@ function updateRseOptions() {
                     <span class='nb'>Name of the Rucio instance to connect to from notebooks.</span>
                 </div>
             </label>
-            <select id="rucioOptions" name="rucio" required onchange="updateRseOptions()"></select>
+            <select id="rucioOptions" name="rucio" onchange="updateRseOptions()"></select>
+            <!-- <select id="rucioOptions" name="rucio" ></select> -->
             <br>
             <label for="rucioRSEOptions">Rucio RSE <a href="#" onclick="toggleVisibility('rucioRSEDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="rucioRSEDetails">
                     <span class='nb'>Rucio Storage Element to mount in the session.</span>
                 </div>
             </label>
-            <select id="rucioRSEOptions" name="rucioRSE" required></select>
+            <select id="rucioRSEOptions" name="rucioRSE"></select>
+            <input type="hidden" id="rseMountPathInput" name="rse_mount_path">
+            <input type="hidden" id="pathBeginsAtInput" name="path_begins_at">
             <br>
         </div>
     </div>
