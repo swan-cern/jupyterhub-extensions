@@ -432,6 +432,7 @@
         const selected_config = source_config[selected_source];
         const selected_value = document.getElementById(selected_config.options_element).value;
         const form_data = findFormData(selected_config.source_form, selected_config.form_element, selected_value);
+        setVisible('gpuSection', selected_source === lcg_source);
 
         if (Object.keys(form_data).length !== 0) {
             // Populate the form according to main dropdown selection
@@ -456,15 +457,13 @@
                 }
             }
             
-            // For LCG source, handle both GPU and Rucio options
-            if (selected_source === lcg_source) {       
-                handleGpuOptions();
-                handleRucioOptions();
-            }
         }    
         if (selected_source === lcg_source) {
             adjustOptions();
             adjustPlatforms();
+            // For LCG source, handle both GPU and Rucio options
+            handleGpuOptions();
+            handleRucioOptions();
         }
     }
 
@@ -772,9 +771,9 @@ function updateRseAttributes() {
                 />
                 <span> Use Python packages installed on CERNBox</span>
             </div>
+            <br>
         </div>
-        <br>
-
+        
         <div id="platformSection">
             <label for="platformsOptions">Platform <a href="#" onclick="toggleVisibility('platformDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="platformDetails">
@@ -783,8 +782,8 @@ function updateRseAttributes() {
             </label>
             <select id="platformsOptions" name="platforms" onchange="adjustOptions();" required></select>
             <input type="hidden" id="hiddenPlatformsOptions" name="platforms">
+            <br>
         </div>
-        <br>
 
         <div id="scriptenvSection">
             <label for="scriptenvOption">Environment script <a href="#" onclick="toggleVisibility('scriptenvDetails');"><span class='nbs'>more...</span></a>
@@ -793,8 +792,8 @@ function updateRseAttributes() {
                 </div>
             </label>
             <input type="text" id="scriptenvOption" name="scriptenv" placeholder="e.g. $CERNBOX_HOME/MySWAN/myscript.sh">
+            <br>
         </div>
-        <br>
     </div>
 
     <!-- Custom environment configuration -->
@@ -816,8 +815,8 @@ function updateRseAttributes() {
                     oninput="validateRepositoryInput(this);"
                 />
             </div>
+            <br>
         </div>
-        <br>
 
         <div id="builderSection">
             <label for="builderOptions">Builder <a href="#" onclick="toggleVisibility('builderDetails');"><span class='nbs'>more...</span></a>
@@ -826,8 +825,8 @@ function updateRseAttributes() {
                 </div>
             </label>
             <select id="builderOptions" name="builder" onchange="adjustForm(customenv_source);" required></select>
+            <br>
         </div>
-        <br>
     </div>
 
     <div id="network_config" style="margin-bottom: 30px;">
@@ -854,8 +853,8 @@ function updateRseAttributes() {
                 </div>
             </label>
             <select id="coresOptions" name="cores" required></select>
+            <br>
         </div>
-        <br>
 
         <div id="memorySection">
             <label for="memoryOptions">Memory <a href="#" onclick="toggleVisibility('memoryDetails');"><span class='nbs'>more...</span></a>
@@ -864,8 +863,8 @@ function updateRseAttributes() {
                 </div>
             </label>
             <select id="memoryOptions" name="memory" required></select>
+            <br>
         </div>
-        <br>
 
         <div id="gpuSection">
             <label for="gpuOptions">GPU <a href="#" onclick="toggleVisibility('gpuDetails');"><span class='nbs'>more...</span></a>
@@ -874,8 +873,8 @@ function updateRseAttributes() {
                 </div>
             </label>
             <select id="gpuOptions" name="gpu" required></select>
+            <br>
         </div>
-        <br>
     </div>
 
     <!-- External computing resources -->
@@ -889,8 +888,8 @@ function updateRseAttributes() {
                 </div>
             </label>
             <select id="clustersOptions" name="clusters" required></select>
+            <br>
         </div>
-        <br>
 
         <div id="condorSection">
             <label for="condorOptions">HTCondor pool <a href="#" onclick="toggleVisibility('condorDetails');"><span class='nbs'>more...</span></a>
