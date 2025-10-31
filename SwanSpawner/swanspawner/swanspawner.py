@@ -147,7 +147,9 @@ def define_SwanSpawner_from(base_class):
             Ensure the validity of the minor options selected by the user,
             to prevent the acceptance of malicious / erroneous values
             """
-            # Skip validation for certain nested configuration attributes
+            # Skip validation for certain nested configuration attributes and metadata fields
+            # 'platforms' is metadata (list of available platforms), not a user-selected value
+            # The actual platform selection is validated separately via platform_field
             skip_attrs = {'rucio', 'type', 'lcg', 'builder', 'platforms'}
             
             for attr, available_options in selection.items():
@@ -158,6 +160,18 @@ def define_SwanSpawner_from(base_class):
                 # Only validate if available_options is a list of options
                 if type(available_options) == list and options.get(attr) not in (_.get('value') for _ in available_options):
                     self._popup_error(options, attr)
+            
+            # Separately validate platform selection against the platforms metadata
+            if 'platforms' in selection and self.platform_field in options:
+                platform_options = selection['platforms']
+                selected_platform = options[self.platform_field]
+                valid_platforms = [p.get('value') for p in platform_options]
+                
+                if selected_platform not in valid_platforms:
+                    raise ValueError(
+                        f'Invalid platform selection: {selected_platform}. '
+                        f'Valid options for this LCG stack are: {", ".join(valid_platforms)}'
+                    )
 
         def _validate_rucio_options(self, selection: dict, formdata: dict) -> dict:
             """
