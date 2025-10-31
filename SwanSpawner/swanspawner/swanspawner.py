@@ -150,6 +150,7 @@ def define_SwanSpawner_from(base_class):
             # Skip validation for certain nested configuration attributes and metadata fields
             # 'platforms' is metadata (list of available platforms), not a user-selected value
             # The actual platform selection is validated separately via platform_field
+            # Same for 'rucio' which is a nested configuration block
             skip_attrs = {'rucio', 'platforms'}
             
             for attr, available_options in selection.items():
