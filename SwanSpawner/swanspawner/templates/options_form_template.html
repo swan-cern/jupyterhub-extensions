@@ -305,27 +305,8 @@
             use_local_packages_option.checked = false;
         }
 
+        // Always sync the hidden field with the visible select value
         hidden_platform_options.value = platform_options.value;
-    }
-
-    /**
-     * Disable the platform options if the user selects JupyterLab or local packages
-     * and show/hide the extra options section
-     */
-    function adjustPlatforms(by_click=false) {
-        const platform_options = document.getElementById('platformsOptions');
-        const jupyter_lab_option = document.getElementById('use-jupyterlab');
-        const use_local_packages_option = document.getElementById('use-local-packages');
-
-        // Disable the platform options if JupyterLab or local packages are selected
-        setDisabled(platform_options, jupyter_lab_option.checked || use_local_packages_option.checked);
-
-        // Hide the extra options section if JupyterLab is not selected
-        setVisible('extra_options_config', jupyter_lab_option.checked);
-        // Remember last value of jupyterlab checkbox option each time it gets changed by clicking
-        if (by_click === true) {
-            previous_jupyterlab = jupyter_lab_option.checked;
-        }
     }
 
     /**
@@ -454,8 +435,15 @@
                     config_element.add(select_option);
                 }
             }
-            // Special handling for GPU after form population
+            
+            // For LCG source, ensure hidden platform field is populated
             if (selected_source === lcg_source) {
+                const platformSelect = document.getElementById('platformsOptions');
+                const hiddenPlatform = document.getElementById('hiddenPlatformsOptions');
+                if (platformSelect && platformSelect.value) {
+                    hiddenPlatform.value = platformSelect.value;
+                }
+                
                 handleGpuOptions();
                 handleRucioOptions();
             }
@@ -792,7 +780,7 @@ function updateRseAttributes() {
                     <span class='nb'>The combination of compiler version and flags.</span>
                 </div>
             </label>
-            <select id="platformsOptions" name="platforms" onchange="adjustOptions();" required></select>
+            <select id="platformsOptions" name="platforms" onchange="adjustOptions();"></select>
             <input type="hidden" id="hiddenPlatformsOptions" name="platforms">
         </div>
         <br>
