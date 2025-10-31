@@ -150,12 +150,12 @@ def define_SwanSpawner_from(base_class):
             # Skip validation for certain nested configuration attributes and metadata fields
             # 'platforms' is metadata (list of available platforms), not a user-selected value
             # The actual platform selection is validated separately via platform_field
-            skip_attrs = {'rucio', 'type', 'lcg', 'builder', 'platforms'}
+            # skip_attrs = {'rucio', 'type', 'lcg', 'builder', 'platforms'}
             
             for attr, available_options in selection.items():
                 # Skip attributes that are not actual form selections
-                if attr in skip_attrs:
-                    continue
+                # if attr in skip_attrs:
+                #     continue
                     
                 # Only validate if available_options is a list of options
                 if type(available_options) == list and options.get(attr) not in (_.get('value') for _ in available_options):
