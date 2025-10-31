@@ -695,8 +695,32 @@ function updateRseAttributes() {
     }
 
     window.onload = toggleForm;
-//-->
-</script>
+    /**
+     * Disable the platform options if the user selects JupyterLab or local packages
+     * and show/hide the extra options section
+     */
+    function adjustPlatforms(by_click=false) {
+        const platform_options = document.getElementById('platformsOptions');
+        const jupyter_lab_option = document.getElementById('use-jupyterlab');
+        const use_local_packages_option = document.getElementById('use-local-packages');
+        const hidden_platform_options = document.getElementById('hiddenPlatformsOptions');
+
+        // Before disabling, sync the hidden field with the current value
+        if (platform_options.value) {
+            hidden_platform_options.value = platform_options.value;
+        }
+
+        // Disable the platform options if JupyterLab or local packages are selected
+        setDisabled(platform_options, jupyter_lab_option.checked || use_local_packages_option.checked);
+
+        // Hide the extra options section if JupyterLab is not selected
+        setVisible('extra_options_config', jupyter_lab_option.checked);
+        // Remember last value of jupyterlab checkbox option each time it gets changed by clicking
+        if (by_click === true) {
+            previous_jupyterlab = jupyter_lab_option.checked;
+        }
+    }
+    </script>
 <div>
     <label for="placeholder">
     <span class='nb' id="optionsHeader">Specify the configuration parameters for the SWAN container that will be created for you.</span>
