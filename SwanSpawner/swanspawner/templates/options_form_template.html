@@ -176,9 +176,9 @@
      */
     function setDisabled(element, disabled) {
         if (disabled === true) 
-            element.setAttribute('disabled', '');
+            element.classList.add('checkbox-locked');
         else 
-            element.removeAttribute('disabled');
+            element.classList.remove('checkbox-locked');
     }
     function setDisabledMany(elements, disabled) {
         elements.forEach((elem) => setDisabled(elem, disabled));
@@ -496,80 +496,80 @@
     updateRseOptions();
 }
 
-function updateRseOptions() {
-    const rucioSelect = document.getElementById('rucioOptions');
-    const rseSelect = document.getElementById('rseOptions');
-    const jupyterLabCheckbox = document.getElementById('use-jupyterlab');
-    const rseMountPathInput = document.getElementById('rseMountPathInput');
-    const pathBeginsAtInput = document.getElementById('pathBeginsAtInput');
+    function updateRseOptions() {
+        const rucioSelect = document.getElementById('rucioOptions');
+        const rseSelect = document.getElementById('rseOptions');
+        const jupyterLabCheckbox = document.getElementById('use-jupyterlab');
+        const rseMountPathInput = document.getElementById('rseMountPathInput');
+        const pathBeginsAtInput = document.getElementById('pathBeginsAtInput');
 
-    const selectedRucio = rucioSelect.value;
+        const selectedRucio = rucioSelect.value;
 
-    const selected_config = source_config[lcg_source];
-    const selected_value = document.getElementById(selected_config.options_element).value;
-    const form_data = findFormData(selected_config.source_form, selected_config.form_element, selected_value);
-    
-    const rucioInstances = form_data['rucio'] || [];
-    const selectedInstance = rucioInstances.find(inst => inst.value === selectedRucio);
-
-    rseSelect.innerHTML = '';
-    
-    if (selectedInstance && selectedInstance.rse_options && selectedInstance.rse_options.length > 0) {
-        selectedInstance.rse_options.forEach(rse => {
-            const opt = document.createElement('option');
-            opt.value = rse.value;
-            opt.text = rse.text;
-            // Store RSE attributes as data attributes
-            opt.setAttribute('data-mount-path', rse.rse_mount_path || '');
-            opt.setAttribute('data-path-begins-at', rse.path_begins_at || '0');
-            rseSelect.add(opt);
-        });
-        setDisabled(rseSelect, false);
+        const selected_config = source_config[lcg_source];
+        const selected_value = document.getElementById(selected_config.options_element).value;
+        const form_data = findFormData(selected_config.source_form, selected_config.form_element, selected_value);
         
-        // Update hidden fields with first option's values
-        updateRseAttributes();
+        const rucioInstances = form_data['rucio'] || [];
+        const selectedInstance = rucioInstances.find(inst => inst.value === selectedRucio);
+
+        rseSelect.innerHTML = '';
         
-        // Add event listener to update hidden fields when RSE changes
-        if (!rseSelect.hasAttribute('data-listener-attached')) {
-            rseSelect.addEventListener('change', updateRseAttributes);
-            rseSelect.setAttribute('data-listener-attached', 'true');
+        if (selectedInstance && selectedInstance.rse_options && selectedInstance.rse_options.length > 0) {
+            selectedInstance.rse_options.forEach(rse => {
+                const opt = document.createElement('option');
+                opt.value = rse.value;
+                opt.text = rse.text;
+                // Store RSE attributes as data attributes
+                opt.setAttribute('data-mount-path', rse.rse_mount_path || '');
+                opt.setAttribute('data-path-begins-at', rse.path_begins_at || '0');
+                rseSelect.add(opt);
+            });
+            setDisabled(rseSelect, false);
+            
+            // Update hidden fields with first option's values
+            updateRseAttributes();
+            
+            // Add event listener to update hidden fields when RSE changes
+            if (!rseSelect.hasAttribute('data-listener-attached')) {
+                rseSelect.addEventListener('change', updateRseAttributes);
+                rseSelect.setAttribute('data-listener-attached', 'true');
+            }
+        } else {
+            const noneOpt = document.createElement('option');
+            noneOpt.value = 'none';
+            noneOpt.text = 'None';
+            rseSelect.add(noneOpt);
+            setDisabled(rseSelect, true);
+            
+            // Clear hidden fields
+            rseMountPathInput.value = '';
+            pathBeginsAtInput.value = '';
         }
-    } else {
-        const noneOpt = document.createElement('option');
-        noneOpt.value = 'none';
-        noneOpt.text = 'None';
-        rseSelect.add(noneOpt);
-        setDisabled(rseSelect, true);
+
+        // Auto-check and lock JupyterLab checkbox when Rucio is selected
+        if (selectedRucio && selectedRucio.toLowerCase() !== 'none') {
+            jupyterLabCheckbox.checked = true;
+            setDisabled(jupyterLabCheckbox, true);
+            adjustPlatforms(true);
+        } else {
+            setDisabled(jupyterLabCheckbox, false);
+        }
+    }
+
+    /**
+     * Update hidden fields with RSE-specific attributes
+     */
+    function updateRseAttributes() {
+        const rseSelect = document.getElementById('rseOptions');
+        const rseMountPathInput = document.getElementById('rseMountPathInput');
+        const pathBeginsAtInput = document.getElementById('pathBeginsAtInput');
         
-        // Clear hidden fields
-        rseMountPathInput.value = '';
-        pathBeginsAtInput.value = '';
+        const selectedOption = rseSelect.selectedOptions[0];
+        if (selectedOption) {
+            rseMountPathInput.value = selectedOption.getAttribute('data-mount-path') || '';
+            pathBeginsAtInput.value = selectedOption.getAttribute('data-path-begins-at') || '0';
+        }
     }
-
-    // Auto-check and lock JupyterLab checkbox when Rucio is selected
-    if (selectedRucio && selectedRucio.toLowerCase() !== 'none') {
-        jupyterLabCheckbox.checked = true;
-        jupyterLabCheckbox.classList.add('checkbox-locked');
-        adjustPlatforms(true);
-    } else {
-        jupyterLabCheckbox.classList.remove('checkbox-locked');
-    }
-}
-
-// /**
-//  * Update hidden fields with RSE-specific attributes
-//  */
-function updateRseAttributes() {
-    const rseSelect = document.getElementById('rseOptions');
-    const rseMountPathInput = document.getElementById('rseMountPathInput');
-    const pathBeginsAtInput = document.getElementById('pathBeginsAtInput');
-    
-    const selectedOption = rseSelect.selectedOptions[0];
-    if (selectedOption) {
-        rseMountPathInput.value = selectedOption.getAttribute('data-mount-path') || '';
-        pathBeginsAtInput.value = selectedOption.getAttribute('data-path-begins-at') || '0';
-    }
-}
 
     /**
      * Autofill the form according to the specified URL arguments
