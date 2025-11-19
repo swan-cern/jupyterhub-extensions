@@ -282,11 +282,6 @@
         const cluster_options  = document.getElementById('clustersOptions');
         const jupyter_lab_option = document.getElementById('use-jupyterlab');
         const use_local_packages_option = document.getElementById('use-local-packages');
-        /**
-         * Store the chosen platform in a hidden form field, as disabled fields
-         * are not sent in the request
-         */ 
-        const hidden_platform_options = document.getElementById('hiddenPlatformsOptions');
 
         const is_alma = (platform_options.selectedOptions[0] && platform_options.selectedOptions[0].text.startsWith('AlmaLinux 9'));
         const is_nxcals = (cluster_options.selectedOptions[0] && cluster_options.selectedOptions[0].text.startsWith('BE NXCALS (NXCals)'));
@@ -305,8 +300,6 @@
             jupyter_lab_option.checked = false;
             use_local_packages_option.checked = false;
         }
-
-        hidden_platform_options.value = platform_options.value;
     }
 
     /**
