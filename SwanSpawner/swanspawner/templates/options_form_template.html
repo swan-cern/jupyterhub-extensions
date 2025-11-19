@@ -195,10 +195,13 @@
     /**
      * Rotate the triangle icon when the file options are toggled
      */
-    function toggleExtraOptions(id) {
-        const triangle = document.getElementById(id);
+    function toggleExtraOptions(is_lcg) {
+        is_lcg = is_lcg || document.querySelector('input[name="software_source"]:checked').value === lcg_source;
+        const triangle = document.getElementById('extra_options');
         triangle.style.transform = triangle.style.transform === "rotate(90deg)" ? "rotate(0deg)" : "rotate(90deg)";
+
         toggleVisibility('fileSection');
+        is_lcg ? toggleVisibility('rucioSection') : setVisible('rucioSection', false);
     }
 
     /**
@@ -605,7 +608,7 @@
 
             // Toggle the extra options section if the file parameter is specified
             if (param === 'file' && selected !== null  && selected !== '')
-                toggleExtraOptions('extra_options');
+                toggleExtraOptions(selected_source===lcg_source);
         }
         setVisible(selected_source+"-details", true);
         // Hide the other details section
@@ -617,24 +620,28 @@
      */
     function showForm(selected_source) {
         const jupyter_lab_option = document.getElementById('use-jupyterlab');
-
+        
         const is_lcg = selected_source === lcg_source, is_customenv = selected_source === customenv_source;
         if (is_lcg) {
+            const file_option_visibility = document.getElementById('fileOption').checkVisibility();
             // Recover last value specified in LCG config; unblock jupyterlab option
             jupyter_lab_option.checked = previous_jupyterlab !== undefined ? previous_jupyterlab : false;
 
             adjustOptions();
             adjustPlatforms();
+            setVisible('extra_options_config', jupyter_lab_option.checked);
+            setVisible('rucioSection', file_option_visibility);
         } else if (is_customenv) {
             // Save last value specified in LCG config; enable and block jupyterlab option
             if (!form_initialized) previous_jupyterlab = jupyter_lab_option.checked;
             jupyter_lab_option.checked = true;
-            
+            setVisible('extra_options_config', true);
+            setVisible('rucioSection', false);
         }
 
         setDisabled(jupyter_lab_option, is_customenv);
-        setVisibleMany(['lcg_config', 'condorSection', 'data_management_config', 'lcg-details'], is_lcg);
-        setVisibleMany(['customenv_config', 'extra_options_config', 'customenv-details'], is_customenv);
+        setVisibleMany(['lcg_config', 'condorSection', 'lcg-details'], is_lcg);
+        setVisibleMany(['customenv_config', 'customenv-details'], is_customenv);
     }
 
     /**
@@ -689,7 +696,7 @@
     }
 
     window.onload = toggleForm;
-    </script>
+</script>
 <div>
     <label for="placeholder">
     <span class='nb' id="optionsHeader">Specify the configuration parameters for the SWAN container that will be created for you.</span>
@@ -895,11 +902,13 @@
         </div>
     </div>
 
-    <!-- Rucio Data Management -->
-    <div id="data_management_config">
-        <h2>Data Management with Rucio</h2>
+    <!-- Extra Options -->
+    <div id="extra_options_config">
+        <!-- Toggle Extra Options Section -->
+        <h2 role="button" onclick="toggleExtraOptions();" style="display: flex; align-items: center; text-decoration: none;"><span id="extra_options">‣</span>Extra options</h2>
 
-        <div id="rucioSection">
+        <!-- Rucio Data Management -->
+        <div id="rucioSection" style="display: none;">
             <label for="rucioOptions">Rucio Instance <a href="#" onclick="toggleVisibility('rucioDetails');"><span class='nbs'>more...</span></a>
                 <div style="display:none;" id="rucioDetails">
                     <span class='nb'>Name of the Rucio instance to connect to from notebooks.</span>
@@ -913,16 +922,11 @@
                 </div>
             </label>
             <select id="rseOptions" name="rucioRSE"></select>
+            <!-- Inputs used for filling the selectors according to the choosen rucioOption -->
             <input type="hidden" id="rseMountPathInput" name="rse_mount_path">
             <input type="hidden" id="pathBeginsAtInput" name="path_begins_at">
             <br>
         </div>
-    </div>
-
-    <!-- Extra Options -->
-    <div id="extra_options_config">
-        <!-- Toggle Extra Options Section -->
-        <h2 role="button" onclick="toggleExtraOptions('extra_options');" style="display: flex; align-items: center; text-decoration: none;"><span id="extra_options">‣</span>Extra options</h2>
 
         <!-- File path information text -->
         <div id="fileSection" style="display: none;">
