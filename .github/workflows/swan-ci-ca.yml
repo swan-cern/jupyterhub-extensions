@@ -30,15 +30,15 @@ jobs:
       with:
         python-version: '3.x'
 
-    - name: Install dependencies 
+    - name: Install dependencies
       run: |
         cd $PACKAGE_NAME
-        pip install setuptools wheel twine jupyter_packaging
+        pip install twine uv
 
     - name: Build wheel
       run: |
         cd $PACKAGE_NAME
-        python setup.py sdist bdist_wheel
+        uv build
 
     - name: Publish distribution to PyPI
       env:
