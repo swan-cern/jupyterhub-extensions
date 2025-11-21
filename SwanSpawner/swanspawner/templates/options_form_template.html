@@ -174,7 +174,7 @@
      * Disable a given element (or a list of elements)
      */
     function setDisabled(element, disabled) {
-        element.classList.toggle('checkbox-locked', disabled);
+        element.toggleAttribute('disabled', disabled);
     }
     function setDisabledMany(elements, disabled) {
         elements.forEach((elem) => setDisabled(elem, disabled));
@@ -198,6 +198,15 @@
 
         toggleVisibility('fileSection');
         is_lcg ? toggleVisibility('rucioSection') : setVisible('rucioSection', false);
+    }
+
+    /**
+     * Forces a given toggle state for extra options section
+     */
+    function fixExtraOptions(is_lcg, show) {
+        const triangle = document.getElementById('extra_options');
+        if ((show && triangle.style.transform !== "rotate(90deg)") || (!show && triangle.style.transform !== "rotate(0deg)")) {
+            toggleExtraOptions(is_lcg)
     }
 
     /**
@@ -463,30 +472,30 @@
      * Handle Rucio instance and RSE options based on form configuration
      */
     function handleRucioOptions() {
-    const rucioSelect = document.getElementById('rucioOptions');
-    const rseSelect = document.getElementById('rseOptions');
-        
-    const selected_config = source_config[lcg_source];
-    const selected_value = document.getElementById(selected_config.options_element).value;
-    const form_data = findFormData(selected_config.source_form, selected_config.form_element, selected_value);
+        const rucioSelect = document.getElementById('rucioOptions');
+        const rseSelect = document.getElementById('rseOptions');
 
-    const rucioInstances = form_data['rucio'] || [];
-    rucioSelect.innerHTML = '';
-    
-    rucioInstances.forEach(instance => {
-        const opt = document.createElement('option');
-        opt.value = instance.value;
-        opt.text = instance.text;
-        rucioSelect.add(opt);
-    });
-    
-    if (!rucioSelect.hasAttribute('data-listener-attached')) {
-        rucioSelect.addEventListener('change', updateRseOptions);
-        rucioSelect.setAttribute('data-listener-attached', 'true');
+        const selected_config = source_config[lcg_source];
+        const selected_value = document.getElementById(selected_config.options_element).value;
+        const form_data = findFormData(selected_config.source_form, selected_config.form_element, selected_value);
+
+        const rucioInstances = form_data['rucio'] || [];
+        rucioSelect.innerHTML = '';
+
+        rucioInstances.forEach(instance => {
+            const opt = document.createElement('option');
+            opt.value = instance.value;
+            opt.text = instance.text;
+            rucioSelect.add(opt);
+        });
+
+        if (!rucioSelect.hasAttribute('data-listener-attached')) {
+            rucioSelect.addEventListener('change', updateRseOptions);
+            rucioSelect.setAttribute('data-listener-attached', 'true');
+        }
+        
+        updateRseOptions();
     }
-    
-    updateRseOptions();
-}
 
     function updateRseOptions() {
         const rucioSelect = document.getElementById('rucioOptions');
@@ -505,7 +514,7 @@
         const selectedInstance = rucioInstances.find(inst => inst.value === selectedRucio);
 
         rseSelect.innerHTML = '';
-        
+
         if (selectedInstance && selectedInstance.rse_options && selectedInstance.rse_options.length > 0) {
             selectedInstance.rse_options.forEach(rse => {
                 const opt = document.createElement('option');
@@ -517,10 +526,10 @@
                 rseSelect.add(opt);
             });
             setDisabled(rseSelect, false);
-            
+
             // Update hidden fields with first option's values
             updateRseAttributes();
-            
+
             // Add event listener to update hidden fields when RSE changes
             if (!rseSelect.hasAttribute('data-listener-attached')) {
                 rseSelect.addEventListener('change', updateRseAttributes);
@@ -532,7 +541,7 @@
             noneOpt.text = 'None';
             rseSelect.add(noneOpt);
             setDisabled(rseSelect, true);
-            
+
             // Clear hidden fields
             rseMountPathInput.value = '';
             pathBeginsAtInput.value = '';
@@ -541,10 +550,10 @@
         // Auto-check and lock JupyterLab checkbox when Rucio is selected
         if (selectedRucio && selectedRucio.toLowerCase() !== 'none') {
             jupyterLabCheckbox.checked = true;
-            setDisabled(jupyterLabCheckbox, true);
+            jupyterLabCheckbox.classList.add('checkbox-locked');
             adjustPlatforms(true);
         } else {
-            setDisabled(jupyterLabCheckbox, false);
+            jupyterLabCheckbox.classList.remove('checkbox-locked');
         }
     }
 
@@ -555,7 +564,7 @@
         const rseSelect = document.getElementById('rseOptions');
         const rseMountPathInput = document.getElementById('rseMountPathInput');
         const pathBeginsAtInput = document.getElementById('pathBeginsAtInput');
-        
+
         const selectedOption = rseSelect.selectedOptions[0];
         if (selectedOption) {
             rseMountPathInput.value = selectedOption.getAttribute('data-mount-path') || '';
@@ -586,6 +595,11 @@
             if (selected) {
                 setInput(element, selected);
                 
+                if (argument === 'rucio') {
+                    updateRseOptions()
+                    fixExtraOptions(selected_source===lcg_source, true);
+                }
+
                 // Refill the remaining selectors according to the specified software stack/builder (each one has its platforms, resources etc)
                 if (argument === lcg_parent_field || argument === builder_parent_field) {
                     adjustForm(selected_source);
@@ -604,7 +618,7 @@
 
             // Toggle the extra options section if the file parameter is specified
             if (param === 'file' && selected !== null  && selected !== '')
-                toggleExtraOptions(selected_source===lcg_source);
+                fixExtraOptions(selected_source===lcg_source, true);
         }
         setVisible(selected_source+"-details", true);
         // Hide the other details section
@@ -631,11 +645,11 @@
             // Save last value specified in LCG config; enable and block jupyterlab option
             if (!form_initialized) previous_jupyterlab = jupyter_lab_option.checked;
             jupyter_lab_option.checked = true;
+            jupyter_lab_option.classList.add('checkbox-locked');
             setVisible('extra_options_config', true);
             setVisible('rucioSection', false);
         }
 
-        setDisabled(jupyter_lab_option, is_customenv);
         setVisibleMany(['lcg_config', 'condorSection', 'lcg-details'], is_lcg);
         setVisibleMany(['customenv_config', 'customenv-details'], is_customenv);
     }
