@@ -175,10 +175,7 @@
      * Disable a given element (or a list of elements)
      */
     function setDisabled(element, disabled) {
-        if (disabled === true) 
-            element.classList.add('checkbox-locked');
-        else 
-            element.classList.remove('checkbox-locked');
+        element.classList.toggle('checkbox-locked', disabled);
     }
     function setDisabledMany(elements, disabled) {
         elements.forEach((elem) => setDisabled(elem, disabled));
