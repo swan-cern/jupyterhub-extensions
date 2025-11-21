@@ -19,11 +19,7 @@ jobs:
       - name: Install testing dependencies
         working-directory: KeyCloakAuthenticator/
         run: |
-          # Install dependencies required by the package
-          pip install -e .
-
-          # Install dependencies for testing framework
-          pip install -r requirements-dev.txt
+          pip install -e .[dev]
 
       - name: Run Unit tests
         working-directory: KeyCloakAuthenticator/
