@@ -1,3 +1,36 @@
+[project]
+name = "swanspawner"
+dynamic = ["version"]
+description = "SWAN JupyterHub spawner"
+readme = "README.md"
+license = "AGPL-3.0"
+authors = [{ name = "SWAN Admins" }]
+keywords = ["JupyterHub", "Spawner", "SWAN", "CERN"]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "jupyterhub",
+    "psutil",
+    "dockerspawner==12.1.0",
+    "jupyterhub-kubespawner==6.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/swan-cern/jupyterhub-extensions"
+GitHub = "https://github.com/swan-cern/jupyterhub-extensions"
+
 [build-system]
-requires = ["jupyter_packaging==0.12.3", "setuptools>=40.8.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch]
+version = { path = "swanspawner/_version.py" }
+
+[tool.hatch.build]
+packages = ["swanspawner"]
