@@ -201,6 +201,15 @@
     }
 
     /**
+     * Forces a given toggle state for extra options section
+     */
+    function fixExtraOptions(is_lcg, show) {
+        const triangle = document.getElementById('extra_options');
+        if ((show && triangle.style.transform !== "rotate(90deg)") || (!show && triangle.style.transform !== "rotate(0deg)")) {
+            toggleExtraOptions(is_lcg)
+    }
+
+    /**
      * Auxiliary function to gather all the current selected values in the form
      */
     function gatherFormOptions(selected_source) {
@@ -586,6 +595,11 @@
             if (selected) {
                 setInput(element, selected);
                 
+                if (argument === 'rucio') {
+                    updateRseOptions()
+                    fixExtraOptions(selected_source===lcg_source, true);
+                }
+
                 // Refill the remaining selectors according to the specified software stack/builder (each one has its platforms, resources etc)
                 if (argument === lcg_parent_field || argument === builder_parent_field) {
                     adjustForm(selected_source);
@@ -604,7 +618,7 @@
 
             // Toggle the extra options section if the file parameter is specified
             if (param === 'file' && selected !== null  && selected !== '')
-                toggleExtraOptions(selected_source===lcg_source);
+                fixExtraOptions(selected_source===lcg_source, true);
         }
         setVisible(selected_source+"-details", true);
         // Hide the other details section
