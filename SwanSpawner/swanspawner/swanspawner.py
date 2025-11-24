@@ -10,7 +10,8 @@ from socket import gethostname
 from traitlets import (
     Unicode,
     Bool,
-    Int
+    Int,
+    List
 )
 
 from jinja2 import Environment, FileSystemLoader
@@ -85,6 +86,12 @@ def define_SwanSpawner_from(base_class):
             default_value='ats.swan.cern.ch',
             config=True,
             help='Domain name of the ATS SwanHub instance.'
+        )
+
+        stacks_for_customenvs = List(
+            default_value=[],
+            config=True,
+            help='List of software stacks that will use customenvs extension for building the environment'
         )
 
         ats_role = Unicode(
@@ -260,10 +267,6 @@ def define_SwanSpawner_from(base_class):
             options[self.file]                      = formdata.get(self.file, [''])[0]
 
             if options[self.software_source] == self.customenv_special_type:
-                options[self.repository] = formdata[self.repository][0]
-                if not options[self.repository]:
-                    raise ValueError('Cannot create custom software environment: no repository specified')
-
                 # Builders can have a version or not. When they do, we receive the following text from the form: builder:builder_version
                 options[self.builder] = formdata.get(self.builder, [''])[0].lower()
                 selection = self._get_selection(options_form_config, options, self.builder)
@@ -273,6 +276,10 @@ def define_SwanSpawner_from(base_class):
 
                 if options[self.builder].count(':') == 1:
                     options[self.builder], options[self.builder_version] = options[self.builder].split(':')
+
+                options[self.repository] = formdata.get(self.repository, [''])[0]
+                if not options[self.repository] and options[self.builder] not in self.stacks_for_customenvs:
+                    raise ValueError('Cannot create custom software environment: no repository specified')
             elif options[self.software_source] == self.lcg_special_type:
                 options[self.lcg_rel_field]             = formdata[self.lcg_rel_field][0]
                 options[self.platform_field]            = formdata[self.platform_field][0]
@@ -282,8 +289,10 @@ def define_SwanSpawner_from(base_class):
 
                 selection = self._get_selection(options_form_config, options, self.lcg_rel_field)
 
-                # Validate user selected options with what is on the yaml form    
+                # Validate user selected options with what is on the yaml form
                 self._validate_selection_options(selection, options)
+                if options[self.lcg_rel_field].split("-")[0] in self.stacks_for_customenvs:
+                    options[self.software_source] = self.customenv_special_type
             else:
                 self._popup_error(options, self.software_source)
 
@@ -311,6 +320,7 @@ def define_SwanSpawner_from(base_class):
             #FIXME clean JPY env variables
             env.update(dict(
                 SOFTWARE_SOURCE        = self.user_options[self.software_source],
+                STACKS_FOR_CUSTOMENVS  = " ".join(self.stacks_for_customenvs),
                 USER                   = username,
                 NB_USER                = username,
                 USER_ID                = self.user_uid,
