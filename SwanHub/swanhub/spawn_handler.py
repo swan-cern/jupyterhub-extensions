@@ -203,6 +203,8 @@ class SpawnHandler(JHSpawnHandler):
             # If the builder has a version, pass it as an argument of the query
             if options.get(configs.builder_version):
                 query_params[configs.builder_version] = options[configs.builder_version]
+            elif options.get(configs.lcg_rel_field):
+                query_params[configs.builder], query_params[configs.builder_version] = options[configs.lcg_rel_field].split('-')
             if options.get(configs.spark_cluster_field, "none") != "none":
                 query_params["nxcals"] = True
 
