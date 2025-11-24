@@ -58,7 +58,7 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
 
         # If the user selected an Acc-Py based custom environment,
         # use the corresponding image.
-        if self.user_options[self.software_source] == self.customenv_special_type and self.user_options[self.builder] == 'accpy':
+        if self.user_options[self.software_source] == self.customenv_special_type and self.user_options.get(self.builder) == 'accpy':
             image = self.accpy['image']['name'] + ':' + self.accpy['image']['tag']
             if not image:
                 raise RuntimeError('The user selected an Acc-Py environment, but no Acc-Py image was configured')
