@@ -174,7 +174,7 @@
      * Disable a given element (or a list of elements)
      */
     function setDisabled(element, disabled) {
-        element.toggleAttribute('disabled', disabled);
+        element.classList.toggle('checkbox-locked', disabled);
     }
     function setDisabledMany(elements, disabled) {
         elements.forEach((elem) => setDisabled(elem, disabled));
@@ -339,7 +339,7 @@
         selectGpu.innerHTML = '';
 
         const noneOption = document.createElement("option");
-        noneOption.value = '';
+        noneOption.value = 'none';
         noneOption.text = 'None';
         
         // Enable GPU selection only if CUDA stack is used
@@ -550,10 +550,10 @@
         // Auto-check and lock JupyterLab checkbox when Rucio is selected
         if (selectedRucio && selectedRucio.toLowerCase() !== 'none') {
             jupyterLabCheckbox.checked = true;
-            jupyterLabCheckbox.classList.add('checkbox-locked');
+            setDisabled(jupyterLabCheckbox, true);
             adjustPlatforms(true);
         } else {
-            jupyterLabCheckbox.classList.remove('checkbox-locked');
+            setDisabled(jupyterLabCheckbox, false);
         }
     }
 
@@ -645,7 +645,7 @@
             // Save last value specified in LCG config; enable and block jupyterlab option
             if (!form_initialized) previous_jupyterlab = jupyter_lab_option.checked;
             jupyter_lab_option.checked = true;
-            jupyter_lab_option.classList.add('checkbox-locked');
+            setDisabled(jupyter_lab_option, true);
             setVisible('extra_options_config', true);
             setVisible('rucioSection', false);
         }
