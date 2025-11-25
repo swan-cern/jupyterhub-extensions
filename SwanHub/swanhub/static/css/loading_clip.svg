@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<svg xmlns="http://www.w3.org/2000/svg">
+
+    <mask id="loading-mask">
+        <linearGradient id="gradient-1" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="rgb(255,255,255)" />
+            <stop offset="100%" stop-color="rgb(255,255,255)" stop-opacity="0"/>
+        </linearGradient>
+        <rect x="0" y="0" width="450" height="350" fill="url(#gradient-1)"/>
+    </mask>
+</svg>
