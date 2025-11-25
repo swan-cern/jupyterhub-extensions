@@ -32,3 +32,11 @@ version = { path = "swanhub/_version.py" }
 
 [tool.hatch.build]
 packages = ["swanhub"]
+
+[tool.hatch.build.targets.wheel.shared-data]
+"swanhub/static" = "share/jupyterhub/static/swan"
+
+[tool.hatch.build.hooks.jupyter-builder]
+dependencies = ["hatch-jupyter-builder==0.9.1"]
+build-function = "hatch_jupyter_builder.npm_builder"
+ensured-targets = ["swanhub/static/css/style.css"]

@@ -97,3 +97,9 @@ ENV/
 
 # Mac os
 .DS_Store
+
+# node
+node_modules/
+
+# Generated frontend assets
+SwanHub/swanhub/static/css/style.css
