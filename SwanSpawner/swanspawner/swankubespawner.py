@@ -85,7 +85,7 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
             self.log.info(f'Deleting secret {namespace}:{eos_secret_name}')
             try:
                 await self.api.delete_namespaced_secret(eos_secret_name, namespace)
-            except ApiException as e:
+            except ApiException:
                 self.log.error('Error deleting secret {namespace}:{eos_secret_name}: {e}')
 
             # Cleanup for computing integrations (Spark, HTCondor)
@@ -97,7 +97,7 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
                 self.log.info(f'Deleting service {namespace}:{computing_ports_service}')
                 try:
                     await self.api.delete_namespaced_service(computing_ports_service, namespace)
-                except ApiException as e:
+                except ApiException:
                     self.log.error('Error deleting service {namespace}:{computing_ports_service}: {e}')
 
                 if clean_spark:
@@ -106,7 +106,7 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
                     self.log.info(f'Deleting secret {namespace}:{hadoop_secret_name}')
                     try:
                         await self.api.delete_namespaced_secret(hadoop_secret_name, namespace)
-                    except ApiException as e:
+                    except ApiException:
                         self.log.error('Error deleting secret {namespace}:{hadoop_secret_name}: {e}')
 
             # free GPU update
