@@ -5,4 +5,4 @@ dev = ["ruff==0.14.6"]
 target-version = "py38"
 
 [tool.ruff.lint]
-select = ["F841"]
+select = ["F841", "F"]
