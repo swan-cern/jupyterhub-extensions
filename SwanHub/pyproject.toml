@@ -33,10 +33,19 @@ version = { path = "swanhub/_version.py" }
 [tool.hatch.build]
 packages = ["swanhub"]
 
+# hatch-jupyter-builder uses the the sdist to build the frontend
+# assets so we need to include the package.json and lock file.
+[tool.hatch.build.targets.sdist.force-include]
+"package.json" = "package.json"
+"package-lock.json" = "package-lock.json"
+
+# Install the built static files where JupyterHub looks for them.
 [tool.hatch.build.targets.wheel.shared-data]
 "swanhub/static" = "share/jupyterhub/static/swan"
 
+# Call `npm run build` while building the package.
 [tool.hatch.build.hooks.jupyter-builder]
 dependencies = ["hatch-jupyter-builder==0.9.1"]
 build-function = "hatch_jupyter_builder.npm_builder"
+# Fail the build if the target files are not created:
 ensured-targets = ["swanhub/static/css/style.css"]
