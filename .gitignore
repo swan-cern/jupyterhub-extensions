@@ -103,3 +103,6 @@ node_modules/
 
 # Generated frontend assets
 SwanHub/swanhub/static/css/style.css
+
+# ruff
+.ruff_cache/
