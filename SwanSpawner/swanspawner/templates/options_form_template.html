@@ -177,7 +177,12 @@
         // if disabled = true: when submitting, checkboxes with values in it aren't sent, leading to an error in the backend for missing values
         // if checkbox-locked = true: when submitting, a "not focusable" error due to the required attribute on checkboxes with no values in it
         // Solution: apply both approaches depending on the element contents (checkbox-locked is the default behavior)
-        element.children.length ? element.classList.toggle('checkbox-locked', disabled) : element.toggleAttribute('disabled', disabled);
+        if (disabled) {
+            element.type === 'select-one' && !element.children.length ? element.setAttribute('disabled', 'disabled') : element.classList.add('checkbox-locked');
+        } else {
+            element.removeAttribute('disabled');
+            element.classList.remove('checkbox-locked');
+        }
     }
     function setDisabledMany(elements, disabled) {
         elements.forEach((elem) => setDisabled(elem, disabled));
