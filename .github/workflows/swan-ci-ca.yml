@@ -8,11 +8,14 @@ on:
   push:
     tags:
        - '*/v*'
-  
+
 jobs:
   build-publish:
 
     runs-on: ubuntu-latest
+    environment: publish
+    permissions:
+      id-token: write
 
     steps:
     - uses: actions/checkout@v2
@@ -33,20 +36,17 @@ jobs:
     - name: Install dependencies
       run: |
         cd $PACKAGE_NAME
-        pip install twine uv
+        pip install uv
 
     - name: Build wheel
       run: |
         cd $PACKAGE_NAME
         uv build
 
-    - name: Publish distribution to PyPI
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-      run: |
-        cd $PACKAGE_NAME
-        twine upload --repository pypi dist/*
+    - name: Publish distribution to PyPI 🚀
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        package-dir: ./${{ env.PACKAGE_NAME }}/dist/
 
     - name: Create Release
       id: create_release
