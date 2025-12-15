@@ -19,6 +19,7 @@ dependencies = [
     "psutil",
     "dockerspawner==12.1.0",
     "jupyterhub-kubespawner==6.1.0",
+    "kubernetes~=22.0",
 ]
 
 [project.urls]
