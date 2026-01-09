@@ -31,6 +31,8 @@ class SpawnHandlersConfigs(SingletonConfigurable):
 
     file = 'file'
 
+    user_interface = 'user_interface'
+
     use_jupyterlab_field = 'use-jupyterlab'
 
     use_tn_field = 'use-tn'

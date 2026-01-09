@@ -199,6 +199,7 @@ class SpawnHandler(JHSpawnHandler):
                 configs.repository: options.get(configs.repository, ''),
                 configs.builder: options.get(configs.builder),
                 configs.file: options.get(configs.file, ''),
+                configs.user_interface: options.get(configs.user_interface, 'lab'),
             }
             # If the builder has a version, pass it as an argument of the query
             if options.get(configs.builder_version):
