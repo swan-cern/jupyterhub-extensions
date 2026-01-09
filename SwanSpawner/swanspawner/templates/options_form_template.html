@@ -2,37 +2,6 @@
 .nb{ font-weight:normal }
 .nbs{ font-weight:normal; font-size:small }
 .news{ font-weight:normal; background-color:yellow }
-#clipboard_config {
-    float: right;
-    position: relative;
-    cursor: pointer;
-    width: fit-content;
-    border: 1px solid #0053A1;
-    border-radius: 8px;
-    padding: 5px;
-    transition: transform 0.2s ease, border-color 0.2s ease;
-}
-#clipboard_config:hover {
-    transform: scale(1.05);
-}
-#tooltip {
-    position: absolute;
-    right: 110%; top: 50%;
-    transform: translateY(-50%);
-    background-color: #333;
-    color: white;
-    padding: 5px 10px;
-    border-radius: 4px;
-    font-size: 14px;
-    white-space: nowrap;
-    display: none;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-#clipboard_config:hover #tooltip {
-    display: block;
-    opacity: 1;
-}
 #extra_options {
     transition: transform 0.2s ease;
     margin-right: 5px;
@@ -40,6 +9,12 @@
 .checkbox-locked {
     pointer-events: none;
     opacity: 0.6;
+}
+label.form-label {
+    margin-bottom: 0;
+}
+.form-label > span {
+    font-weight: bold;
 }
 </style>
 <script type="text/javascript">
@@ -254,14 +229,13 @@
 
         const tooltip = document.getElementById('tooltip');
         navigator.clipboard.writeText(generated_url).then(() => {
-            tooltip.textContent = 'URL Copied!';
+            tooltip.textContent = 'URL copied!';
         }).catch(err => {
             console.error('Failed to copy URL: ', err);
             tooltip.textContent = 'Failed to copy URL, try again!';
         }).finally(() => {
             setTimeout(() => {
                 tooltip.textContent = 'Generate URL';
-                tooltip.style.backgroundColor = '#333';
             }, 3000);
         });
     }
@@ -286,7 +260,11 @@
 
         const isValid = httpPattern.test(repo_input.value) || sshPattern.test(repo_input.value);
 
-        repo_input.style.backgroundColor = repo_input.value && !isValid ? '#ffcccc' : '#ffffff';
+        if (!isValid) {
+            repo_input.classList.add('is-invalid');
+        } else {
+            repo_input.classList.remove('is-invalid');
+        }
     }
 
     /**
@@ -392,13 +370,6 @@
      * Initialize the form populating the main dropdown (lcg stack/builder) and loading its options
      */
     function initializeForm() {
-        // Set proper header for the whole form based on config
-        const options_header = document.getElementById('optionsHeader');
-        const header = form_config['header'];
-        if (header) {
-            options_header.innerHTML = header;
-        }
-
         // Loop through all source types and populate the main dropdown options (lcg -> lcg_release, customenv -> builder)
         for (const [source, source_data] of Object.entries(source_config)) {
             let first_form_optionselected = false;
@@ -716,144 +687,147 @@
     window.onload = toggleForm;
 </script>
 <div>
-    <label for="placeholder">
-    <span class='nb' id="optionsHeader">Specify the configuration parameters for the SWAN container that will be created for you.</span>
-    </label>
-    <label for="alma9">
-    <span class='news' id="alma9">Try out our new experimental interface based on <b>JupyterLab</b> and let us know your feedback!</span>
-    </label>
-    <br>
-
-    <div id="clipboard_config" onclick="copyToClipboard()">
-        <i class="fa fa-clipboard"></i>
-        <span id="tooltip">Generate URL</span>
+    <div class="d-flex justify-content-between align-items-center">
+        <h2>Configure your session</h2>
+        <button type="button" class="btn btn-primary" onclick="copyToClipboard()">
+            <i class="fa fa-clipboard"></i>
+            <span id="tooltip">Generate URL</span>
+        </button>
     </div>
 
     <!-- Source Type selection -->
     <div id="software_sourceSection">
-        <h2>Software</h2>
+        <h4>Software</h4>
 
-        <label> User Interface <a href="#" onclick="toggleVisibility('userInterfaceDetails');"><span class='nbs'>more...</span></a></label>
-        <div style="display:none;" id="userInterfaceDetails">
-            <span class='nb'>JupyterLab is the latest web-based interactive development environment for notebooks, code and data. More information <a target="_blank" href="https://jupyterlab.readthedocs.io/en/stable/user/interface.html">here</a>.</span>
-        </div>
-        <div style="display: flex; align-items: center">
+        <div class="mb-3">
+            <div class="alert alert-warning">
+                Try out our new experimental interface based on JupyterLab and let us know your feedback!
+            </div>
+            <div>
+                <label class="form-label"><span>User Interface</span><button type="button" class="btn btn-link btn-sm" onclick="toggleVisibility('userInterfaceDetails');"><span class='nbs'>more...</span></button></label>
+            </div>
+            <div style="display:none;" id="userInterfaceDetails">
+                <span class='nb'>JupyterLab is the latest web-based interactive development environment for notebooks, code and data. More information <a target="_blank" href="https://jupyterlab.readthedocs.io/en/stable/user/interface.html">here</a>.</span>
+            </div>
             <input
                 id="use-jupyterlab"
                 type="checkbox"
                 name="use-jupyterlab"
                 value="checked"
-                style="display: inline; width: initial; margin: 0 8px 0 0"
+                class="form-check-input me-1"
                 onchange="adjustPlatforms(true);"
             />
-            <span> Try the new JupyterLab interface (experimental)</span>
-            <br>
+            <label for="use-jupyterlab" class="form-check-label">
+                Try the new JupyterLab interface (experimental)
+            </label>
         </div>
-        <br>
 
-        <div id="software_source_selection">
-            <label>Source <a href="#" onclick="toggleVisibility('sourceDetails');"><span class='nbs'>more...</span></a>
+        <div id="software_source_selection" class="mb-3">
+            <label class="form-label"><span>Source</span> <button type="button" class="btn btn-link btn-sm" onclick="toggleVisibility('sourceDetails');"><span class='nbs'>more...</span></button></label>
                 <div style="display:none;" id="sourceDetails">
                     <span class='nb'>Software source: curated stack (LCG) or custom environment.</span>
                 </div>
             </label>
-            <br>
-
-            <input type="radio" id="use-lcg" name="software_source" value="lcg" checked onchange="toggleForm();" style="width: auto; height: auto; display: inline-block;">
-            <label for="use-lcg" style="margin-right: 5%;">LCG</label>
-            <input type="radio" id="use-customenv" name="software_source" value="customenv" onchange="toggleForm();" style="width: auto; height: auto; display: inline-block;">
-            <label for="use-customenv">Custom Environment</label>
-            <br><br>
+            <div class="form-check">
+                <input type="radio" id="use-lcg" name="software_source" value="lcg" checked onchange="toggleForm();" class="form-check-input">
+                <label for="use-lcg" class="form-check-label">LCG</label>
+            </div>
+            <div class="form-check">
+                <input type="radio" id="use-customenv" name="software_source" value="customenv" onchange="toggleForm();" class="form-check-input">
+                <label for="use-customenv" class="form-check-label">Custom Environment</label>
+            </div>
         </div>
     </div>
 
     <!-- LCG configuration -->
     <div id="lcg_config">
         <div id="lcgSection">
-            <label for="lcgOptions">Software stack <a href="#" onclick="toggleVisibility('lcgDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="lcgDetails">
-                    <span class='nb'>The software stack to associate to the container. See the <a target="_blank" href="http://lcginfo.cern.ch/">LCG package info</a> page.</span>
-                    <br>
-                    <span class='nb'>Additionally, it is possible to use Python packages installed by the user on CERNBox. More information <a target="_blank" href="https://swan.docs.cern.ch/advanced/install_packages/">here</a>.</span>
-                </div>
-            </label>
-            <select id="lcgOptions" name="lcg" onchange="adjustForm(lcg_source);" required></select>
-            <div style="display: flex; align-items: center">
-                <input
-                  id="use-local-packages"
-                  type="checkbox"
-                  name="use-local-packages"
-                  value="checked"
-                  style="display: inline; width: initial; margin: 0 8px 0 0"
-                  onchange="adjustPlatforms(true);"
-                />
-                <span> Use Python packages installed on CERNBox</span>
+            <div class="mb-3">
+                <label for="lcgOptions" class="form-label"><span>Software stack</span> <button type="button" class="btn btn-link btn-sm" onclick="toggleVisibility('lcgDetails');"><span class='nbs'>more...</span></button>
+                    <div style="display:none;" id="lcgDetails">
+                        <span class='nb'>The software stack to associate to the container. See the <a target="_blank" href="http://lcginfo.cern.ch/">LCG package info</a> page.</span>
+                        <br>
+                        <span class='nb'>Additionally, it is possible to use Python packages installed by the user on CERNBox. More information <a target="_blank" href="https://swan.docs.cern.ch/advanced/install_packages/">here</a>.</span>
+                    </div>
+                </label>
+                <select id="lcgOptions" name="lcg" onchange="adjustForm(lcg_source);" required class="form-select"></select>
             </div>
-            <br>
+            <div class="form-check mb-3">
+                <input
+                    id="use-local-packages"
+                    type="checkbox"
+                    name="use-local-packages"
+                    value="checked"
+                    class="form-check-input"
+                    onchange="adjustPlatforms(true);"
+                />
+                <label for="use-local-packages" class="form-check-label">
+                    Use Python packages installed on CERNBox
+                </label>
+            </div>
         </div>
         
-        <div id="platformSection">
-            <label for="platformsOptions">Platform <a href="#" onclick="toggleVisibility('platformDetails');"><span class='nbs'>more...</span></a>
+        <div id="platformSection" class="mb-3">
+            <label for="platformsOptions" class="form-label"><span>Platform</span> <button type="button" class="btn btn-link btn-sm" onclick="toggleVisibility('platformDetails');"><span class='nbs'>more...</span></button>
                 <div style="display:none;" id="platformDetails">
                     <span class='nb'>The combination of compiler version and flags.</span>
                 </div>
             </label>
-            <select id="platformsOptions" name="platforms" onchange="adjustOptions();" required></select>
-            <input type="hidden" id="hiddenPlatformsOptions" name="platforms">
-            <br>
+            <select id="platformsOptions" name="platforms" onchange="adjustOptions();" required class="form-select"></select>
+            <input type="hidden" id="hiddenPlatformsOptions" name="platforms" class="form-control">
         </div>
 
-        <div id="scriptenvSection">
-            <label for="scriptenvOption">Environment script <a href="#" onclick="toggleVisibility('scriptenvDetails');"><span class='nbs'>more...</span></a>
+        <div id="scriptenvSection" class="mb-3">
+            <label for="scriptenvOption" class="form-label"><span>Environment script</span> <button type="button" class="btn btn-link btn-sm" onclick="toggleVisibility('scriptenvDetails');"><span class='nbs'>more...</span></button>
                 <div style="display:none;" id="scriptenvDetails">
                     <span class='nb'>User-provided bash script to define custom environment variables. The variable CERNBOX_HOME is resolved to the proper /eos/user/u/username directory.</span>
                 </div>
             </label>
-            <input type="text" id="scriptenvOption" name="scriptenv" placeholder="e.g. $CERNBOX_HOME/MySWAN/myscript.sh">
-            <br>
+            <input type="text" id="scriptenvOption" name="scriptenv" placeholder="e.g. $CERNBOX_HOME/MySWAN/myscript.sh" class="form-control">
         </div>
     </div>
 
     <!-- Custom environment configuration -->
     <div id="customenv_config">
-        <div id="repositorySection">
-            <label for="repositoryOption">Repository 
-                <a href="#" onclick="toggleVisibility('repositoryDetails');"><span class='nbs'>more...</span></a>
+        <div id="repositorySection" class="mb-3">
+            <label for="repositoryOption" class="form-label"><span>Repository</span> 
+                <button type="button" class="btn btn-link btn-sm" onclick="toggleVisibility('repositoryDetails');"><span class='nbs'>more...</span></button>
                 <div style="display:none;" id="repositoryDetails">
                     <span class='nb'>URL of a git repository containing a requirements file.</span>
                 </div>
             </label>
-            <br>
-            <div style="display: flex;">
-                <input 
-                    type="text"
-                    id="repositoryOption"
-                    name="repository"
-                    placeholder="e.g. https://gitlab.cern.ch/user/myrepo"
-                    oninput="validateRepositoryInput(this);"
-                />
+            <input 
+                type="text"
+                id="repositoryOption"
+                name="repository"
+                placeholder="e.g. https://gitlab.cern.ch/user/myrepo"
+                oninput="validateRepositoryInput(this);"
+                class="form-control"
+            />
+            <div class="invalid-feedback">
+                The repository URL is not valid.
             </div>
-            <br>
         </div>
 
-        <div id="builderSection">
-            <label for="builderOptions">Builder <a href="#" onclick="toggleVisibility('builderDetails');"><span class='nbs'>more...</span></a>
+        <div id="builderSection" class="mb-3">
+            <label for="builderOptions" class="form-label"><span>Builder</span> <button type="button" class="btn btn-link btn-sm" onclick="toggleVisibility('builderDetails');"><span class='nbs'>more...</span></button>
                 <div style="display:none;" id="builderDetails">
                     <span class='nb'>Acc-Py release to build the custom environment.</a></span>
                 </div>
             </label>
-            <select id="builderOptions" name="builder" onchange="adjustForm(customenv_source);" required></select>
-            <br>
+            <select id="builderOptions" name="builder" onchange="adjustForm(customenv_source);" required class="form-select"></select>
         </div>
     </div>
 
-    <div id="network_config" style="margin-bottom: 30px;">
-        <h2>Network</h2>
+    <div id="network_config" class="mt-4">
+        <h4>Network</h4>
 
-        <div id="tnSection">
-            <input type="checkbox" id="use-tn" name="use-tn" onchange="accessTN(this.checked);" style="width: auto; height: auto; display: inline-block;">
-            <label style="width: auto; height: auto; display: inline-block;" for="use-tn">TN Access</label>
-            <a href="#" onclick="toggleVisibility('use-tnDetails');"><span class='nbs'>more...</span></a>
+        <div id="tnSection" class="form-check mb-3">
+            <input type="checkbox" id="use-tn" name="use-tn" onchange="accessTN(this.checked);" class="form-check-input">
+            <label for="use-tn" class="form-check-label">
+                TN Access
+            </label>
+            <button type="button" class="btn btn-link btn-sm" onclick="toggleVisibility('use-tnDetails');"><span class='nbs'>more...</span></button>
             <div style="display:none;" id="use-tnDetails">
                 <span class='nb'>Request a user session that is exposed to the CERN Technical Network.</span>
             </div>
@@ -861,101 +835,97 @@
     </div>
 
     <!-- Resources configuration -->
-    <div id="resources_config">
-        <h2 for="session-resources">Session resources</h2>
+    <div id="resources_config" class="mt-4">
+        <h4 for="session-resources">Session resources</h4>
 
-        <div id="coresSection">
-                <label for="coresOptions">CPU <a href="#" onclick="toggleVisibility('coresDetails');"><span class='nbs'>more...</span></a>
+        <div id="coresSection" class="mb-3">
+                <label for="coresOptions" class="form-label"><span>CPU</span> <button type="button" class="btn btn-link btn-sm" onclick="toggleVisibility('coresDetails');"><span class='nbs'>more...</span></button>
                 <div style="display:none;" id="coresDetails">
                     <span class='nb'>Number of CPU cores to associate to the container.</span>
                 </div>
             </label>
-            <select id="coresOptions" name="cores" required></select>
-            <br>
+            <select id="coresOptions" name="cores" required class="form-select"></select>
         </div>
 
-        <div id="memorySection">
-            <label for="memoryOptions">Memory <a href="#" onclick="toggleVisibility('memoryDetails');"><span class='nbs'>more...</span></a>
+        <div id="memorySection" class="mb-3">
+            <label for="memoryOptions" class="form-label"><span>Memory</span> <button type="button" class="btn btn-link btn-sm" onclick="toggleVisibility('memoryDetails');"><span class='nbs'>more...</span></button>
                 <div style="display:none;" id="memoryDetails">
                     <span class='nb'>Amount of memory allocated to the container.</span>
                 </div>
             </label>
-            <select id="memoryOptions" name="memory" required></select>
-            <br>
+            <select id="memoryOptions" name="memory" required class="form-select"></select>
         </div>
 
-        <div id="gpuSection">
-            <label for="gpuOptions">GPU <a href="#" onclick="toggleVisibility('gpuDetails');"><span class='nbs'>more...</span></a>
+        <div id="gpuSection" class="mb-3">
+            <label for="gpuOptions" class="form-label"><span>GPU</span> <button type="button" class="btn btn-link btn-sm" onclick="toggleVisibility('gpuDetails');"><span class='nbs'>more...</span></button>
                 <div style="display:none;" id="gpuDetails">
                     <span class='nb'>GPU model or flavour to attach to the container.</span>
                 </div>
             </label>
-            <select id="gpuOptions" name="gpu" required></select>
-            <br>
+            <select id="gpuOptions" name="gpu" required class="form-select"></select>
         </div>
     </div>
 
     <!-- External computing resources -->
-    <div id="external_res_config">
-        <h2>External computing resources</h2>
+    <div id="external_res_config" class="mt-4">
+        <h4>External computing resources</h4>
         
-        <div id="clusterSection">
-            <label for="clustersOptions">Spark cluster <a href="#" onclick="toggleVisibility('clustersDetails');"><span class='nbs'>more...</span></a>
+        <div id="clusterSection" class="mb-3">
+            <label for="clustersOptions" class="form-label"><span>Spark cluster</span> <button type="button" class="btn btn-link btn-sm" onclick="toggleVisibility('clustersDetails');"><span class='nbs'>more...</span></button>
                 <div style="display:none;" id="clustersDetails">
                     <span class='nb'>Name of the Spark cluster to connect to from notebooks. See the <a target="_blank" href="https://hadoop-user-guide.web.cern.ch/">Hadoop User guide</a> and the <a target="_blank" href="https://sparktraining.web.cern.ch/">Spark training course</a></span>
                 </div>
             </label>
-            <select id="clustersOptions" name="clusters" required></select>
-            <br>
+            <select id="clustersOptions" name="clusters" required class="form-select"></select>
         </div>
 
-        <div id="condorSection">
-            <label for="condorOptions">HTCondor pool <a href="#" onclick="toggleVisibility('condorDetails');"><span class='nbs'>more...</span></a>
+        <div id="condorSection" class="mb-3">
+            <label for="condorOptions" class="form-label"><span>HTCondor pool</span> <button type="button" class="btn btn-link btn-sm" onclick="toggleVisibility('condorDetails');"><span class='nbs'>more...</span></button>
                 <div style="display:none;" id="condorDetails">
                     <span class='nb'>Name of the HTCondor pool to use.</span>
                 </div>
             </label>
-            <select id="condorOptions" name="condor" required></select>
-            <br>
+            <select id="condorOptions" name="condor" required class="form-select"></select>
         </div>
     </div>
 
     <!-- Extra Options -->
-    <div id="extra_options_config">
+    <div id="extra_options_config" class="mt-4">
         <!-- Toggle Extra Options Section -->
-        <h2 role="button" onclick="toggleExtraOptions();" style="display: flex; align-items: center; text-decoration: none;"><span id="extra_options">‣</span>Extra options</h2>
+        <h4 role="button" onclick="toggleExtraOptions();" style="display: flex; align-items: center; text-decoration: none;"><span id="extra_options">‣</span>Extra options</h4>
 
         <!-- Rucio Data Management -->
         <div id="rucioSection" style="display: none;">
-            <label for="rucioOptions">Rucio Instance <a href="#" onclick="toggleVisibility('rucioDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="rucioDetails">
-                    <span class='nb'>Name of the Rucio instance to connect to from notebooks.</span>
-                </div>
-            </label>
-            <select id="rucioOptions" name="rucio" onchange="updateRseOptions()"></select>
-            <br>
-            <label for="rseOptions">Rucio RSE <a href="#" onclick="toggleVisibility('rucioRSEDetails');"><span class='nbs'>more...</span></a>
-                <div style="display:none;" id="rucioRSEDetails">
-                    <span class='nb'>Rucio Storage Element to mount in the session.</span>
-                </div>
-            </label>
-            <select id="rseOptions" name="rucioRSE"></select>
-            <!-- Inputs used for filling the selectors according to the choosen rucioOption -->
-            <input type="hidden" id="rseMountPathInput" name="rse_mount_path">
-            <input type="hidden" id="pathBeginsAtInput" name="path_begins_at">
-            <br>
+            <div class="mb-3">
+                <label for="rucioOptions" class="form-label"><span>Rucio Instance</span> <button type="button" class="btn btn-link btn-sm" onclick="toggleVisibility('rucioDetails');"><span class='nbs'>more...</span></button>
+                    <div style="display:none;" id="rucioDetails">
+                        <span class='nb'>Name of the Rucio instance to connect to from notebooks.</span>
+                    </div>
+                </label>
+                <select id="rucioOptions" name="rucio" class="form-select" onchange="updateRseOptions()"></select>
+            </div>
+            <div class="mb-3">
+                <label for="rseOptions" class="form-label"><span>Rucio RSE</span> <button type="button" class="btn btn-link btn-sm" onclick="toggleVisibility('rucioRSEDetails');"><span class='nbs'>more...</span></button>
+                    <div style="display:none;" id="rucioRSEDetails">
+                        <span class='nb'>Rucio Storage Element to mount in the session.</span>
+                    </div>
+                </label>
+                <select id="rseOptions" name="rucioRSE" class="form-select"></select>
+                <!-- Inputs used for filling the selectors according to the choosen rucioOption -->
+                <input type="hidden" id="rseMountPathInput" name="rse_mount_path" class="form-control">
+                <input type="hidden" id="pathBeginsAtInput" name="path_begins_at" class="form-control">
+            </div>
         </div>
 
         <!-- File path information text -->
-        <div id="fileSection" style="display: none;">
-            <label for="fileOption">File path <a href="#" onclick="toggleVisibility('fileDetails');"><span class='nbs'>more...</span></a>
+        <div id="fileSection" class="mb-3" style="display: none;">
+            <label for="fileOption" class="form-label"><span>File path</span> <button type="button" class="btn btn-link btn-sm" onclick="toggleVisibility('fileDetails');"><span class='nbs'>more...</span></button>
                 <div style="display:none;" id="fileDetails">
                     <span id="lcg-details" class='nb'>Path of the file to be opened after the session is launched, relative to CERNBOX_HOME.</span>
                     <span id="customenv-details" class='nb'>Path of the file to be opened after the session is launched, relative to the root of the git repository.</span>
                 </div>
             </label>
-            <input type="text" id="fileOption" name="file">
+            <input type="text" id="fileOption" name="file" class="form-control">
         </div>
-        <br>
     </div>
 </div>

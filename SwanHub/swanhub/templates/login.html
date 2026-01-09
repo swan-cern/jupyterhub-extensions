@@ -1,4 +1,5 @@
 {% extends "page.html" %}
+{% from "_macros.html" import swan_loader with context %}
 
 {% block login_widget %}
 {% endblock %}
@@ -6,21 +7,13 @@
 {% block main %}
 
 {% block login %}
-<div class="container">
+<main class="container">
   <div class="row">
-    <div class="swan-info">
-      <div id="swan-loader">
-        <div class="loader-circle">
-          <img src="{{ static_url('swan/logos/' + swan_logo_filename) }}">
-        </div>
-        <div class="loader-line-mask">
-          <div class="loader-line"></div>
-        </div>
-        <span class="text">Logging you in</span>
-      </div>
-    </div>
+    {% call swan_loader() %}
+      <h4 class="text-body-secondary">Logging you in...</h4>
+    {% endcall %}
   </div>
-</div>
+</main>
 {% endblock login %}
 
 {% endblock %}

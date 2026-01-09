@@ -1,26 +1,15 @@
 {% extends "page.html" %}
+{% from "_macros.html" import swan_loader with context %}
 {% if announcement_home %}
   {% set announcement = announcement_home %}
 {% endif %}
 
 {% block main %}
-
-
 <div class="container">
   <div class="row">
-    <div class="swan-info">
-      <div id="swan-loader">
-        <div class="loader-circle">
-          <img src="{{ static_url('swan/logos/' + swan_logo_filename) }}">
-        </div>
-        <div class="loader-line-mask">
-          <div class="loader-line"></div>
-        </div>
-      </div>
-    </div>
+    {% call swan_loader() %}{% endcall %}
   </div>
 </div>
-
 {% endblock %}
 
 {% block script %}

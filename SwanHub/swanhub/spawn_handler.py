@@ -221,7 +221,7 @@ class SpawnHandler(JHSpawnHandler):
         form = await self._render_form(for_user, spawner_options_form, message)
         return form
 
-    async def _render_form(self, for_user, spawner_options_form, message=''):
+    async def _render_form(self, for_user, spawner_options_form, message='', *args, **kwargs):
         configs = SpawnHandlersConfigs.instance()
         auth_state = await for_user.get_auth_state()
 
