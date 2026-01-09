@@ -65,6 +65,8 @@ def define_SwanSpawner_from(base_class):
 
         file = 'file'
 
+        user_interface = 'user_interface'
+
         customenv_special_type = 'customenv'
 
         lcg_special_type = 'lcg'
@@ -291,8 +293,12 @@ def define_SwanSpawner_from(base_class):
 
                 # Validate user selected options with what is on the yaml form
                 self._validate_selection_options(selection, options)
+                # There are software stacks that use customenvs' logic for building environments. So, we need to
+                # adjust the software_source accordingly
+                # Also, let the extension know which user interface to use (jupyterlab or classic notebook)
                 if options[self.lcg_rel_field].split("-")[0] in self.stacks_for_customenvs:
                     options[self.software_source] = self.customenv_special_type
+                    options[self.user_interface] = 'lab' if options[self.use_jupyterlab_field] == 'checked' else 'projects'
             else:
                 self._popup_error(options, self.software_source)
 
