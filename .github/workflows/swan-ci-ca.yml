@@ -46,7 +46,7 @@ jobs:
     - name: Publish distribution to PyPI 🚀
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
-        package-dir: ./${{ env.PACKAGE_NAME }}/dist/
+        packages-dir: ./${{ env.PACKAGE_NAME }}/dist/
 
     - name: Create Release
       id: create_release
