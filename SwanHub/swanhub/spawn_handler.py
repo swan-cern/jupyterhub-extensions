@@ -11,8 +11,6 @@ from jupyterhub.scopes import needs_scope
 from tornado import web
 from .handlers_configs import SpawnHandlersConfigs
 from tornado.httputil import url_concat
-import datetime
-import calendar
 import pickle
 import struct
 from socket import (
@@ -281,26 +279,17 @@ class SpawnHandler(JHSpawnHandler):
         This will allow us to see what users are choosing from within Grafana.
         """
 
-        date = calendar.timegm(datetime.datetime.utcnow().timetuple())
         host = gethostname().split('.')[0]
         configs = SpawnHandlersConfigs.instance()
 
-        # Add options to the log and send as metrics
-        metrics = []
         for (key, value) in options.items():
             if key == configs.user_script_env_field:
-                path = ".".join(
-                    [configs.graphite_metric_path, host, 'spawn_form', key])
-                metrics.append((path, (date, 1 if value else 0)))
+                pass
             else:
                 value_cleaned = str(value).replace('/', '_')
 
                 self._log_metric(user.name, host, ".".join(
                     ['spawn_form', key]), value_cleaned)
-
-                metric = ".".join(
-                    [configs.graphite_metric_path, host, 'spawn_form', key, value_cleaned])
-                metrics.append((metric, (date, 1)))
 
         spawn_context_key = ".".join(
             [options.get(configs.lcg_rel_field, "CustomEnv"), options.get(configs.spark_cluster_field, "none")])
@@ -311,10 +300,6 @@ class SpawnHandler(JHSpawnHandler):
                 ["spawn", spawn_context_key, "exception_class"]), spawn_exc_class)
             self._log_metric(user.name, host, ".".join(
                 ["spawn", spawn_context_key, "duration_sec"]), spawn_duration_sec)
-            metrics.append((".".join(
-                [configs.graphite_metric_path, host, "spawn_exception", spawn_exc_class]), (date, 1)))
-            metrics.append((".".join([configs.graphite_metric_path, host, "spawn_duration_sec", str(
-                spawn_duration_sec)]), (date, 1)))
         else:
             # Log spawn exception (send exception as metric)
             spawn_exc_class = spawn_exception.__class__.__name__
@@ -322,36 +307,7 @@ class SpawnHandler(JHSpawnHandler):
                 ["spawn", spawn_context_key, "exception_class"]), spawn_exc_class)
             self._log_metric(user.name, host, ".".join(
                 ["spawn", spawn_context_key, "exception_message"]), str(spawn_exception))
-            metrics.append((".".join(
-                [configs.graphite_metric_path, host, "spawn_exception", spawn_exc_class]), (date, 1)))
-
-        if configs.metrics_on:
-            self._send_graphite_metrics(metrics)
 
     def _log_metric(self, user, host, metric, value):
         self.log.info("user: %s, host: %s, metric: %s, value: %s" %
                       (user, host, metric, value))
-
-    def _send_graphite_metrics(self, metrics):
-        """
-        Send metrics to the metrics server for analysis in Grafana.
-        """
-
-        self.log.debug("sending metrics to graphite: %s", metrics)
-
-        try:
-            configs = SpawnHandlersConfigs.instance()
-            # Serialize the message and send everything in on single package
-            payload = pickle.dumps(metrics, protocol=2)
-            header = struct.pack("!L", len(payload))
-            message = header + payload
-
-            # Send the message
-            conn = socket(AF_INET, SOCK_STREAM)
-            conn.settimeout(2)
-            conn.connect((configs.graphite_server,
-                          configs.graphite_server_port_batch))
-            conn.send(message)
-            conn.close()
-        except Exception as ex:
-            self.log.error("Failed to send metrics: %s", ex, exc_info=True)

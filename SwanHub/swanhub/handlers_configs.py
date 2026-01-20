@@ -63,30 +63,6 @@ class SpawnHandlersConfigs(SingletonConfigurable):
         help='Message to display when Spawn fails'
     )
 
-    graphite_metric_path = Unicode(
-        default_value='c5.swan',
-        config=True,
-        help='Base path for SWAN in Grafana metrics'
-    )
-
-    graphite_server = Unicode(
-        default_value='filer-carbon.cern.ch',
-        config=True,
-        help='Server where to post the metrics collected'
-    )
-
-    graphite_server_port_batch = Int(
-        default_value=2004,
-        config=True,
-        help='Port of the server where to post the metrics collected'
-    )
-
-    metrics_on = Bool(
-        default_value=True,
-        config=True,
-        help="If True, it will send the metrics to CERN grafana (temporary, we will separate the metrics from the spwaner)."
-    )
-
     @default('config')
     def _config_default(self):
         # load application config by default
