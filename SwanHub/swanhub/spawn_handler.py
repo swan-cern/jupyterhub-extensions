@@ -283,9 +283,7 @@ class SpawnHandler(JHSpawnHandler):
         configs = SpawnHandlersConfigs.instance()
 
         for (key, value) in options.items():
-            if key == configs.user_script_env_field:
-                pass
-            else:
+            if key != configs.user_script_env_field:
                 value_cleaned = str(value).replace('/', '_')
 
                 self._log_metric(user.name, host, ".".join(
