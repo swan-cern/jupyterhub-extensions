@@ -10,7 +10,7 @@
     "build": "cd swanhub/static && lessc --js --clean-css ./css/style.less ./css/style.css"
   },
   "devDependencies": {
-    "less": "3.9.0",
+    "less": "3.13.1",
     "less-plugin-clean-css": "^1.5.1",
     "lesshat": "^4.1.0"
   }
