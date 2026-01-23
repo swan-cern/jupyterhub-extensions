@@ -322,10 +322,16 @@ def define_SwanSpawner_from(base_class):
             if not hasattr(self, 'user_uid'):
                 raise Exception('Authenticator needs to set user uid (in pre_spawn_start)')
 
+            # Variable responsible for setting the code working directory on vscode web instance (relative to the user's home directory)
+            code_working_dir = ''
+            if self.repository in self.user_options:
+                code_working_dir = os.path.join("SWAN_projects", self.user_options[self.repository].split('/')[-1])
+
             #FIXME remove userrid and username and just use jovyan 
             #FIXME clean JPY env variables
             env.update(dict(
                 SOFTWARE_SOURCE        = self.user_options[self.software_source],
+                CODE_WORKING_DIRECTORY = os.path.join(homepath, code_working_dir),
                 STACKS_FOR_CUSTOMENVS  = " ".join(self.stacks_for_customenvs),
                 USER                   = username,
                 NB_USER                = username,
