@@ -172,10 +172,18 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
 
                 if self.config.check_signature :
                     jwks_uri = data['jwks_uri']
-
                     jwk_data = await self.httpfetch(jwks_uri, label="fetching jwks")
-                    self.public_key = RSAAlgorithm(RSAAlgorithm.SHA256).from_jwk(jwk_data['keys'][0])
-                    self.log.info(f"aquired public key from {jwks_uri}")
+                    sign_key_index = None
+                    # Find signature key out of keys provided at certs endpoint
+                    for index, key in enumerate(jwk_data['keys']):
+                        if key['use'] == "sig":
+                            sign_key_index = index
+                            break
+                    if sign_key_index is None:
+                        raise Exception(f"check_signature was requested, but no public signing key found at {jwks_uri}")
+                    
+                    self.public_key = RSAAlgorithm(RSAAlgorithm.SHA256).from_jwk(jwk_data['keys'][sign_key_index])
+                    self.log.info(f"acquired public key from {jwks_uri}")
                 else:
                     self.public_key = None
 
