@@ -6,7 +6,7 @@ import os
 import json
 from tornado import web
 from tornado.ioloop import IOLoop
-from jupyterhub.services.auth import HubOAuthenticated, HubOAuthCallbackHandler
+from jupyterhub.services.auth import HubOAuthenticated
 from kubernetes import client,config
 
 

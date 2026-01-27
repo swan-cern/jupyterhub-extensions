@@ -245,8 +245,8 @@ class AvailableGPUs:
 
         try:
             # Filter out GPU nodes reserved for a SWAN event, if any
-            gpu_nodes = self._api.list_node(label_selector = f'nvidia.com/gpu.present=true').items
-            virtual_gpu_nodes = self._api.list_node(label_selector = f'liqo.io/type=virtual-node').items
+            gpu_nodes = self._api.list_node(label_selector = 'nvidia.com/gpu.present=true').items
+            virtual_gpu_nodes = self._api.list_node(label_selector = 'liqo.io/type=virtual-node').items
             all_gpu_nodes = virtual_gpu_nodes + gpu_nodes
         except ApiException as e:
             self._logger.error('Error getting list of GPU nodes', e)
