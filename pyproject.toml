@@ -9,4 +9,7 @@ dev = [
 target-version = "py38"
 
 [tool.ruff.lint]
-select = ["F841"]
+select = [
+    "F541",
+    "F841",
+]
