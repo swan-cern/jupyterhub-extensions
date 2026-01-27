@@ -13,7 +13,6 @@ from urllib.error import HTTPError
 from tornado.httpclient import HTTPRequest
 from tornado import web
 import asyncio
-import time
 from .metrics import (
     metric_refresh_user,
     metric_refresh_token, 
