@@ -61,7 +61,7 @@ def watch_for_changes():
     Watch for file changes in the package static directories and automatically
     rebuild assets.
     """
-    existing_paths = [REPO_ROOT / pkg / "static" for pkg in packages.keys()]
+    existing_paths = [REPO_ROOT / pkg / "static" for pkg in packages]
     existing_paths = [p for p in existing_paths if p.exists()]
 
     # style.css is a generated file, ignore changes to it
@@ -70,7 +70,7 @@ def watch_for_changes():
     click.secho("Watching for changes...", fg="green")
     for _ in watch(*existing_paths, watch_filter=ignore_filter):
         click.secho("Changes detected, rebuilding packages...", fg="yellow")
-        for pkg in packages.keys():
+        for pkg in packages:
             package_json = (REPO_ROOT / pkg / "../package.json").resolve()
             if package_json.exists():
                 subprocess.run(
