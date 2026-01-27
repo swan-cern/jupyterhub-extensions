@@ -3,7 +3,6 @@ from jupyterhub.app import JupyterHub
 
 from traitlets.config.configurable import SingletonConfigurable, Config
 from traitlets import (
-    Int,
     Unicode,
     Bool,
     default

@@ -11,12 +11,7 @@ from jupyterhub.scopes import needs_scope
 from tornado import web
 from .handlers_configs import SpawnHandlersConfigs
 from tornado.httputil import url_concat
-import pickle
-import struct
 from socket import (
-    socket,
-    AF_INET,
-    SOCK_STREAM,
     gethostname,
 )
 

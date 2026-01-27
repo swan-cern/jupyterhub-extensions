@@ -9,7 +9,6 @@ from .error_handler import ProxyErrorHandler
 from .userapi_handler import SelfAPIHandler
 from . import get_templates
 from traitlets import default
-import sys
 import os
 import datetime
 

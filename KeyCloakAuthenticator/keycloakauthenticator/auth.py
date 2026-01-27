@@ -8,7 +8,7 @@ from oauthenticator.oauth2 import OAuthLoginHandler
 from traitlets import Unicode, Bool, List, Any, TraitError, default, validate
 import jwt, time, json
 from jwt.algorithms import RSAAlgorithm
-from urllib import request, parse
+from urllib import parse
 from urllib.error import HTTPError
 from tornado.httpclient import HTTPRequest
 from tornado import web
