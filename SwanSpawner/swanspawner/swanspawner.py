@@ -16,6 +16,18 @@ from traitlets import (
 
 from jinja2 import Environment, FileSystemLoader
 
+def get_repo_name_from_options(user_options: dict) -> str:
+    """
+    Extract repository name from the full repository URL
+    and return the SWAN working directory.
+    """
+    repo_url = user_options.get('repository', '')
+    if not repo_url:
+        return ""
+
+    repo_name = repo_url.removesuffix("/").removesuffix(".git").split("/")[-1]
+    return os.path.join("SWAN_projects", repo_name)
+
 def define_SwanSpawner_from(base_class):
     """
         The Spawner need to inherit from a proper upstream Spawner (i.e Docker or Kube).
@@ -244,17 +256,6 @@ def define_SwanSpawner_from(base_class):
             
             return rucio_options
 
-        def _get_repo_name(self) -> str:
-            """
-            Extract repository name from the full repository URL.
-            """
-            # Variable responsible for setting the code working directory on vscode web instance (relative to the user's home directory)
-            code_working_dir = ''
-            if self.repository in self.user_options:
-                repo_name = self.user_options[self.repository].removesuffix('/').removesuffix('.git').split('/')[-1]
-                code_working_dir = os.path.join("SWAN_projects", repo_name)
-            return code_working_dir
-
         def options_from_form(self, formdata: dict) -> dict:
             """
             Get the options from the form and validate them according to the available options
@@ -337,7 +338,7 @@ def define_SwanSpawner_from(base_class):
             #FIXME clean JPY env variables
             env.update(dict(
                 SOFTWARE_SOURCE        = self.user_options[self.software_source],
-                CODE_WORKING_DIRECTORY = os.path.join(homepath, self._get_repo_name()),
+                CODE_WORKING_DIRECTORY = os.path.join(homepath, get_repo_name_from_options(self.user_options)),
                 STACKS_FOR_CUSTOMENVS  = " ".join(self.stacks_for_customenvs),
                 USER                   = username,
                 NB_USER                = username,
