@@ -225,8 +225,6 @@ class SpawnHandler(JHSpawnHandler):
         configs = SpawnHandlersConfigs.instance()
         auth_state = await for_user.get_auth_state()
 
-        save_config = not configs.local_home and not self.allow_named_servers
-
         return await self.render_template('spawn.html',
                                     for_user=for_user,
                                     auth_state=auth_state,
@@ -237,7 +235,6 @@ class SpawnHandler(JHSpawnHandler):
                                     ),
                                     spawner=for_user.spawner,
                                     tn_enabled=configs.tn_enabled,
-                                    save_config=save_config
                                     )
 
 
