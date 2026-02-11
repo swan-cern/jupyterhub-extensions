@@ -5,6 +5,11 @@ dev = [
     "pytest-asyncio==1.3.0",
     "ruff==0.14.8",
     "watchfiles==1.1.1",
+    "keycloakauthenticator @ file:///${PROJECT_ROOT}/KeyCloakAuthenticator",
+    "swanculler @ file:///${PROJECT_ROOT}/SwanCuller",
+    "swanhub @ file:///${PROJECT_ROOT}/SwanHub",
+    "swannotificationsservice @ file:///${PROJECT_ROOT}/SwanNotificationsService",
+    "swanspawner @ file:///${PROJECT_ROOT}/SwanSpawner",
 ]
 
 [tool.ruff]
