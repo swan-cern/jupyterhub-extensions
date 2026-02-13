@@ -39,6 +39,10 @@ body {
 nav.navbar {
     // Same as mb-5 from bootstrap
     margin-bottom: 3rem !important;
+
+    ul.navbar-nav {
+        align-items: center;
+    }
 }
 
 // Main content area
@@ -70,8 +74,12 @@ footer {
         li.nav-item {
             color: white;
 
-            .nav-link:hover {
-                background-color: @swan-nav-color-light-hover !important;
+            .swan-nav-link {
+                color: white;
+
+                &:hover {
+                    background-color: @swan-nav-color-light-hover !important;
+                }
             }
         }
 
@@ -82,16 +90,6 @@ footer {
 
             .fa-moon {
                 display: none;
-            }
-        }
-
-        #logout {
-            border-color: white !important;
-            color: white !important;
-
-            &:hover {
-                background-color: white !important;
-                color: black !important;
             }
         }
     }
@@ -105,7 +103,7 @@ footer {
     nav {
         background-color: @swan-nav-color-dark !important;
 
-        .nav-link:hover {
+        li.nav-item .swan-nav-link:hover {
             background-color: @swan-nav-color-dark-hover !important;
         }
 
