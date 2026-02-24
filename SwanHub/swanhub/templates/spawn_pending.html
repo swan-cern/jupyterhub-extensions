@@ -1,50 +1,37 @@
-{% extends "page.html" %}
+{% extends "templates/spawn_pending.html" %}
+{% from "_macros.html" import swan_loader with context %}
 
 {% block main %}
-
-<div class="container">
+<main class="container">
   <div class="row">
-    <div class="swan-info">
-      <div id="swan-loader">
-        <div class="loader-circle">
-          <img src="{{ static_url('swan/logos/' + swan_logo_filename) }}">
-        </div>
-        <div class="loader-line-mask">
-          <div class="loader-line"></div>
-        </div>
-        <span class="text">Starting your session
-        <p class="extra">You will be redirected automatically when it's ready for you.</p>
-        </span>
+    {% call swan_loader() %}
+      <div class="text-center">
+        <h4>Starting your session...</h4>
+        <p>You will be redirected automatically when it's ready for you.</p>
       </div>
-    </div>
+    {% endcall %}
   </div>
-</div>
-
+</main>
 {% endblock %}
 
 {% block script %}
 <script type="text/javascript">
-require(["jquery"], function ($) {
-  $("#refresh").click(function () {
+// hook up event-stream for progress
+const evtSource = new EventSource("{{ progress_url }}");
+evtSource.onmessage = function(e) {
+  const evt = JSON.parse(e.data);
+  console.log(evt);
+  if (evt.ready) {
+    evtSource.close();
+    // reload the current page
+    // which should result in a redirect to the running server
     window.location.reload();
-  })
-  // hook up event-stream for progress
-  var evtSource = new EventSource("{{ progress_url }}");
-  evtSource.onmessage = function(e) {
-    var evt = JSON.parse(e.data);
-    console.log(evt);
-    if (evt.ready) {
-      evtSource.close();
-      // reload the current page
-      // which should result in a redirect to the running server
-      window.location.reload();
-    }
-    if (evt.failed) {
-      evtSource.close();
-      window.location.replace('{{base_url}}spawn?failed');
-    }
   }
-});
+  if (evt.failed) {
+    evtSource.close();
+    window.location.replace('{{base_url}}spawn?failed');
+  }
+}
 // signal that page has finished loading (mostly for tests)
 window._jupyterhub_page_loaded = true;
 </script>

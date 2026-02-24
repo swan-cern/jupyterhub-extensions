@@ -7,7 +7,7 @@
   "license": "AGPL-3.0",
   "private": true,
   "scripts": {
-    "build": "cd swanhub/static && lessc --js --clean-css ./css/style.less ./css/style.css"
+    "build": "cd swanhub/static && lessc --js --clean-css ./css/style.less ./css/style.css && lessc --js --clean-css ./css/style_legacy.less ./css/style_legacy.css"
   },
   "devDependencies": {
     "less": "3.9.0",
