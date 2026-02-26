@@ -165,14 +165,14 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 self.authorize_url = data['authorization_endpoint']
                 self.token_url = data['token_endpoint']
                 self.userdata_url = data['userinfo_endpoint']
-                
+
                 end_session_url = data.get('end_session_endpoint')
                 if self.enable_logout and end_session_url:
                     if self.logout_redirect_url:
                         end_session_url += '?post_logout_redirect_uri=%s' % self.logout_redirect_url
                         end_session_url += '&client_id=%s' % self.client_id
                     # Update parent class OAuthenticator.logout_redirect_url
-                    self.logout_redirect_url = end_session_url 
+                    self.logout_redirect_url = end_session_url
 
                 if self.config.check_signature :
                     jwks_uri = data['jwks_uri']
@@ -250,18 +250,18 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             if access_token is None:
                 self.log.error(f"Could not obtain access token for {service_name}")
                 continue
-                
+
             access_tokens[service_name] = access_token
 
             # Produce logs and metrics for this token exchange
             queue_t = response.time_info['queue'] if 'queue' in response.time_info else -1
             request_t = response.request_time
             self.log.info(f'Exchanged {service_name} token, queue time: {queue_t} s, request time: {request_t} s')
-            metric_exchange_tornado_queue_time.labels("exchange_token_{}".format(service_name.replace("-","_"))).observe(queue_t)            
+            metric_exchange_tornado_queue_time.labels("exchange_token_{}".format(service_name.replace("-","_"))).observe(queue_t)
             metric_exchange_tornado_request_time.labels("exchange_token_{}".format(service_name.replace("-","_")), response.code).observe(request_t)
 
         return access_tokens
-    
+
 
     async def _refresh_token(self, refresh_token):
         with metric_refresh_token.time():
@@ -285,16 +285,16 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 access_t = body.get('access_token', None)
                 refresh_t = body.get('refresh_token', None)
             if access_t is None:
-               self.log.error("Could not obtain access token for swan") 
+               self.log.error("Could not obtain access token for swan")
             if refresh_t is None:
-               self.log.error("Could not obtain refresh token for swan") 
-            
+               self.log.error("Could not obtain refresh token for swan")
+
             metric_refresh_tornado_request_time.labels("refresh_token",response.code).observe(response.request_time)
             queue_t = response.time_info['queue'] if 'queue' in response.time_info else -1
             metric_refresh_tornado_queue_time.observe(queue_t)
             self.log.info(f'Refresh token request completed in {time.time() - start} seconds')
             return access_t, refresh_t
-    
+
     async def authenticate(self, handler, data=None):
         with metric_authenticate.time():
             user = await super().authenticate(handler, data=data)
@@ -304,7 +304,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             try:
                 decoded_token = self._decode_token(user['auth_state']['access_token'])
                 user_roles = self.claim_roles_key(self, decoded_token)
-                user['auth_state']['roles'] = list(user_roles) 
+                user['auth_state']['roles'] = list(user_roles)
             except Exception:
                 self.log.error("Unable to retrieve the roles, denying access.", exc_info=True)
                 return None
@@ -333,7 +333,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 auth_state = await user.get_auth_state()
                 await maybe_future(self.pre_spawn_hook(self, spawner, auth_state))
 
-    
+
     async def refresh_user(self, user, handler=None):
         """
             Refresh user's oAuth tokens.

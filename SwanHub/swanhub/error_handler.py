@@ -14,7 +14,7 @@ class ProxyErrorHandler(pages.ProxyErrorHandler):
         status_code = int(status_code_s)
 
         # If the error is container not reachable, redirect to home#changeconfig
-        # where the cleanup will take place (including removing the stored configuration 
+        # where the cleanup will take place (including removing the stored configuration
         # which might be causing the problem)
         if status_code == 503:
             html = await self.render_template(
