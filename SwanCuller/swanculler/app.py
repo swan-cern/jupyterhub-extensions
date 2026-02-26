@@ -42,7 +42,6 @@ try:
 except ImportError:
     from urllib import quote, urlencode
 
-# Start SWAN code
 from subprocess import call
 
 import dateutil.parser
