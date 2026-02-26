@@ -49,7 +49,7 @@ class SpawnHandler(JHSpawnHandler):
             page = await self.render_template('spawn_conflict.html', for_user=user, spawner=spawner, next_url=next_url)
             self.finish(page)
             return
-            
+
         elif spawner.pending:
             # If the spawner is pending, show the pending page
             auth_state = await user.get_auth_state()
@@ -104,7 +104,7 @@ class SpawnHandler(JHSpawnHandler):
         if not current_user.admin and os.path.isfile(configs.maintenance_file):
             self.finish(self.render_template('maintenance.html'))
             return
-        
+
         if user_name is None:
             user_name = self.current_user.name
         if server_name is None:
@@ -121,7 +121,7 @@ class SpawnHandler(JHSpawnHandler):
             user = self.find_user(for_user)
             if user is None:
                 raise web.HTTPError(404, "No such user: %s" % for_user)
-            
+
         spawner = user.get_spawner(server_name, replace_failed=True)
 
         if spawner.ready:

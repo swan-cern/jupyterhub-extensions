@@ -103,7 +103,7 @@ def delete_server(user_name, server_name, url, auth_header, fetch):
         )
     else:
         delete_url = url + '/users/%s/server' % quote(user_name)
-    
+
     req = HTTPRequest(url=delete_url, method='DELETE', headers=auth_header)
     resp = yield fetch(req)
     return resp
@@ -539,7 +539,7 @@ def main():
     # schedule periodic blocked user check
     pc_blocked = PeriodicCallback(blocked_check, 1e3 * options.auth_check_interval)
     pc_blocked.start()
-    
+
     try:
         loop.start()
     except KeyboardInterrupt:

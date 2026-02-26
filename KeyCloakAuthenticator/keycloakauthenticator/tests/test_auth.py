@@ -54,7 +54,7 @@ async def test_refresh_user(monkeypatch):
     # Mock the response from the server on refresh and exchange tokens
     async def _mock_fetch(self, req, label, **kargs):
         print(f"Mocking fetch for {req} ({label})")
-        mock_response_body = json.dumps({ 
+        mock_response_body = json.dumps({
             "access_token": _get_mock_token(private_key, "new_access_token"),
             "refresh_token": _get_mock_token(private_key, "new_refresh_token"),
             })
@@ -125,7 +125,7 @@ async def test_refresh_user_with_expired_refresh_token(monkeypatch):
 
     async def _mock_httpfetch(self, url, label, **kargs):
         print(f"Mocking httpfetch for {url} ({label})")
-        mock_response_body = json.dumps({ 
+        mock_response_body = json.dumps({
             "access_token": _get_mock_token(private_key, "new_access_token"),
             "refresh_token": _get_mock_token(private_key, "new_refresh_token"),
             })

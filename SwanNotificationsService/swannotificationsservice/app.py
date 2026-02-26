@@ -13,7 +13,7 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', default=8888, type=int, action="store", dest="port")
-    parser.add_argument('--notifications_file', default="/srv/jupyterhub/notifications.json", action="store", 
+    parser.add_argument('--notifications_file', default="/srv/jupyterhub/notifications.json", action="store",
                             dest="notification")
     parser.add_argument('--maintenance_file', default="/etc/nologin", action="store", dest="maintenance")
     parser.add_argument('--prefix', default="/", action="store", dest="prefix")

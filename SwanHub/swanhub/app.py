@@ -51,9 +51,9 @@ class SWAN(app.JupyterHub):
         self.template_vars['current_year'] = datetime.datetime.now().year # For copyright message
         if datetime.date.today().month == 12:
             # It's Christmas time!
-            self.template_vars['swan_logo_filename'] = 'swan_letters_christmas.png' 
+            self.template_vars['swan_logo_filename'] = 'swan_letters_christmas.png'
         else:
-            self.template_vars['swan_logo_filename'] = 'logo_swan_letters.png' 
+            self.template_vars['swan_logo_filename'] = 'logo_swan_letters.png'
 
         # Register SwanHub templates with the correct priority:
         # Hub config (c.JupyterHub.template_paths) >> SwanHub templates >> JupyterHub default templates
