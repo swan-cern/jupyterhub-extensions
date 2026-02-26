@@ -1,16 +1,18 @@
 # Author: Danilo Piparo, Diogo Castro 2015
 # Copyright CERN
 
-import jupyterhub.handlers.pages as pages
-import jupyterhub.apihandlers.users as users
-from jupyterhub import app
-from .spawn_handler import SpawnHandler
-from .error_handler import ProxyErrorHandler
-from .userapi_handler import SelfAPIHandler
-from . import get_templates
-from traitlets import default
-import os
 import datetime
+import os
+
+from jupyterhub import app
+from jupyterhub.apihandlers import users
+from jupyterhub.handlers import pages
+from traitlets import default
+
+from . import get_templates
+from .error_handler import ProxyErrorHandler
+from .spawn_handler import SpawnHandler
+from .userapi_handler import SelfAPIHandler
 
 handlers_map = {
     pages.SpawnHandler: SpawnHandler,

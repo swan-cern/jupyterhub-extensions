@@ -1,5 +1,5 @@
 
-import jupyterhub.handlers.pages as pages
+from jupyterhub.handlers import pages
 
 
 class ProxyErrorHandler(pages.ProxyErrorHandler):

@@ -1,8 +1,11 @@
-import os, argparse
+import argparse
+import os
+
 import tornado.ioloop
 import tornado.web
-from jupyterhub.utils import url_path_join
 from jupyterhub.services.auth import HubOAuthCallbackHandler
+from jupyterhub.utils import url_path_join
+
 from .service import SwanNotificationsService
 
 

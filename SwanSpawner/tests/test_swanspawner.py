@@ -2,9 +2,11 @@
 Unit tests for swanspawner.py functions
 """
 
-import pytest
 import os
+
+import pytest
 from swanspawner.swanspawner import get_repo_name_from_options
+
 
 class TestGetRepoNameFromOptions:
     """Test suite for get_repo_name_from_options function"""

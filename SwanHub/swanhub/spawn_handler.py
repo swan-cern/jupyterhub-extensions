@@ -3,17 +3,19 @@
 
 """CERN Spawn handler"""
 
-import time
 import os
-from jupyterhub.handlers.pages import SpawnHandler as JHSpawnHandler
-from jupyterhub.utils import url_path_join, maybe_future
-from jupyterhub.scopes import needs_scope
-from tornado import web
-from .handlers_configs import SpawnHandlersConfigs
-from tornado.httputil import url_concat
+import time
 from socket import (
     gethostname,
 )
+
+from jupyterhub.handlers.pages import SpawnHandler as JHSpawnHandler
+from jupyterhub.scopes import needs_scope
+from jupyterhub.utils import maybe_future, url_path_join
+from tornado import web
+from tornado.httputil import url_concat
+
+from .handlers_configs import SpawnHandlersConfigs
 
 
 class SpawnHandler(JHSpawnHandler):

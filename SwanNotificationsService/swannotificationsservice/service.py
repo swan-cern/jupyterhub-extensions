@@ -2,12 +2,13 @@
 # Copyright CERN
 
 
-import os
 import json
+import os
+
+from jupyterhub.services.auth import HubOAuthenticated
+from kubernetes import client, config
 from tornado import web
 from tornado.ioloop import IOLoop
-from jupyterhub.services.auth import HubOAuthenticated
-from kubernetes import client,config
 
 
 class SwanNotificationsService(HubOAuthenticated, web.RequestHandler):

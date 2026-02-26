@@ -3,18 +3,16 @@
 
 """CERN Specific Spawner class"""
 
-import re, yaml, json
+import json
 import os
+import re
 import time
 from socket import gethostname
-from traitlets import (
-    Unicode,
-    Bool,
-    Int,
-    List
-)
 
+import yaml
 from jinja2 import Environment, FileSystemLoader
+from traitlets import Bool, Int, List, Unicode
+
 
 def get_repo_name_from_options(user_options: dict) -> str:
     """

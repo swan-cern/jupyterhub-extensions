@@ -2,27 +2,32 @@
 # Copyright CERN
 
 """KeyCloakAuthenticator"""
-from jupyterhub.utils import maybe_future
-from oauthenticator.generic import GenericOAuthenticator
-from oauthenticator.oauth2 import OAuthLoginHandler
-from traitlets import Unicode, Bool, List, Any, TraitError, default, validate
-import jwt, time, json
-from jwt.algorithms import RSAAlgorithm
+import asyncio
+import json
+import time
 from urllib import parse
 from urllib.error import HTTPError
-from tornado.httpclient import HTTPRequest
+
+import jwt
+from jupyterhub.utils import maybe_future
+from jwt.algorithms import RSAAlgorithm
+from oauthenticator.generic import GenericOAuthenticator
+from oauthenticator.oauth2 import OAuthLoginHandler
 from tornado import web
-import asyncio
+from tornado.httpclient import HTTPRequest
+from traitlets import Any, Bool, List, TraitError, Unicode, default, validate
+
 from .metrics import (
-    metric_refresh_user,
-    metric_refresh_token, 
-    metric_authenticate, 
-    metric_pre_spawn_start, 
-    metric_exchange_tornado_request_time, 
+    metric_authenticate,
     metric_exchange_tornado_queue_time,
-    metric_refresh_tornado_request_time, 
-    metric_refresh_tornado_queue_time
+    metric_exchange_tornado_request_time,
+    metric_pre_spawn_start,
+    metric_refresh_token,
+    metric_refresh_tornado_queue_time,
+    metric_refresh_tornado_request_time,
+    metric_refresh_user,
 )
+
 
 # Use a login handler wrapper to ensure the configuration was loaded before redirecting the user
 # Otherwise, the login will end up in infinite loop of redirects

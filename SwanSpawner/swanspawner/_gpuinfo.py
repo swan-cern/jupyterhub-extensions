@@ -1,6 +1,6 @@
-from dataclasses import dataclass
 import logging
 import re
+from dataclasses import dataclass
 from threading import Lock, Thread
 from time import sleep
 from typing import Union
@@ -8,6 +8,7 @@ from typing import Union
 from kubernetes import client, config
 from kubernetes.client.models import V1NodeStatus
 from kubernetes.client.rest import ApiException
+
 
 @dataclass
 class _GPUInfo:

@@ -34,8 +34,7 @@ the ``--cull-users`` option.
 """
 import json
 import os
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timezone
 from functools import partial
 
 try:
@@ -43,17 +42,16 @@ try:
 except ImportError:
     from urllib import quote, urlencode
 
-import dateutil.parser
-
-from tornado.gen import coroutine, multi
-from tornado.locks import Semaphore
-from tornado.log import app_log
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest,HTTPClientError
-from tornado.ioloop import IOLoop, PeriodicCallback
-from tornado.options import define, options, parse_command_line
-
 # Start SWAN code
 from subprocess import call
+
+import dateutil.parser
+from tornado.gen import coroutine, multi
+from tornado.httpclient import AsyncHTTPClient, HTTPClientError, HTTPRequest
+from tornado.ioloop import IOLoop, PeriodicCallback
+from tornado.locks import Semaphore
+from tornado.log import app_log
+from tornado.options import define, options, parse_command_line
 
 # Global variables
 # The users list is shared between the functions that check for idle
