@@ -155,7 +155,7 @@ def define_SwanSpawner_from(base_class):
             raise ValueError(err_msg)
 
         def _get_selection(self, options_form_config: dict, options: dict, parent: str) -> dict:
-            """ 
+            """
             Get major selection which can be either a builder, for customenvs, or a LCG release.
             Each selection has its own minor options that need to be validated, as well.
             """

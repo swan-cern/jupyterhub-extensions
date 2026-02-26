@@ -205,7 +205,7 @@ class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
                     else:
                         raise RuntimeError(
                             """
-                            Problem connecting to Cloud Containers cluster. 
+                            Problem connecting to Cloud Containers cluster.
                             Please <a href="https://cern.service-now.com/service-portal/function.do?name=swan" target="_blank">report an issue</a>
                             """)
 
@@ -236,7 +236,7 @@ class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
                     if cluster == 'hadoop-nxcals':
                         raise ValueError(
                             """
-                            Access to the NXCALS cluster is not granted. 
+                            Access to the NXCALS cluster is not granted.
                             Please <a href="http://nxcals-docs.web.cern.ch/current/user-guide/data-access/nxcals-access-request/" target="_blank">request access</a>
                             """)
                     elif cluster == 'k8s':
@@ -246,7 +246,7 @@ class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
                         # yarn clusters require HADOOP_TOKEN_FILE containing YARN and HDFS tokens
                         raise ValueError(
                             """
-                            Access to the Analytix cluster is not granted. 
+                            Access to the Analytix cluster is not granted.
                             Please <a href="https://cern.service-now.com/service-portal?id=sc_cat_item&name=access-cluster-hadoop&se=Hadoop-Service" target="_blank">request access</a>
                             """)
 
