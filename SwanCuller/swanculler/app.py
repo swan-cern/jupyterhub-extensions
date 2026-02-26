@@ -418,6 +418,7 @@ def check_blocked_users(url, api_token, client_id, client_secret, auth_url, audi
 
         if is_blocked or is_disabled:
             app_log.warning("User %s is blocked. Terminating their sessions.", user['name'])
+            auth_header = {'Authorization': 'token %s' % api_token}
 
             # collect user's server
             if 'servers' in user:
