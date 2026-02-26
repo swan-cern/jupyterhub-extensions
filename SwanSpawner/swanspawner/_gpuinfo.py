@@ -205,7 +205,7 @@ class AvailableGPUs:
 
     def _update_gpu_info(self) -> None:
         '''
-        Updates the internal information about available GPU flavours 
+        Updates the internal information about available GPU flavours
         and the free instances of the flavour.
         '''
         while True:
