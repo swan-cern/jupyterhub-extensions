@@ -51,7 +51,7 @@ class SwanNotificationsService(HubOAuthenticated, web.RequestHandler):
 
         notifications = {}
         if os.path.isfile(self.notifications_file):
-            with open(self.notifications_file, 'r') as data_file:
+            with open(self.notifications_file) as data_file:
                 notifications = json.load(data_file)
 
         for notification in notifications:
