@@ -1,9 +1,11 @@
 
-from jupyterhub.apihandlers.base import APIHandler
-from jupyterhub.scopes import identify_scopes as scopes_identify_scopes, parse_scopes
-from jupyterhub.orm import Service as orm_Service
-from tornado import web
 import json
+
+from jupyterhub.apihandlers.base import APIHandler
+from jupyterhub.orm import Service as orm_Service
+from jupyterhub.scopes import identify_scopes as scopes_identify_scopes
+from jupyterhub.scopes import parse_scopes
+from tornado import web
 
 
 class SelfAPIHandler(APIHandler):

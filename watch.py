@@ -20,8 +20,7 @@ import sys
 from pathlib import Path
 
 import click
-from watchfiles import watch, DefaultFilter
-
+from watchfiles import DefaultFilter, watch
 
 REPO_ROOT = Path(__file__).parent.resolve()
 JUPYTER_STATIC_DIR = Path(sys.prefix) / "share/jupyterhub/static"

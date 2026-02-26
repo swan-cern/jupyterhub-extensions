@@ -1,24 +1,25 @@
-from .swanspawner import define_SwanSpawner_from
-from dockerspawner import SystemUserSpawner
-
-import os, subprocess
-import time
 import contextlib
-import random
-import psutil
 import json
-
-from traitlets import (
-    Unicode,
-    Bool,
-    Int,
-)
-
+import os
+import random
+import subprocess
+import time
 from socket import (
-    socket,
     SO_REUSEADDR,
     SOL_SOCKET,
+    socket,
 )
+
+import psutil
+from dockerspawner import SystemUserSpawner
+from traitlets import (
+    Bool,
+    Int,
+    Unicode,
+)
+
+from .swanspawner import define_SwanSpawner_from
+
 
 class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
 
