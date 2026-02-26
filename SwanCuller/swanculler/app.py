@@ -94,7 +94,7 @@ def format_td(td):
     seconds = seconds % 3600
     m = seconds // 60
     seconds = seconds % 60
-    return "{h:02}:{m:02}:{seconds:02}".format(h=h, m=m, seconds=seconds)
+    return f"{h:02}:{m:02}:{seconds:02}"
 
 @coroutine
 def delete_server(user_name, server_name, url, auth_header, fetch):

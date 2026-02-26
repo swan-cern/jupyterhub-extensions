@@ -231,7 +231,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         start = time.time()
         responses = await asyncio.gather(*(self.fetch(req, "exchanging token", parse_json=False) for req in exchange_requests))
         total_t = time.time() - start
-        self.log.info('Token exchanges finished, total time: {} s'.format(total_t))
+        self.log.info(f'Token exchanges finished, total time: {total_t} s')
 
         # Inspect the responses obtained for each service
         access_tokens = {}
@@ -242,7 +242,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 body = json.loads(response.body.decode('utf8', 'replace'))
                 access_token = body.get('access_token', None)
             if access_token is None:
-                self.log.error("Could not obtain access token for {}".format(service_name))
+                self.log.error(f"Could not obtain access token for {service_name}")
                 continue
                 
             access_tokens[service_name] = access_token
@@ -250,7 +250,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             # Produce logs and metrics for this token exchange
             queue_t = response.time_info['queue'] if 'queue' in response.time_info else -1
             request_t = response.request_time
-            self.log.info('Exchanged {} token, queue time: {} s, request time: {} s'.format(service_name, queue_t, request_t))
+            self.log.info(f'Exchanged {service_name} token, queue time: {queue_t} s, request time: {request_t} s')
             metric_exchange_tornado_queue_time.labels("exchange_token_{}".format(service_name.replace("-","_"))).observe(queue_t)            
             metric_exchange_tornado_request_time.labels("exchange_token_{}".format(service_name.replace("-","_")), response.code).observe(request_t)
 
@@ -286,7 +286,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             metric_refresh_tornado_request_time.labels("refresh_token",response.code).observe(response.request_time)
             queue_t = response.time_info['queue'] if 'queue' in response.time_info else -1
             metric_refresh_tornado_queue_time.observe(queue_t)
-            self.log.info('Refresh token request completed in {} seconds'.format(time.time() - start))
+            self.log.info(f'Refresh token request completed in {time.time() - start} seconds')
             return access_t, refresh_t
     
     async def authenticate(self, handler, data=None):
@@ -354,7 +354,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
 
                 if diff_refresh < 0:
                     # Refresh token not valid, need to re-authenticate again
-                    self.log.info('Failed to refresh token as refresh token expired, took {}'.format(time.time() - start))
+                    self.log.info(f'Failed to refresh token as refresh token expired, took {time.time() - start}')
                     return False
 
                 else:

@@ -297,7 +297,7 @@ class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
                     net_connections = psutil.net_connections()
                     # look through the list of active connections to check if the port is being used or not and return FREE if port is unused
                     if next((conn.laddr[1] for conn in net_connections if conn.laddr[1] == port), 'FREE') != 'FREE':
-                        raise Exception('Port {} is in use'.format(port))
+                        raise Exception(f'Port {port} is in use')
                     s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
                     s.bind(('127.0.0.1', port))
 
