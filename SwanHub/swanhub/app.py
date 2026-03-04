@@ -45,6 +45,16 @@ class SWAN(app.JupyterHub):
             }
         ]
 
+    @default('default_url')
+    def _default_url(self):
+        def default_url(handler):
+            user = handler.current_user
+            if user and not user.spawner.active:
+                # User is logged in but does not have a running session -> Redirect to the
+                # home page rather than the spawn page (default behaviour when redirect_to_server is enabled)
+                return f"{self.hub_prefix}home"
+        return default_url
+
     def init_tornado_settings(self):
         self.template_vars['current_year'] = datetime.datetime.now().year # For copyright message
         if datetime.date.today().month == 12:
