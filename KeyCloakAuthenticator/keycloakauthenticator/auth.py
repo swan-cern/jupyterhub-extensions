@@ -172,6 +172,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 if self.config.check_signature :
                     jwks_uri = data['jwks_uri']
 
+                    self.log.info("Fetching JWKs data")
                     jwk_data = await self.httpfetch(jwks_uri, label="fetching jwks")
                     self.public_key = RSAAlgorithm(RSAAlgorithm.SHA256).from_jwk(jwk_data['keys'][0])
                     self.log.info(f"aquired public key from {jwks_uri}")
