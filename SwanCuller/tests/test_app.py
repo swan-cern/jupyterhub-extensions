@@ -2,10 +2,8 @@ import json
 from datetime import datetime, timezone
 
 import pytest
-
-import swanculler.app as app
+from swanculler import app
 from swanculler.app import check_blocked_users
-
 
 # ---------------------------------------------------------------------------
 # Helpers
