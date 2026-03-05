@@ -142,9 +142,6 @@ def define_SwanSpawner_from(base_class):
             if not self.options_form and self.options_form_config:
                 # if options_form not provided, use templated options form based on configuration file
                 self.options_form = self._render_templated_options_form
-                # Load options form configuration once during initialization
-                with open(self.options_form_config) as yaml_file:
-                    self.options_form_yaml = yaml.safe_load(yaml_file)
             # Dictionary with dynamic information to insert in the options form
             self._dynamic_form_info = {}
 
@@ -479,7 +476,9 @@ def define_SwanSpawner_from(base_class):
             template = env.get_template('options_form_template.html')
 
             try:
-                return template.render(options_form_config=self.options_form_yaml, dynamic_form_info=json.dumps(self._dynamic_form_info), general_domain_name=self.general_domain_name, ats_domain_name=self.ats_domain_name)
+                with open(self.options_form_config) as yaml_file:
+                    options_form_config = yaml.safe_load(yaml_file)
+                return template.render(options_form_config=options_form_config, dynamic_form_info=json.dumps(self._dynamic_form_info), general_domain_name=self.general_domain_name, ats_domain_name=self.ats_domain_name)
             except Exception as ex:
                 self.log.error("Could not initialize form: %s", ex, exc_info=True)
                 raise RuntimeError(
