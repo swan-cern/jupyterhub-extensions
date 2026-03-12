@@ -1,17 +1,18 @@
 # Author: Danilo Piparo, Diogo Castro 2015
 # Copyright CERN
 
-import jupyterhub.handlers.pages as pages
-import jupyterhub.apihandlers.users as users
-from jupyterhub import app
-from .spawn_handler import SpawnHandler
-from .error_handler import ProxyErrorHandler
-from .userapi_handler import SelfAPIHandler
-from . import get_templates
-from traitlets import default
-import sys
-import os
 import datetime
+import os
+
+from jupyterhub import app
+from jupyterhub.apihandlers import users
+from jupyterhub.handlers import pages
+from traitlets import default
+
+from . import get_templates
+from .error_handler import ProxyErrorHandler
+from .spawn_handler import SpawnHandler
+from .userapi_handler import SelfAPIHandler
 
 handlers_map = {
     pages.SpawnHandler: SpawnHandler,
@@ -23,16 +24,12 @@ handlers_map = {
 class SWAN(app.JupyterHub):
     name = 'swan'
 
-    @default('template_paths')
-    def _template_paths_default(self):
-        return [get_templates(), os.path.join(self.data_files_path, 'templates')]
-
     @default('logo_file')
     def _logo_file_default(self):
         return os.path.join(
             self.data_files_path, 'static', 'swan', 'logos', 'logo_swan_cloudhisto.png'
         )
-    
+
     @default('load_roles')
     def _load_roles_default(self):
         # Ensure that users can see their own auth_state
@@ -54,16 +51,26 @@ class SWAN(app.JupyterHub):
         self.template_vars['current_year'] = datetime.datetime.now().year # For copyright message
         if datetime.date.today().month == 12:
             # It's Christmas time!
-            self.template_vars['swan_logo_filename'] = 'swan_letters_christmas.png' 
+            self.template_vars['swan_logo_filename'] = 'swan_letters_christmas.png'
         else:
-            self.template_vars['swan_logo_filename'] = 'logo_swan_letters.png' 
+            self.template_vars['swan_logo_filename'] = 'logo_swan_letters.png'
 
-        # Add our templates to the end of the list to be used as fallback
-        # The upstream templates will be added to the end in the parent init_tornado_settings as well
-        for template_path in self._template_paths_default():
-            if template_path not in self.template_paths:
-                self.template_paths.append(template_path)
+        # Register SwanHub templates with the correct priority:
+        # Hub config (c.JupyterHub.template_paths) >> SwanHub templates >> JupyterHub default templates
+        swan_path = get_templates()
+        if swan_path not in self.template_paths:
+            default_path = self._template_paths_default()[0]
+            # Remove the default JupyterHub templates path (will be present if c.JupyterHub.template_paths is not set)
+            # This is to ensure correct ordering of template paths. The default templates will be re-added again
+            # by super().init_tornado_settings() at the end.
+            if default_path in self.template_paths:
+                self.template_paths.remove(default_path)
+            self.template_paths.append(swan_path)
+
         super().init_tornado_settings()
+        # At this point, self.template_paths should be either:
+        # - [swan_path, default_path] (c.JupyterHub.template_paths not set)
+        # - [c.JupyterHub.template_paths, swan_path, default_path] (c.JupyterHub.template_paths set)
 
     def init_handlers(self):
         super().init_handlers()

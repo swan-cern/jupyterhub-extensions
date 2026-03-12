@@ -1,38 +1,34 @@
-{% extends "page.html" %}
+{% extends "templates/stop_pending.html" %}
+{% from "_macros.html" import swan_loader with context %}
 
 {% block main %}
-
 <div class="container">
   <div class="row">
-    <div class="swan-info">
-      <div id="swan-loader">
-        <div class="loader-circle">
-          <img src="{{ static_url('swan/logos/' + swan_logo_filename) }}">
-        </div>
-        <div class="loader-line-mask">
-          <div class="loader-line"></div>
-        </div>
-        <span class="text">Stopping your session
-          <p class="extra">You will be able to start it again once it has finished stopping.<br>
-            If this is taking too long, <a id="refresh" href="#">click here to refresh</a>.</p>
-        </span>
+    {% call swan_loader() %}
+      <div class="text-center">
+        <h4>Stopping your session...</h4>
+        <p>You will be able to start it again once it has finished stopping.</p>
+        <p>If this is taking too long, <a id="refresh" href="#">click here to refresh</a>.</p>
       </div>
-    </div>
+    {% endcall %}
   </div>
 </div>
-
 {% endblock %}
 
 {% block script %}
 {{ super() }}
 <script type="text/javascript">
-require(["jquery"], function ($) {
-  $("#refresh").click(function () {
-    window.location.reload();
-  });
-  setTimeout(function () {
-    window.location.reload();
-  }, 5000);
+
+const refreshBtn = document.getElementById("refresh");
+
+refreshBtn.addEventListener("click", e => {
+  e.preventDefault();
+  window.location.reload();
 });
+
+setTimeout(() => {
+  window.location.reload();
+}, 5000);
+
 </script>
 {% endblock %}

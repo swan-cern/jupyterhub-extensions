@@ -1,5 +1,6 @@
-from ._version import __version__ 
 import os
+
+from ._version import __version__  # noqa: F401
 
 
 def get_templates():

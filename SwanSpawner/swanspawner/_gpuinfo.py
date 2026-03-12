@@ -1,6 +1,6 @@
-from dataclasses import dataclass
 import logging
 import re
+from dataclasses import dataclass
 from threading import Lock, Thread
 from time import sleep
 from typing import Union
@@ -8,6 +8,7 @@ from typing import Union
 from kubernetes import client, config
 from kubernetes.client.models import V1NodeStatus
 from kubernetes.client.rest import ApiException
+
 
 @dataclass
 class _GPUInfo:
@@ -78,7 +79,7 @@ class AvailableGPUs:
                         try:
                             used_gpu_count = int(quantity)
                             description = self._node_to_flavor.get((pod.spec.node_name, resource_name))
-                            key = (resource_name, description) 
+                            key = (resource_name, description)
                             gpu_usage_by_resource[key] = gpu_usage_by_resource.get(key, 0) + used_gpu_count
                         except ValueError:
                             self._logger.error(
@@ -94,8 +95,8 @@ class AvailableGPUs:
                     self._logger.info(f'{description} -> Used: {used_count}, '
                                     f'Total: {gpu_info.count}, Free: {gpu_info.free}')
 
-            self._logger.info('Final currently free GPU state: ' + 
-                            ', '.join([f'{desc}: {info.free}/{info.count}' 
+            self._logger.info('Final currently free GPU state: ' +
+                            ', '.join([f'{desc}: {info.free}/{info.count}'
                                         for desc, info in self._gpus.items()]))
 
         except ApiException as e:
@@ -105,7 +106,7 @@ class AvailableGPUs:
 
     def get_info(self, description: str) -> Union[_GPUInfo, None]:
         return self._gpus.get(description, None)
-    
+
     def _role_flags(self, roles: list[str]) -> tuple[bool, bool, bool]:
         """
         Returns a tuple of booleans: (is_lhcb, is_swan_events, is_normal)
@@ -115,22 +116,22 @@ class AvailableGPUs:
         is_normal = not is_lhcb and not is_swan_events
         return is_lhcb, is_swan_events, is_normal
 
-    
+
     def _get_allowed_flavors_for_role(self, is_lhcb: bool, is_swan_events: bool, is_normal: bool) -> set[str]:
         """
         Determine which GPU flavors are visible based on user roles.
         """
         allowed_flavors = set()
-        
+
         with self._lock:
             for (node_name, resource_name), description in self._node_to_flavor.items():
                 # Skip cordoned nodes
                 if node_name in self._cordoned_gpu_nodes:
                     continue
-                
+
                 has_lhcb_label = node_name in self._lhcb_nodes
                 has_events_label = node_name in self._events_nodes
-                
+
                 if is_swan_events:
                     # Events users can only see nodes with events role label
                     if has_events_label:
@@ -143,7 +144,7 @@ class AvailableGPUs:
                     # Normal users see all except lhcb and events nodes
                     if not has_lhcb_label and not has_events_label:
                         allowed_flavors.add(description)
-        
+
         return allowed_flavors
 
     def get_available_gpu_flavours(self, roles: list[str]) -> dict:
@@ -151,7 +152,7 @@ class AvailableGPUs:
         Returns information about available GPU flavours, filtering based on user roles.
         """
         is_lhcb, is_swan_events, is_normal = self._role_flags(roles)
-        
+
         try:
             allowed_flavors = self._get_allowed_flavors_for_role(is_lhcb, is_swan_events, is_normal)
 
@@ -161,7 +162,7 @@ class AvailableGPUs:
                     for name, gpu in self._gpus.items()
                     if name in allowed_flavors
                 }
-                
+
         except Exception:
             self._logger.exception("[get_available_gpu_flavours]: Failed to filter GPU flavours")
             # Return all GPUs as fallback
@@ -204,7 +205,7 @@ class AvailableGPUs:
 
     def _update_gpu_info(self) -> None:
         '''
-        Updates the internal information about available GPU flavours 
+        Updates the internal information about available GPU flavours
         and the free instances of the flavour.
         '''
         while True:
@@ -221,11 +222,11 @@ class AvailableGPUs:
             # Get nodes with LHCb label
             lhcb_node_list = self._api.list_node(label_selector=self._lhcb_role).items
             lhcb_nodes = {node.metadata.name for node in lhcb_node_list}
-            
-            # Get nodes with events label  
+
+            # Get nodes with events label
             events_node_list = self._api.list_node(label_selector=self._events_role).items
             events_nodes = {node.metadata.name for node in events_node_list}
-        
+
             self._logger.info(f'Cached node labels - LHCb nodes: {len(lhcb_nodes)}, Events nodes: {len(events_nodes)}')
 
             self._lhcb_nodes = lhcb_nodes
@@ -245,8 +246,8 @@ class AvailableGPUs:
 
         try:
             # Filter out GPU nodes reserved for a SWAN event, if any
-            gpu_nodes = self._api.list_node(label_selector = f'nvidia.com/gpu.present=true').items
-            virtual_gpu_nodes = self._api.list_node(label_selector = f'liqo.io/type=virtual-node').items
+            gpu_nodes = self._api.list_node(label_selector = 'nvidia.com/gpu.present=true').items
+            virtual_gpu_nodes = self._api.list_node(label_selector = 'liqo.io/type=virtual-node').items
             all_gpu_nodes = virtual_gpu_nodes + gpu_nodes
         except ApiException as e:
             self._logger.error('Error getting list of GPU nodes', e)
@@ -329,7 +330,7 @@ class AvailableGPUs:
                             gpu_model: str,
                             product_name: str,
                             node_to_flavor: dict,
-                            node_status: V1NodeStatus, 
+                            node_status: V1NodeStatus,
                             node_name: str) -> None:
         '''
         Gets information about allocatable GPU partitions

@@ -3,22 +3,19 @@
 
 """CERN Spawn handler"""
 
-import time
 import os
-from jupyterhub.handlers.pages import SpawnHandler as JHSpawnHandler
-from jupyterhub.utils import url_path_join, maybe_future
-from jupyterhub.scopes import needs_scope
-from tornado import web
-from .handlers_configs import SpawnHandlersConfigs
-from tornado.httputil import url_concat
-import pickle
-import struct
+import time
 from socket import (
-    socket,
-    AF_INET,
-    SOCK_STREAM,
     gethostname,
 )
+
+from jupyterhub.handlers.pages import SpawnHandler as JHSpawnHandler
+from jupyterhub.scopes import needs_scope
+from jupyterhub.utils import maybe_future, url_path_join
+from tornado import web
+from tornado.httputil import url_concat
+
+from .handlers_configs import SpawnHandlersConfigs
 
 
 class SpawnHandler(JHSpawnHandler):
@@ -52,7 +49,7 @@ class SpawnHandler(JHSpawnHandler):
             page = await self.render_template('spawn_conflict.html', for_user=user, spawner=spawner, next_url=next_url)
             self.finish(page)
             return
-            
+
         elif spawner.pending:
             # If the spawner is pending, show the pending page
             auth_state = await user.get_auth_state()
@@ -107,7 +104,7 @@ class SpawnHandler(JHSpawnHandler):
         if not current_user.admin and os.path.isfile(configs.maintenance_file):
             self.finish(self.render_template('maintenance.html'))
             return
-        
+
         if user_name is None:
             user_name = self.current_user.name
         if server_name is None:
@@ -124,7 +121,7 @@ class SpawnHandler(JHSpawnHandler):
             user = self.find_user(for_user)
             if user is None:
                 raise web.HTTPError(404, "No such user: %s" % for_user)
-            
+
         spawner = user.get_spawner(server_name, replace_failed=True)
 
         if spawner.ready:
@@ -226,11 +223,9 @@ class SpawnHandler(JHSpawnHandler):
         form = await self._render_form(for_user, spawner_options_form, message)
         return form
 
-    async def _render_form(self, for_user, spawner_options_form, message=''):
+    async def _render_form(self, for_user, spawner_options_form, message='', *args, **kwargs):
         configs = SpawnHandlersConfigs.instance()
         auth_state = await for_user.get_auth_state()
-
-        save_config = not configs.local_home and not self.allow_named_servers
 
         return await self.render_template('spawn.html',
                                     for_user=for_user,
@@ -242,7 +237,6 @@ class SpawnHandler(JHSpawnHandler):
                                     ),
                                     spawner=for_user.spawner,
                                     tn_enabled=configs.tn_enabled,
-                                    save_config=save_config
                                     )
 
 

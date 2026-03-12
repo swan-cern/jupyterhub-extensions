@@ -1,12 +1,12 @@
-from .swanspawner import define_SwanSpawner_from
-from ._gpuinfo import AvailableGPUs
-from kubespawner import KubeSpawner
-
-from kubernetes_asyncio.client.rest import ApiException
-
 import os
 from math import ceil
-from traitlets import Float, Unicode, Dict
+
+from kubernetes_asyncio.client.rest import ApiException
+from kubespawner import KubeSpawner
+from traitlets import Dict, Float, Unicode
+
+from ._gpuinfo import AvailableGPUs
+from .swanspawner import define_SwanSpawner_from
 
 
 class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):

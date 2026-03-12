@@ -1,13 +1,7 @@
 
 from jupyterhub.app import JupyterHub
-
-from traitlets.config.configurable import SingletonConfigurable, Config
-from traitlets import (
-    Int,
-    Unicode,
-    Bool,
-    default
-)
+from traitlets import Bool, Unicode, default
+from traitlets.config.configurable import Config, SingletonConfigurable
 
 
 class SpawnHandlersConfigs(SingletonConfigurable):

@@ -1,43 +1,50 @@
-{% extends "page.html" %}
+{% extends "templates/not_running.html" %}
 
-{% block main %}
+{% block heading %}
+  <h1>
+    {% if failed %}
+      Spawn failed
+    {% else %}
+      Session not running
+    {% endif %}
+  </h1>
+{% endblock heading %}
 
-<div class="container">
-    <div class="row">
-      <div class="swan-info">
-        <div id="swan-loader">
-          <div class="loader-circle">
-            <img src="{{ static_url('swan/logos/' + swan_logo_filename) }}">
-          </div>
-          <span class="text">{% block heading %}{% if failed %}Spawn failed{% else %}Server not running{% endif %}{% endblock %}
-            <p class="extra">
-                {% block message %}
-                {% if failed %}
-                    The latest attempt to start your server {{ server_name }} has failed.
-                    {% if failed_html_message %}
-                      </p><p>{{ failed_html_message | safe }}</p><p>
-                    {% elif failed_message %}
-                      </p><p>{{ failed_message }}</p><p>
-                    {% endif %}
-                {% else %}
-                    Your server {{ server_name }} is not running. 
-                {% endif %}
-                {% endblock %}
-                {% block start_button %}
-                <a id="start" role="button" href="{{ spawn_url }}">
-                    Click here to 
-                    {% if failed %}
-                    try again. 
-                    {% else %}
-                    start a new session. 
-                    {% endif %}
-                </a>
-            {% endblock %}
-            </p>
-          </span>
-        </div>
-      </div>
-    </div>
-  </div>
+{% block message %}
+  <p>
+    {% if failed %}
+      The latest attempt to start your session {{ server_name }} has failed.
+      {% if failed_html_message %}
+      </p>
+      <p>{{ failed_html_message | safe }}</p>
+      <p>{% elif failed_message %}</p>
+      <p>{{ failed_message }}</p>
+      <p>
+      {% endif %}
+      Would you like to retry starting it?
+    {% else %}
+      Your session {{ server_name }} is not running.
+      {% if implicit_spawn_seconds %}
+        It will be restarted automatically.
+        If you are not redirected in a few seconds,
+        click below to launch your session.
+      {% else %}
+        Would you like to start it?
+      {% endif %}
+    {% endif %}
+  </p>
+{% endblock message %}
 
-{% endblock %}
+{% block start_button %}
+  <a id="start"
+     role="button"
+     class="btn btn-lg btn-primary"
+     href="{{ spawn_url }}">
+    {% if failed %}
+      Relaunch
+    {% else %}
+      Start new
+    {% endif %}
+    Session {{ server_name }}
+  </a>
+{% endblock start_button %}

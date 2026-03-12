@@ -34,8 +34,7 @@ the ``--cull-users`` option.
 """
 import json
 import os
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timezone
 from functools import partial
 
 try:
@@ -43,17 +42,15 @@ try:
 except ImportError:
     from urllib import quote, urlencode
 
-import dateutil.parser
+from subprocess import call
 
+import dateutil.parser
 from tornado.gen import coroutine, multi
+from tornado.httpclient import AsyncHTTPClient, HTTPClientError, HTTPRequest
+from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.locks import Semaphore
 from tornado.log import app_log
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest,HTTPClientError
-from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.options import define, options, parse_command_line
-
-# Start SWAN code
-from subprocess import call
 
 # Global variables
 # The users list is shared between the functions that check for idle
@@ -94,7 +91,7 @@ def format_td(td):
     seconds = seconds % 3600
     m = seconds // 60
     seconds = seconds % 60
-    return "{h:02}:{m:02}:{seconds:02}".format(h=h, m=m, seconds=seconds)
+    return f"{h:02}:{m:02}:{seconds:02}"
 
 @coroutine
 def delete_server(user_name, server_name, url, auth_header, fetch):
@@ -106,7 +103,7 @@ def delete_server(user_name, server_name, url, auth_header, fetch):
         )
     else:
         delete_url = url + '/users/%s/server' % quote(user_name)
-    
+
     req = HTTPRequest(url=delete_url, method='DELETE', headers=auth_header)
     resp = yield fetch(req)
     return resp
@@ -418,6 +415,7 @@ def check_blocked_users(url, api_token, client_id, client_secret, auth_url, audi
 
         if is_blocked or is_disabled:
             app_log.warning("User %s is blocked. Terminating their sessions.", user['name'])
+            auth_header = {'Authorization': 'token %s' % api_token}
 
             # collect user's server
             if 'servers' in user:
@@ -541,7 +539,7 @@ def main():
     # schedule periodic blocked user check
     pc_blocked = PeriodicCallback(blocked_check, 1e3 * options.auth_check_interval)
     pc_blocked.start()
-    
+
     try:
         loop.start()
     except KeyboardInterrupt:

@@ -1,24 +1,25 @@
-from .swanspawner import define_SwanSpawner_from
-from dockerspawner import SystemUserSpawner
-
-import os, subprocess
-import time
 import contextlib
-import random
-import psutil
 import json
-
-from traitlets import (
-    Unicode,
-    Bool,
-    Int,
-)
-
+import os
+import random
+import subprocess
+import time
 from socket import (
-    socket,
     SO_REUSEADDR,
     SOL_SOCKET,
+    socket,
 )
+
+import psutil
+from dockerspawner import SystemUserSpawner
+from traitlets import (
+    Bool,
+    Int,
+    Unicode,
+)
+
+from .swanspawner import define_SwanSpawner_from
+
 
 class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
 
@@ -204,7 +205,7 @@ class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
                     else:
                         raise RuntimeError(
                             """
-                            Problem connecting to Cloud Containers cluster. 
+                            Problem connecting to Cloud Containers cluster.
                             Please <a href="https://cern.service-now.com/service-portal/function.do?name=swan" target="_blank">report an issue</a>
                             """)
 
@@ -235,7 +236,7 @@ class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
                     if cluster == 'hadoop-nxcals':
                         raise ValueError(
                             """
-                            Access to the NXCALS cluster is not granted. 
+                            Access to the NXCALS cluster is not granted.
                             Please <a href="http://nxcals-docs.web.cern.ch/current/user-guide/data-access/nxcals-access-request/" target="_blank">request access</a>
                             """)
                     elif cluster == 'k8s':
@@ -245,7 +246,7 @@ class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
                         # yarn clusters require HADOOP_TOKEN_FILE containing YARN and HDFS tokens
                         raise ValueError(
                             """
-                            Access to the Analytix cluster is not granted. 
+                            Access to the Analytix cluster is not granted.
                             Please <a href="https://cern.service-now.com/service-portal?id=sc_cat_item&name=access-cluster-hadoop&se=Hadoop-Service" target="_blank">request access</a>
                             """)
 
@@ -297,7 +298,7 @@ class SwanDockerSpawner(define_SwanSpawner_from(SystemUserSpawner)):
                     net_connections = psutil.net_connections()
                     # look through the list of active connections to check if the port is being used or not and return FREE if port is unused
                     if next((conn.laddr[1] for conn in net_connections if conn.laddr[1] == port), 'FREE') != 'FREE':
-                        raise Exception('Port {} is in use'.format(port))
+                        raise Exception(f'Port {port} is in use')
                     s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
                     s.bind(('127.0.0.1', port))
 

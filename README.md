@@ -109,7 +109,6 @@ os.environ['SWANHUB_ENV'] = 'dev'
 c.Application.log_level = 'DEBUG'
 c.Spawner.debug = True
 
-
 # Auth configuration
 # ================================================
 

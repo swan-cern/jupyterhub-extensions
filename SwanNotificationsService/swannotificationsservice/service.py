@@ -2,12 +2,13 @@
 # Copyright CERN
 
 
-import os
 import json
+import os
+
+from jupyterhub.services.auth import HubOAuthenticated
+from kubernetes import client, config
 from tornado import web
 from tornado.ioloop import IOLoop
-from jupyterhub.services.auth import HubOAuthenticated, HubOAuthCallbackHandler
-from kubernetes import client,config
 
 
 class SwanNotificationsService(HubOAuthenticated, web.RequestHandler):
@@ -51,7 +52,7 @@ class SwanNotificationsService(HubOAuthenticated, web.RequestHandler):
 
         notifications = {}
         if os.path.isfile(self.notifications_file):
-            with open(self.notifications_file, 'r') as data_file:
+            with open(self.notifications_file) as data_file:
                 notifications = json.load(data_file)
 
         for notification in notifications:

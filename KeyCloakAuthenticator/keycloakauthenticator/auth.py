@@ -2,28 +2,32 @@
 # Copyright CERN
 
 """KeyCloakAuthenticator"""
+import asyncio
+import json
+import time
+from urllib import parse
+from urllib.error import HTTPError
+
+import jwt
 from jupyterhub.utils import maybe_future
+from jwt.algorithms import RSAAlgorithm
 from oauthenticator.generic import GenericOAuthenticator
 from oauthenticator.oauth2 import OAuthLoginHandler
-from traitlets import Unicode, Bool, List, Any, TraitError, default, validate
-import jwt, time, json
-from jwt.algorithms import RSAAlgorithm
-from urllib import request, parse
-from urllib.error import HTTPError
-from tornado.httpclient import HTTPRequest
 from tornado import web
-import asyncio
-import time
+from tornado.httpclient import HTTPRequest
+from traitlets import Any, Bool, List, TraitError, Unicode, default, validate
+
 from .metrics import (
-    metric_refresh_user,
-    metric_refresh_token, 
-    metric_authenticate, 
-    metric_pre_spawn_start, 
-    metric_exchange_tornado_request_time, 
+    metric_authenticate,
     metric_exchange_tornado_queue_time,
-    metric_refresh_tornado_request_time, 
-    metric_refresh_tornado_queue_time
+    metric_exchange_tornado_request_time,
+    metric_pre_spawn_start,
+    metric_refresh_token,
+    metric_refresh_tornado_queue_time,
+    metric_refresh_tornado_request_time,
+    metric_refresh_user,
 )
+
 
 # Use a login handler wrapper to ensure the configuration was loaded before redirecting the user
 # Otherwise, the login will end up in infinite loop of redirects
@@ -161,17 +165,19 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 self.authorize_url = data['authorization_endpoint']
                 self.token_url = data['token_endpoint']
                 self.userdata_url = data['userinfo_endpoint']
-                
+
                 end_session_url = data.get('end_session_endpoint')
                 if self.enable_logout and end_session_url:
                     if self.logout_redirect_url:
                         end_session_url += '?post_logout_redirect_uri=%s' % self.logout_redirect_url
                         end_session_url += '&client_id=%s' % self.client_id
                     # Update parent class OAuthenticator.logout_redirect_url
-                    self.logout_redirect_url = end_session_url 
+                    self.logout_redirect_url = end_session_url
 
                 if self.config.check_signature :
                     jwks_uri = data['jwks_uri']
+
+                    self.log.info("Fetching JWKs data")
                     jwk_data = await self.httpfetch(jwks_uri, label="fetching jwks")
                     # Find signature key out of keys provided at certs endpoint
                     sign_keys = [key for key in jwk_data['keys'] if key['use'] == 'sig']
@@ -236,7 +242,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         start = time.time()
         responses = await asyncio.gather(*(self.fetch(req, "exchanging token", parse_json=False) for req in exchange_requests))
         total_t = time.time() - start
-        self.log.info('Token exchanges finished, total time: {} s'.format(total_t))
+        self.log.info(f'Token exchanges finished, total time: {total_t} s')
 
         # Inspect the responses obtained for each service
         access_tokens = {}
@@ -247,20 +253,20 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 body = json.loads(response.body.decode('utf8', 'replace'))
                 access_token = body.get('access_token', None)
             if access_token is None:
-                self.log.error("Could not obtain access token for {}".format(service_name))
+                self.log.error(f"Could not obtain access token for {service_name}")
                 continue
-                
+
             access_tokens[service_name] = access_token
 
             # Produce logs and metrics for this token exchange
             queue_t = response.time_info['queue'] if 'queue' in response.time_info else -1
             request_t = response.request_time
-            self.log.info('Exchanged {} token, queue time: {} s, request time: {} s'.format(service_name, queue_t, request_t))
-            metric_exchange_tornado_queue_time.labels("exchange_token_{}".format(service_name.replace("-","_"))).observe(queue_t)            
+            self.log.info(f'Exchanged {service_name} token, queue time: {queue_t} s, request time: {request_t} s')
+            metric_exchange_tornado_queue_time.labels("exchange_token_{}".format(service_name.replace("-","_"))).observe(queue_t)
             metric_exchange_tornado_request_time.labels("exchange_token_{}".format(service_name.replace("-","_")), response.code).observe(request_t)
 
         return access_tokens
-    
+
 
     async def _refresh_token(self, refresh_token):
         with metric_refresh_token.time():
@@ -284,16 +290,16 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 access_t = body.get('access_token', None)
                 refresh_t = body.get('refresh_token', None)
             if access_t is None:
-               self.log.error("Could not obtain access token for swan") 
+               self.log.error("Could not obtain access token for swan")
             if refresh_t is None:
-               self.log.error("Could not obtain refresh token for swan") 
-            
+               self.log.error("Could not obtain refresh token for swan")
+
             metric_refresh_tornado_request_time.labels("refresh_token",response.code).observe(response.request_time)
             queue_t = response.time_info['queue'] if 'queue' in response.time_info else -1
             metric_refresh_tornado_queue_time.observe(queue_t)
-            self.log.info('Refresh token request completed in {} seconds'.format(time.time() - start))
+            self.log.info(f'Refresh token request completed in {time.time() - start} seconds')
             return access_t, refresh_t
-    
+
     async def authenticate(self, handler, data=None):
         with metric_authenticate.time():
             user = await super().authenticate(handler, data=data)
@@ -303,7 +309,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             try:
                 decoded_token = self._decode_token(user['auth_state']['access_token'])
                 user_roles = self.claim_roles_key(self, decoded_token)
-                user['auth_state']['roles'] = list(user_roles) 
+                user['auth_state']['roles'] = list(user_roles)
             except Exception:
                 self.log.error("Unable to retrieve the roles, denying access.", exc_info=True)
                 return None
@@ -332,7 +338,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 auth_state = await user.get_auth_state()
                 await maybe_future(self.pre_spawn_hook(self, spawner, auth_state))
 
-    
+
     async def refresh_user(self, user, handler=None):
         """
             Refresh user's oAuth tokens.
@@ -359,7 +365,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
 
                 if diff_refresh < 0:
                     # Refresh token not valid, need to re-authenticate again
-                    self.log.info('Failed to refresh token as refresh token expired, took {}'.format(time.time() - start))
+                    self.log.info(f'Failed to refresh token as refresh token expired, took {time.time() - start}')
                     return False
 
                 else:
