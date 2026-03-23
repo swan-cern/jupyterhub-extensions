@@ -50,17 +50,15 @@ jobs:
         packages-dir: ./${{ env.PACKAGE_NAME }}/dist/
 
     - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: ${{ github.ref }}
-        body: |
-          ${{github.event.head_commit.message}}
-        draft: false
-        prerelease: false
+      run: |
+        TAG="${GITHUB_REF#refs/tags/}"
+        echo "${{ github.event.head_commit.message }}" > release_notes.txt
+
+        gh release create "$TAG" \
+          --title "$TAG" \
+          --notes-file release_notes.txt
 
     - name: Invoke workflow in jupyterhub-image
       uses: benc-uk/workflow-dispatch@v1
