@@ -4,9 +4,12 @@
 import datetime
 import os
 
+import sentry_sdk
 from jupyterhub import app
 from jupyterhub.apihandlers import users
 from jupyterhub.handlers import pages
+from sentry_sdk.integrations.asyncio import AsyncioIntegration
+from sentry_sdk.integrations.pure_eval import PureEvalIntegration
 from traitlets import default
 
 from . import get_templates
@@ -46,6 +49,28 @@ class SWAN(app.JupyterHub):
                 'scopes': ["access:servers!user", "read:users:activity!user", "users:activity!user", "admin:auth_state!user"]
             }
         ]
+
+    async def start(self):
+        # Sentry recommends initializing the SDK at the beginning of the first async function called:
+        # https://docs.sentry.io/platforms/python/
+        sentry_sdk.init(
+            # SENTRY_DSN and SENTRY_ENVIRONMENT are read from environment variables
+            send_default_pii=True,
+            attach_stacktrace=True,
+            traces_sample_rate=0.1,
+            in_app_include=[
+                "keycloakauthenticator",
+                "swanculler",
+                "swanhub",
+                "swannotificationsservice",
+                "swanspawner",
+            ],
+            integrations=[
+                AsyncioIntegration(),
+                PureEvalIntegration(),
+            ]
+        )
+        await super().start()
 
     def init_tornado_settings(self):
         self.template_vars['current_year'] = datetime.datetime.now().year # For copyright message
