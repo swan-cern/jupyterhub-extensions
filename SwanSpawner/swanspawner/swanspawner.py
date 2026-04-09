@@ -186,7 +186,7 @@ def define_SwanSpawner_from(base_class):
 
             # Get Rucio instance selection
             rucio_instance = formdata.get(self.rucio_instance, ['none'])
-            self.log.error(f'Validating Rucio instance selection: {rucio_instance}')
+            self.log.info(f'Validating Rucio instance selection: {rucio_instance}')
             rucio_options[self.rucio_instance] = rucio_instance
 
             # If no Rucio instance selected, set defaults and return
