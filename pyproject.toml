@@ -17,18 +17,45 @@ target-version = "py38"
 
 [tool.ruff.lint]
 select = [
-    "F401",
-    "F541",
-    "F811",
-    "F821",
-    "F841",
-    "SIM118",
-    "UP015",
-    "UP032",
-    "I001",
-    "E401",
-    "PLR0402",
-    "W291",
-    "W292",
-    "W293",
+    "ASYNC",   # flake8-async
+    "B",       # flake8-bugbear
+    "DTZ",     # flake8-datetimez
+    "E",       # pycodestyle errors
+    "F",       # Pyflakes
+    "G",       # flake8-logging-format
+    "I",       # isort
+    "LOG",     # flake8-logging
+    "PIE",     # flake8-pie
+    "PLE",     # Pylint errors
+    "PLR0402", # manual-from-import
+    "PLW",     # Pylint warnings
+    "RET502",  # implicit-return-value
+    "RUF",     # Ruff-specific
+    "SIM118",  # in-dict-keys
+    "UP015",   # redundant-open-modes
+    "UP032",   # f-string
+    "W",       # pycodestyle warnings
+    "YTT",     # flake8-2020
+]
+ignore = [
+    "ASYNC221", # run-process-in-async-function
+    "ASYNC230", # blocking-open-call-in-async-function
+    "B006",     # mutable-argument-default
+    "B007",     # unused-loop-control-variable
+    "B904",     # raise-without-from-inside-except
+    "DTZ005",   # call-datetime-now-without-tzinfo
+    "DTZ011",   # call-date-today
+    "E501",     # line-too-long
+    "E701",     # multiple-statements-on-one-line-colon
+    "E721",     # type-comparison
+    "F403",     # undefined-local-with-import-star
+    "G002",     # logging-percent-format
+    "G003",     # logging-string-concat
+    "G004",     # logging-f-string
+    "G201",     # logging-exc-info
+    "LOG014",   # exc-info-outside-except-handler
+    "PLE1205",  # logging-too-many-args
+    "PLW0603",  # global-statement
+    "PLW2901",  # redefined-loop-name
+    "RUF006",   # asyncio-dangling-task
 ]
