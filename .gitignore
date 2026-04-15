@@ -115,3 +115,6 @@ jupyterhub-proxy.pid
 jupyter_hub_config.py
 
 options_form.yaml
+
+# VS Code
+.vscode/
