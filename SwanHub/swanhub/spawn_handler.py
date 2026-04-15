@@ -123,6 +123,10 @@ class SpawnHandler(JHSpawnHandler):
             if user is None:
                 raise web.HTTPError(404, "No such user: %s" % for_user)
 
+        # Set the user in Sentry as soon as it's resolved so that any exception raised
+        # after this point will have the user information attached in Sentry.
+        sentry_sdk.set_user({"username": user.name})
+
         spawner = user.get_spawner(server_name, replace_failed=True)
 
         if spawner.ready:
@@ -142,6 +146,11 @@ class SpawnHandler(JHSpawnHandler):
         options = {}
         try:
             options = await maybe_future(spawner.run_options_from_form(form_options))
+
+            # Set spawn options in Sentry as soon as they are available so that any exception
+            # raised after this point will have the spawn options attached in Sentry.
+            sentry_set_spawn_tags(options)
+
             await self.spawn_single_user(user, server_name=server_name, options=options)
 
             # if spawn future is already done it is success,
@@ -277,15 +286,12 @@ class SpawnHandler(JHSpawnHandler):
         host = gethostname().split('.')[0]
         configs = SpawnHandlersConfigs.instance()
 
-        spawn_form_tags = {}
         for (key, value) in options.items():
             if key != configs.user_script_env_field:
                 value_cleaned = str(value).replace('/', '_')
 
                 self._log_metric(user.name, host, ".".join(
                     ['spawn_form', key]), value_cleaned)
-
-                spawn_form_tags[f"spawn_form.{key}"] = value_cleaned
 
         spawn_context_key = ".".join(
             [options.get(configs.lcg_rel_field, "CustomEnv"), options.get(configs.spark_cluster_field, "none")])
@@ -304,14 +310,16 @@ class SpawnHandler(JHSpawnHandler):
             self._log_metric(user.name, host, ".".join(
                 ["spawn", spawn_context_key, "exception_message"]), str(spawn_exception))
 
-            # Report spawn exception to Sentry with full context
-            with sentry_sdk.new_scope() as scope:
-                scope.set_user({"username": user.name})
-                for tag_key, tag_value in spawn_form_tags.items():
-                    if tag_value:  # Sentry does not like empty tag values (shows a warning in the UI)
-                        scope.set_tag(tag_key, tag_value)
-                scope.capture_exception(spawn_exception)
+            # Report spawn exception to Sentry. The user and spawn options
+            # were already set in the _post method.
+            sentry_sdk.capture_exception(spawn_exception)
 
     def _log_metric(self, user, host, metric, value):
         self.log.info("user: %s, host: %s, metric: %s, value: %s" %
                       (user, host, metric, value))
+
+
+def sentry_set_spawn_tags(spawn_options: dict):
+    for key, value in spawn_options.items():
+        if value:  # Sentry does not like empty tag values (shows a warning in the UI)
+            sentry_sdk.set_tag(f"spawn_form.{key}", value)
