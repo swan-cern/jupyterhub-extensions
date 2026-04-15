@@ -9,6 +9,7 @@ from socket import (
     gethostname,
 )
 
+import sentry_sdk
 from jupyterhub.handlers.pages import SpawnHandler as JHSpawnHandler
 from jupyterhub.scopes import needs_scope
 from jupyterhub.utils import maybe_future, url_path_join
