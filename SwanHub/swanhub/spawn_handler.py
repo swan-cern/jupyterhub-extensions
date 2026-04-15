@@ -104,7 +104,7 @@ class SpawnHandler(JHSpawnHandler):
 
         if not current_user.admin and os.path.isfile(configs.maintenance_file):
             self.finish(self.render_template('maintenance.html'))
-            return
+            return None
 
         if user_name is None:
             user_name = self.current_user.name
