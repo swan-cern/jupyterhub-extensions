@@ -78,15 +78,18 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
         try:
             await super().stop()
         finally:
-            # Delete Kubernetes secret storing EOS kerberos ticket of the user
             username = self.user.name
-            eos_secret_name = f'eos-tokens-{username}'
             namespace = os.environ.get('POD_NAMESPACE', 'default')
-            self.log.info(f'Deleting secret {namespace}:{eos_secret_name}')
-            try:
-                await self.api.delete_namespaced_secret(eos_secret_name, namespace)
-            except ApiException:
-                self.log.error('Error deleting secret {namespace}:{eos_secret_name}: {e}')
+
+            # Delete Kubernetes secret storing EOS kerberos ticket of the user
+            # Only needed when EOS is enabled (== local_home is False)
+            if not self.local_home:
+                eos_secret_name = f'eos-tokens-{username}'
+                self.log.info(f'Deleting secret {namespace}:{eos_secret_name}')
+                try:
+                    await self.api.delete_namespaced_secret(eos_secret_name, namespace)
+                except ApiException:
+                    self.log.error(f'Error deleting secret {namespace}:{eos_secret_name}')
 
             # Cleanup for computing integrations (Spark, HTCondor)
             clean_spark = self.user_options.get(self.spark_cluster_field, 'none') != 'none'
