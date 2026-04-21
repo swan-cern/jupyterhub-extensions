@@ -13,14 +13,14 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 dependencies = [
     "jupyterhub==5.4.3",
     "psutil",
     "dockerspawner==12.1.0",
     "jupyterhub-kubespawner==6.1.0",
-    "kubernetes~=22.0",
-    "kubernetes-asyncio==33.3.0"
+    "kubernetes==35.0.0",
+    "kubernetes-asyncio==35.0.0"
 ]
 
 [project.urls]
