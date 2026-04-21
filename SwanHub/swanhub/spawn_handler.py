@@ -287,11 +287,12 @@ class SpawnHandler(JHSpawnHandler):
         configs = SpawnHandlersConfigs.instance()
 
         for (key, value) in options.items():
-            if key != configs.user_script_env_field:
+            if key == configs.user_script_env_field:
+                # For the environment script, we want to log only whether it is set or not, not the actual value
+                value_cleaned = 'set' if value else 'not_set'
+            else:
                 value_cleaned = str(value).replace('/', '_')
-
-                self._log_metric(user.name, host, ".".join(
-                    ['spawn_form', key]), value_cleaned)
+            self._log_metric(user.name, host, ".".join(['spawn_form', key]), value_cleaned)
 
         spawn_context_key = ".".join(
             [options.get(configs.lcg_rel_field, "CustomEnv"), options.get(configs.spark_cluster_field, "none")])
