@@ -183,7 +183,6 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                     sign_keys = [key for key in jwk_data['keys'] if key['use'] == 'sig']
                     if not sign_keys:
                         raise Exception(f"check_signature was requested, but no public signing key found at {jwks_uri}")
-                    
                     self.public_key = RSAAlgorithm(RSAAlgorithm.SHA256).from_jwk(sign_keys[0])
                     self.log.info(f"acquired public key from {jwks_uri}")
                 else:
