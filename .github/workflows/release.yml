@@ -27,6 +27,8 @@ jobs:
   release:
     runs-on: ubuntu-latest
     environment: publish
+    env:
+      EXTENSION: ${{ inputs.extension }}
     permissions:
       id-token: write
       contents: write
@@ -43,12 +45,14 @@ jobs:
 
       - name: Bump version
         id: version
+        env:
+          BUMP: ${{ inputs.bump }}
         run: |
           # Run bump2version
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          cd ${{ inputs.extension }}
-          uvx bump2version ${{ inputs.bump }}
+          cd ${EXTENSION}
+          uvx bump2version ${BUMP}
 
           # Get the new tag and version
           TAG=$(git describe --tags --exact-match)
@@ -59,12 +63,12 @@ jobs:
       - name: Generate release notes
         run: |
           # Get the previous tag for this extension
-          PREV_TAG=$(git describe --tags --match "${{ inputs.extension }}/*" --abbrev=0 HEAD~1 2>/dev/null || true)
+          PREV_TAG=$(git describe --tags --match "${EXTENSION}/*" --abbrev=0 HEAD~1 2>/dev/null || true)
           # If there is a previous tag, get commits since that tag, otherwise get all commits
           [ -n "$PREV_TAG" ] && RANGE="$PREV_TAG..HEAD" || RANGE="HEAD"
           # Format commit messages as a markdown list & remove the extension name from the beginning of the message
-          EXT_LOWER=$(echo "${{ inputs.extension }}" | tr '[:upper:]' '[:lower:]')
-          git log "$RANGE" --pretty=format:"- %B" -- "${{ inputs.extension }}" \
+          EXT_LOWER=$(echo "${EXTENSION}" | tr '[:upper:]' '[:lower:]')
+          git log "$RANGE" --pretty=format:"- %B" -- "${EXTENSION}" \
             | sed -r "s/$EXT_LOWER: //g" > /tmp/release_body.md
 
       - name: Push version bump commit and tag
@@ -77,28 +81,30 @@ jobs:
 
       - name: Build wheel 📦
         run: |
-          cd ${{ inputs.extension }}
+          cd ${EXTENSION}
           uv build
 
       - name: Publish to PyPI 🚀
         uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
         with:
-          packages-dir: ./${{ inputs.extension }}/dist/
+          packages-dir: ./${EXTENSION}/dist/
 
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
-          gh release create "${{ steps.version.outputs.tag }}" \
-            --title "${{ steps.version.outputs.tag }}" \
+          gh release create "${TAG}" \
+            --title "${TAG}" \
             --notes-file /tmp/release_body.md
 
       - name: Trigger image update in jupyterhub-image
         env:
           GH_TOKEN: ${{ secrets.WORKFLOW_ACCESS_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           gh workflow run SWAN_CI_CD_pipeline.yml \
             --repo swan-cern/jupyterhub-image \
             --ref master \
-            -f package="${{ inputs.extension }}" \
-            -f version="${{ steps.version.outputs.version }}"
+            -f package="${EXTENSION}" \
+            -f version="${VERSION}"
