@@ -32,6 +32,7 @@ select = [
     "RET502",  # implicit-return-value
     "RUF",     # Ruff-specific
     "SIM118",  # in-dict-keys
+    "UP007",   # PEP 604 union
     "UP015",   # redundant-open-modes
     "UP032",   # f-string
     "W",       # pycodestyle warnings

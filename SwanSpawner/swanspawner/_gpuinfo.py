@@ -3,7 +3,6 @@ import re
 from dataclasses import dataclass
 from threading import Lock, Thread
 from time import sleep
-from typing import Union
 
 from kubernetes import client, config
 from kubernetes.client.models import V1NodeStatus
@@ -104,7 +103,7 @@ class AvailableGPUs:
         except Exception as e:
             self._logger.exception(f'Unexpected error during currently free GPU check: {e}')
 
-    def get_info(self, description: str) -> Union[_GPUInfo, None]:
+    def get_info(self, description: str) -> _GPUInfo | None:
         return self._gpus.get(description, None)
 
     def _role_flags(self, roles: list[str]) -> tuple[bool, bool, bool]:
