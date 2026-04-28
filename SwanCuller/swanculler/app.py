@@ -34,7 +34,7 @@ the ``--cull-users`` option.
 """
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from functools import partial
 
 try:
@@ -72,7 +72,7 @@ def parse_date(date_string):
     dt = dateutil.parser.parse(date_string)
     if not dt.tzinfo:
         # assume naïve timestamps are UTC
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return dt
 
 
@@ -126,7 +126,7 @@ def cull_idle(
     """
     auth_header = {'Authorization': 'token %s' % api_token}
     req = HTTPRequest(url=url + '/users', headers=auth_header)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     client = AsyncHTTPClient()
 
     if concurrency:

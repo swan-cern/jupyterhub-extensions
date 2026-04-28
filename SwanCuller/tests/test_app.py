@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from swanculler import app
@@ -10,7 +10,7 @@ from swanculler.app import check_blocked_users
 # ---------------------------------------------------------------------------
 
 def make_user(name):
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     return {
         "name": name,
         "servers": {'': {
