@@ -245,7 +245,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
 
         # Inspect the responses obtained for each service
         access_tokens = {}
-        for response, service_name in zip(responses, self.exchange_tokens):
+        for response, service_name in zip(responses, self.exchange_tokens, strict=True):
             # Get the access token obtained for this service
             access_token = None
             if response.body:
