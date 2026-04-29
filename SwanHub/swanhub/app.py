@@ -57,7 +57,7 @@ class SWAN(app.JupyterHub):
             # SENTRY_DSN and SENTRY_ENVIRONMENT are read from environment variables
             send_default_pii=True,
             attach_stacktrace=True,
-            traces_sample_rate=0.1,
+            traces_sample_rate=0.01,
             in_app_include=[
                 "keycloakauthenticator",
                 "swanculler",
