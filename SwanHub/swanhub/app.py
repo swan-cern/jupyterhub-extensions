@@ -62,7 +62,6 @@ class SWAN(app.JupyterHub):
                 "keycloakauthenticator",
                 "swanculler",
                 "swanhub",
-                "swannotificationsservice",
                 "swanspawner",
             ],
             integrations=[

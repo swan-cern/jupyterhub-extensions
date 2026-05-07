@@ -8,7 +8,6 @@ dev = [
     "keycloakauthenticator @ file:///${PROJECT_ROOT}/KeyCloakAuthenticator",
     "swanculler @ file:///${PROJECT_ROOT}/SwanCuller",
     "swanhub @ file:///${PROJECT_ROOT}/SwanHub",
-    "swannotificationsservice @ file:///${PROJECT_ROOT}/SwanNotificationsService",
     "swanspawner @ file:///${PROJECT_ROOT}/SwanSpawner",
 ]
 

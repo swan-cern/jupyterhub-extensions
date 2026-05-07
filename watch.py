@@ -31,7 +31,6 @@ packages = {
     "KeyCloakAuthenticator/keycloackauthenticator": "keycloackauthenticator",
     "SwanCuller/swanculler": "swanculler",
     "SwanHub/swanhub": "swan",
-    "SwanNotificationsService/swannotificationsservice": "swannotificationsservice",
     "SwanSpawner/swanspawner": "swanspawner",
 }
 
