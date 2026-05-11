@@ -41,6 +41,7 @@ select = [
 ignore = [
     "ASYNC221", # run-process-in-async-function
     "ASYNC230", # blocking-open-call-in-async-function
+    "ASYNC240", # blocking-path-method-in-async-function
     "B006",     # mutable-argument-default
     "B007",     # unused-loop-control-variable
     "B904",     # raise-without-from-inside-except
