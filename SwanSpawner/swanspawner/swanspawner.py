@@ -344,7 +344,8 @@ def define_SwanSpawner_from(base_class):
                 NB_UID                 = self.user_uid,
                 HOME                   = homepath,
                 EOS_PATH_FORMAT        = self.eos_path_format,
-                SERVER_HOSTNAME        = os.uname().nodename
+                SERVER_HOSTNAME        = os.uname().nodename,
+                LOCAL_HOME             = 'true' if self.local_home else 'false',
             ))
 
             # Enable LCG-related variables
