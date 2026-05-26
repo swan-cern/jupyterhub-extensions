@@ -3,7 +3,6 @@
 
 """CERN Spawn handler"""
 
-import os
 import time
 from socket import (
     gethostname,
@@ -64,12 +63,6 @@ class SpawnHandler(JHSpawnHandler):
             self.finish(page)
             return
 
-        # FIXME with RBAC the admin property looks like it has changed,
-        # but we're going to drop this code soon either way...
-        if not user.admin and os.path.isfile(configs.maintenance_file):
-            self.finish(await self.render_template('maintenance.html'))
-            return
-
         if 'failed' in self.request.query_arguments:
             form = await self._render_form_wrapper(user, message=configs.spawn_error_message)
             self.finish(form)
@@ -98,13 +91,6 @@ class SpawnHandler(JHSpawnHandler):
     def post(self, user_name=None, server_name=''):
         """POST spawns with user-specified options"""
         self.log.info("Handling spawner POST request")
-
-        configs = SpawnHandlersConfigs.instance()
-        current_user = self.current_user
-
-        if not current_user.admin and os.path.isfile(configs.maintenance_file):
-            self.finish(self.render_template('maintenance.html'))
-            return None
 
         if user_name is None:
             user_name = self.current_user.name
