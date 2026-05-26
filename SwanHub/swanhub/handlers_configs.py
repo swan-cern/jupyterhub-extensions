@@ -45,12 +45,6 @@ class SpawnHandlersConfigs(SingletonConfigurable):
         help="If True, a physical directory on the host will be the home and not eos."
     )
 
-    maintenance_file = Unicode(
-        default_value='/etc/nologin',
-        config=True,
-        help='Path of the file that, when present, enables maintenance mode'
-    )
-
     spawn_error_message = Unicode(
         default_value='Error spawning your session',
         config=True,
