@@ -39,25 +39,49 @@ select = [
     "YTT",     # flake8-2020
 ]
 ignore = [
+    # Too many violations, disable repo-wide
+    "E501",  # line-too-long
+    "G002",  # logging-percent-format
+    "G004",  # logging-f-string
+    "G201",  # logging-exc-info
+]
+
+[tool.ruff.lint.per-file-ignores]
+"KeyCloakAuthenticator/keycloakauthenticator/auth.py" = [
+    "B006",   # mutable-argument-default
+    "RUF006", # asyncio-dangling-task
+]
+"KeyCloakAuthenticator/keycloakauthenticator/__init__.py" = [
+    "F403", # undefined-local-with-import-star
+]
+"SwanSpawner/swanspawner/swandockerspawner.py" = [
     "ASYNC221", # run-process-in-async-function
     "ASYNC230", # blocking-open-call-in-async-function
     "ASYNC240", # blocking-path-method-in-async-function
-    "B006",     # mutable-argument-default
-    "B007",     # unused-loop-control-variable
-    "B904",     # raise-without-from-inside-except
-    "DTZ005",   # call-datetime-now-without-tzinfo
-    "DTZ011",   # call-date-today
-    "E501",     # line-too-long
-    "E701",     # multiple-statements-on-one-line-colon
-    "E721",     # type-comparison
-    "F403",     # undefined-local-with-import-star
-    "G002",     # logging-percent-format
-    "G003",     # logging-string-concat
-    "G004",     # logging-f-string
-    "G201",     # logging-exc-info
-    "LOG014",   # exc-info-outside-except-handler
-    "PLE1205",  # logging-too-many-args
-    "PLW0603",  # global-statement
-    "PLW2901",  # redefined-loop-name
-    "RUF006",   # asyncio-dangling-task
+]
+"SwanSpawner/swanspawner/_gpuinfo.py" = [
+    "B007",    # unused-loop-control-variable
+    "G003",    # logging-string-concat
+    "PLE1205", # logging-too-many-args
+]
+"SwanSpawner/swanspawner/swanspawner.py" = [
+    "E721", # type-comparison
+]
+"SwanSpawner/swanspawner/__init__.py" = [
+    "F403", # undefined-local-with-import-star
+]
+"SwanSpawner/swanspawner/*" = [
+    "B904", # raise-without-from-inside-except
+]
+"SwanHub/swanhub/app.py" = [
+    "DTZ005",  # call-datetime-now-without-tzinfo
+    "DTZ011",  # call-date-today
+    "PLW2901", # redefined-loop-name
+]
+"SwanHub/swanhub/spawn_handler.py" = [
+    "LOG014", # exc-info-outside-except-handler
+]
+"SwanCuller/swanculler/app.py" = [
+    "E701",    # multiple-statements-on-one-line-colon
+    "PLW0603", # global-statement
 ]
