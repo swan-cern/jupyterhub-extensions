@@ -497,11 +497,24 @@ def define_SwanSpawner_from(base_class):
             """
             # Seconds between successive polls
             poll_interval = 2
-            while True:
+            
+            # Calculate a maximum number of iterations based on the timeout.
+            max_iterations = int((self.start_timeout * 2) / poll_interval)
+            iterations = 0
+
+            while iterations < max_iterations:
                 await asyncio.sleep(poll_interval)
+                iterations += 1
+                
                 # poll() returns None while running, or an exit code once stopped.
                 # We only stop on the special 127 case; otherwise keep polling.
                 await self.poll()
+                
+            # Fallback safeguard: If it somehow loops past the expected timeframe
+            self.log.error(
+                f"Poll during start reached maximum iteration limit ({max_iterations}). "
+                f"Self-terminating polling loop for user {self.user.name}."
+            )
 
         def log_metric(self, user, host, metric, value):
             """ Function allowing for logging formatted metrics """
