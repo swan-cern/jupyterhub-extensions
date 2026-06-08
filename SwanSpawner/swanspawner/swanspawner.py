@@ -3,6 +3,8 @@
 
 """CERN Specific Spawner class"""
 
+import asyncio
+import contextlib
 import json
 import os
 import re
@@ -452,8 +454,29 @@ def define_SwanSpawner_from(base_class):
             if self.user_options.get(self.user_script_env_field, '').strip() != '':
                 self.start_timeout = self.extended_timeout
 
-            # start configured container
-            startup = await super().start()
+            # Start the container and concurrently poll its status.
+            # Polling aborts immediately if the user environment script is missing
+            # (exit code 127).
+            start_task = asyncio.ensure_future(super().start())
+            poll_task  = asyncio.ensure_future(self._poll_during_start())
+
+            done, pending = await asyncio.wait(
+                {start_task, poll_task},
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+
+            # Cancel remaining task(s)
+            for task in pending:
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
+
+            # If poll_task finished, re-raise its error to abort immediately.
+            if poll_task in done:
+                poll_task.result()  # re-raises RuntimeError from poll()
+
+            # start_task finished first (success or a different exception)
+            startup = start_task.result()
 
             self.log_metric(
                 self.user.name,
@@ -463,6 +486,22 @@ def define_SwanSpawner_from(base_class):
             )
 
             return startup
+
+        async def _poll_during_start(self):
+            """
+            Poll container status during start().
+
+            If poll() sees exit code 127 (missing USER_ENV_SCRIPT) it raises
+            RuntimeError to abort the start immediately; otherwise keep
+            polling and let the usual start timeout handle failures.
+            """
+            # Seconds between successive polls
+            poll_interval = 2
+            while True:
+                await asyncio.sleep(poll_interval)
+                # poll() returns None while running, or an exit code once stopped.
+                # We only stop on the special 127 case; otherwise keep polling.
+                await self.poll()
 
         def log_metric(self, user, host, metric, value):
             """ Function allowing for logging formatted metrics """
