@@ -205,6 +205,11 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             options.update({"verify_signature": False})
         #if not explicitly disabled, verify issuer
         options.setdefault("verify_iss", True)
+        # Skip verifying iat which is
+        # - not very useful in the first place
+        # - small clock drift can lead to rejected tokens (jwt.exceptions.ImmatureSignatureError)
+        # See related issue in PyJWT: https://github.com/jpadilla/pyjwt/issues/939
+        options.setdefault("verify_iat", False)
 
         try:
             decoded_token = jwt.decode(token, self.public_key, options=options, audience=self.client_id,
