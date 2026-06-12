@@ -7,10 +7,10 @@
   "license": "AGPL-3.0",
   "private": true,
   "scripts": {
-    "build": "cd swanhub/static && lessc --js --clean-css ./css/style.less ./css/style.css && lessc --js --clean-css ./css/style_legacy.less ./css/style_legacy.css"
+    "build": "cd swanhub/static && lessc --clean-css ./css/style.less ./css/style.css && lessc --math=parens --clean-css ./css/style_legacy.less ./css/style_legacy.css"
   },
   "devDependencies": {
-    "less": "3.9.0",
-    "less-plugin-clean-css": "^1.5.1"
+    "less": "4.6.4",
+    "less-plugin-clean-css": "^1.6.0"
   }
 }
