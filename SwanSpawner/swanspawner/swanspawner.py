@@ -3,6 +3,8 @@
 
 """CERN Specific Spawner class"""
 
+import asyncio
+import contextlib
 import json
 import os
 import re
@@ -443,17 +445,48 @@ def define_SwanSpawner_from(base_class):
 
         async def start(self):
             """
-            Start the container
+            Start the container and handle user script failure validations safely.
             """
-
             start_time_start_container = time.time()
+            has_user_script = self.user_options.get(self.user_script_env_field, '').strip() != ''
 
-            #if the user script exists, we allow extended timeout
-            if self.user_options.get(self.user_script_env_field, '').strip() != '':
+            if has_user_script:
                 self.start_timeout = self.extended_timeout
 
-            # start configured container
-            startup = await super().start()
+            start_task = asyncio.ensure_future(super().start())
+            poll_task  = asyncio.ensure_future(self._poll_during_start())
+
+            try:
+                done, pending = await asyncio.wait(
+                    {start_task, poll_task},
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+
+                # If super().start() finished first, give the user script a tiny window
+                # to execute/fail before we blindly trust it.
+                if start_task in done and has_user_script:
+                    # Wait up to 3 seconds to see if the container immediately dies with 127
+                    with contextlib.suppress(asyncio.TimeoutError):
+                        await asyncio.wait({poll_task}, timeout=3.0)
+
+                # Cancel remaining task(s)
+                for task in pending:
+                    task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await task
+
+                # Check if poll task encountered exit code 127
+                if poll_task.done() and not poll_task.cancelled():
+                    poll_task.result()  # Re-raises the RuntimeError
+
+                # If we get here, start_task must be done and successful
+                startup = start_task.result()
+
+            except Exception as e:
+                self.log.error(f"Spawn failed or aborted, cleaning up resources. Error: {e}")
+                # FORCE CLEANUP: Ensure K8s pods or Docker containers are not left dangling
+                await self.stop(now=True)
+                raise e
 
             self.log_metric(
                 self.user.name,
@@ -463,6 +496,35 @@ def define_SwanSpawner_from(base_class):
             )
 
             return startup
+
+        async def _poll_during_start(self):
+            """
+            Poll container status during start().
+
+            If poll() sees exit code 127 (missing USER_ENV_SCRIPT) it raises
+            RuntimeError to abort the start immediately; otherwise keep
+            polling and let the usual start timeout handle failures.
+            """
+            # Seconds between successive polls
+            poll_interval = 2
+            
+            # Calculate a maximum number of iterations based on the timeout.
+            max_iterations = int((self.start_timeout * 2) / poll_interval)
+            iterations = 0
+
+            while iterations < max_iterations:
+                await asyncio.sleep(poll_interval)
+                iterations += 1
+                
+                # poll() returns None while running, or an exit code once stopped.
+                # We only stop on the special 127 case; otherwise keep polling.
+                await self.poll()
+                
+            # Fallback safeguard: If it somehow loops past the expected timeframe
+            self.log.error(
+                f"Poll during start reached maximum iteration limit ({max_iterations}). "
+                f"Self-terminating polling loop for user {self.user.name}."
+            )
 
         def log_metric(self, user, host, metric, value):
             """ Function allowing for logging formatted metrics """
