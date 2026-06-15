@@ -3,7 +3,7 @@ dev = [
     "click==8.4.1",
     "pytest==9.0.3",
     "pytest-asyncio==1.4.0",
-    "ruff==0.15.15",
+    "ruff==0.15.16",
     "watchfiles==1.2.0",
     "keycloakauthenticator @ file:///${PROJECT_ROOT}/KeyCloakAuthenticator",
     "swanculler @ file:///${PROJECT_ROOT}/SwanCuller",
