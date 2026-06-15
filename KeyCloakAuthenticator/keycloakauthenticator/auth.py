@@ -98,6 +98,12 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         help="If False, it will disable JWT signature verification."
     )
 
+    verify_aud = Bool(
+        default_value=True,
+        config=True,
+        help="If True, it will verify the audience in the JWT token."
+    )
+
     jwt_signing_algorithms = List (
         Unicode(),
         default_value=["HS256", "RS256"],
@@ -180,9 +186,10 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                     self.log.info("Fetching JWKs data")
                     jwk_data = await self.httpfetch(jwks_uri, label="fetching jwks")
                     # Find signature key out of keys provided at certs endpoint
-                    sign_keys = [key for key in jwk_data['keys'] if key['use'] == 'sig']
+                    sign_keys = [key for key in jwk_data['keys'] if key.get('use') == 'sig']
                     if not sign_keys:
-                        raise Exception(f"check_signature was requested, but no public signing key found at {jwks_uri}")
+                        # If no signature key is found, fallback to first key in the list
+                        sign_keys = jwk_data['keys']
                     self.public_key = RSAAlgorithm(RSAAlgorithm.SHA256).from_jwk(sign_keys[0])
                     self.log.info(f"acquired public key from {jwks_uri}")
                 else:
@@ -203,6 +210,8 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
     def _decode_token(self, token, options={}):
         if not self.config.check_signature:
             options.update({"verify_signature": False})
+        if not self.verify_aud:
+            options.update({"verify_aud": False})
         #if not explicitly disabled, verify issuer
         options.setdefault("verify_iss", True)
         # Skip verifying iat which is
