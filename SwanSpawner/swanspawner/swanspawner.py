@@ -445,38 +445,48 @@ def define_SwanSpawner_from(base_class):
 
         async def start(self):
             """
-            Start the container
+            Start the container and handle user script failure validations safely.
             """
-
             start_time_start_container = time.time()
+            has_user_script = self.user_options.get(self.user_script_env_field, '').strip() != ''
 
-            #if the user script exists, we allow extended timeout
-            if self.user_options.get(self.user_script_env_field, '').strip() != '':
+            if has_user_script:
                 self.start_timeout = self.extended_timeout
 
-            # Start the container and concurrently poll its status.
-            # Polling aborts immediately if the user environment script is missing
-            # (exit code 127).
             start_task = asyncio.ensure_future(super().start())
             poll_task  = asyncio.ensure_future(self._poll_during_start())
 
-            done, pending = await asyncio.wait(
-                {start_task, poll_task},
-                return_when=asyncio.FIRST_COMPLETED,
-            )
+            try:
+                done, pending = await asyncio.wait(
+                    {start_task, poll_task},
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
 
-            # Cancel remaining task(s)
-            for task in pending:
-                task.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await task
+                # If super().start() finished first, give the user script a tiny window
+                # to execute/fail before we blindly trust it.
+                if start_task in done and has_user_script:
+                    # Wait up to 3 seconds to see if the container immediately dies with 127
+                    with contextlib.suppress(asyncio.TimeoutError):
+                        await asyncio.wait({poll_task}, timeout=3.0)
 
-            # If poll_task finished, re-raise its error to abort immediately.
-            if poll_task in done:
-                poll_task.result()  # re-raises RuntimeError from poll()
+                # Cancel remaining task(s)
+                for task in pending:
+                    task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await task
 
-            # start_task finished first (success or a different exception)
-            startup = start_task.result()
+                # Check if poll task encountered exit code 127
+                if poll_task.done() and not poll_task.cancelled():
+                    poll_task.result()  # Re-raises the RuntimeError
+
+                # If we get here, start_task must be done and successful
+                startup = start_task.result()
+
+            except Exception as e:
+                self.log.error(f"Spawn failed or aborted, cleaning up resources. Error: {e}")
+                # FORCE CLEANUP: Ensure K8s pods or Docker containers are not left dangling
+                await self.stop(now=True)
+                raise e
 
             self.log_metric(
                 self.user.name,
@@ -497,7 +507,7 @@ def define_SwanSpawner_from(base_class):
             """
             # Seconds between successive polls
             poll_interval = 2
-            
+
             # Calculate a maximum number of iterations based on the timeout.
             max_iterations = int((self.start_timeout * 2) / poll_interval)
             iterations = 0
@@ -505,11 +515,11 @@ def define_SwanSpawner_from(base_class):
             while iterations < max_iterations:
                 await asyncio.sleep(poll_interval)
                 iterations += 1
-                
+
                 # poll() returns None while running, or an exit code once stopped.
                 # We only stop on the special 127 case; otherwise keep polling.
                 await self.poll()
-                
+
             # Fallback safeguard: If it somehow loops past the expected timeframe
             self.log.error(
                 f"Poll during start reached maximum iteration limit ({max_iterations}). "
