@@ -3,7 +3,7 @@ from math import ceil
 
 from kubernetes_asyncio.client.rest import ApiException
 from kubespawner import KubeSpawner
-from traitlets import Dict, Float, Unicode
+from traitlets import Dict, Float
 
 from ._gpuinfo import AvailableGPUs
 from .swanspawner import define_SwanSpawner_from
@@ -15,11 +15,6 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
         default_value=0.5,
         config=True,
         help="Fraction of the memory value selected by the user that will be requested"
-    )
-
-    centos7_image = Unicode(
-        config=True,
-        help='URL of the CentOS7 user image.'
     )
 
     accpy = Dict(
@@ -46,15 +41,6 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
         # The request (guarantee) is a fraction of the above
         self.mem_limit = self.user_options[self.user_memory]
         self.mem_guarantee = ceil(self.mem_limit * self.mem_request_fraction)
-
-        # An Alma9-based user image is configured by default via the chart
-        # settings, but users could still select a CentOS7 platform.
-        # In that case, reconfigure to use a CentOS7-based user image
-        if self.user_options[self.software_source] == self.lcg_special_type and 'centos7' in self.user_options[self.platform_field]:
-            image = self.centos7_image
-            if not image:
-                raise RuntimeError('The user selected the CentOS7 platform, but no CentOS7 image was configured')
-            self.image = image
 
         # If the user selected an Acc-Py based custom environment,
         # use the corresponding image.
