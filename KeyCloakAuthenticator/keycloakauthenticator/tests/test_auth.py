@@ -153,6 +153,23 @@ class TestGetOidcConfigs:
             "&client_id=dummy-client"
         )
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("enable_logout,doc", [
+        (False, {**OIDC_DISCOVERY_DOC, "end_session_endpoint": "http://fake/logout"}),
+        (True, OIDC_DISCOVERY_DOC),
+    ])
+    async def test_logout_url_not_updated(self, unconfigured_authenticator, monkeypatch, enable_logout, doc):
+        unconfigured_authenticator.enable_logout = enable_logout
+        original_logout_url = unconfigured_authenticator.logout_redirect_url
+
+        async def mock_httpfetch(url, **kwargs):
+            return doc
+
+        monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
+
+        await unconfigured_authenticator._get_oidc_configs()
+
+        assert unconfigured_authenticator.logout_redirect_url == original_logout_url
 
 @pytest.mark.asyncio
 async def test_refresh_user(monkeypatch):
