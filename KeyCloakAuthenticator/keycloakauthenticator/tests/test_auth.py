@@ -50,6 +50,17 @@ def unconfigured_authenticator(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+OIDC_DISCOVERY_DOC = {
+    "authorization_endpoint": "http://fake/auth",
+    "token_endpoint": "http://fake/token",
+    "userinfo_endpoint": "http://fake/userinfo",
+}
+
+
+# ---------------------------------------------------------------------------
 # TestGetOidcConfigs
 # ---------------------------------------------------------------------------
 
@@ -92,6 +103,22 @@ class TestGetOidcConfigs:
             await unconfigured_authenticator._get_oidc_configs()
 
         assert unconfigured_authenticator.configured is False
+
+
+    @pytest.mark.asyncio
+    async def test_set_urls(self, unconfigured_authenticator, monkeypatch):
+        async def mock_httpfetch(url, **kwargs):
+            return OIDC_DISCOVERY_DOC
+
+        monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
+
+        await unconfigured_authenticator._get_oidc_configs()
+
+        assert unconfigured_authenticator.authorize_url == "http://fake/auth"
+        assert unconfigured_authenticator.token_url == "http://fake/token"
+        assert unconfigured_authenticator.userdata_url == "http://fake/userinfo"
+        assert unconfigured_authenticator.configured is True
+
 
 
 
