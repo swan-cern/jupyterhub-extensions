@@ -229,6 +229,23 @@ class TestGetOidcConfigs:
 
         assert unconfigured_authenticator.public_key is not None
 
+    
+    @pytest.mark.asyncio
+    async def test_check_signature_false_skip_jwks_fetch(self, unconfigured_authenticator, monkeypatch):
+        call_count = 0
+
+        async def mock_httpfetch(url, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            return OIDC_DISCOVERY_DOC
+
+        monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
+
+        await unconfigured_authenticator._get_oidc_configs()
+
+        assert call_count == 1
+        assert unconfigured_authenticator.public_key is None
+
 
 
 @pytest.mark.asyncio
