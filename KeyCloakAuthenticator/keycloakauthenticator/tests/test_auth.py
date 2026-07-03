@@ -120,6 +120,38 @@ class TestGetOidcConfigs:
         assert unconfigured_authenticator.configured is True
 
 
+    @pytest.mark.asyncio
+    async def test_enable_logout_end_session_no_existing_redirect_url(self, unconfigured_authenticator, monkeypatch):
+        unconfigured_authenticator.enable_logout = True
+        unconfigured_authenticator.logout_redirect_url = ""
+
+        async def mock_httpfetch(url, **kwargs):
+            return {**OIDC_DISCOVERY_DOC, "end_session_endpoint": "http://fake/logout"}
+
+        monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
+
+        await unconfigured_authenticator._get_oidc_configs()
+
+        assert unconfigured_authenticator.logout_redirect_url == "http://fake/logout"
+
+    @pytest.mark.asyncio
+    async def test_enable_logout_end_session_existing_redirect_url(self, unconfigured_authenticator, monkeypatch):
+        unconfigured_authenticator.enable_logout = True
+        unconfigured_authenticator.logout_redirect_url = "http://fake/post-logout"
+        unconfigured_authenticator.client_id = "dummy-client"
+
+        async def mock_httpfetch(url, **kwargs):
+            return {**OIDC_DISCOVERY_DOC, "end_session_endpoint": "http://fake/logout"}
+
+        monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
+
+        await unconfigured_authenticator._get_oidc_configs()
+
+        assert unconfigured_authenticator.logout_redirect_url == (
+            "http://fake/logout"
+            "?post_logout_redirect_uri=http://fake/post-logout"
+            "&client_id=dummy-client"
+        )
 
 
 @pytest.mark.asyncio
