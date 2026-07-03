@@ -2,6 +2,7 @@ import json
 import asyncio
 
 import jwt
+from jwt.algorithms import RSAAlgorithm
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
 
@@ -49,6 +50,12 @@ def unconfigured_authenticator(monkeypatch):
     return auth
 
 
+@pytest.fixture
+def key_pair():
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    return private_key.public_key(), private_key
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -59,6 +66,12 @@ OIDC_DISCOVERY_DOC = {
     "userinfo_endpoint": "http://fake/userinfo",
 }
 
+
+def _make_jwks(public_key, use_sig=True):
+    jwk = json.loads(RSAAlgorithm.to_jwk(public_key))
+    if use_sig:
+        jwk["use"] = "sig"
+    return {"keys": [jwk]}
 
 # ---------------------------------------------------------------------------
 # TestGetOidcConfigs
@@ -170,6 +183,30 @@ class TestGetOidcConfigs:
         await unconfigured_authenticator._get_oidc_configs()
 
         assert unconfigured_authenticator.logout_redirect_url == original_logout_url
+
+
+    @pytest.mark.asyncio
+    async def test_check_signature_true_sig_key_present(self, unconfigured_authenticator, monkeypatch, key_pair):
+        public_key, _ = key_pair
+        jwks = _make_jwks(public_key, use_sig=True)
+
+        call_count = 0
+
+        async def mock_httpfetch(url, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return {**OIDC_DISCOVERY_DOC, "jwks_uri": "http://fake/certs"}
+            return jwks
+
+        monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
+        unconfigured_authenticator.config.check_signature = True
+
+        await unconfigured_authenticator._get_oidc_configs()
+
+        assert unconfigured_authenticator.public_key is not None
+        assert call_count == 2
+
 
 @pytest.mark.asyncio
 async def test_refresh_user(monkeypatch):
