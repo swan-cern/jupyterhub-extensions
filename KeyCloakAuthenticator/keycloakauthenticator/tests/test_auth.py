@@ -208,6 +208,29 @@ class TestGetOidcConfigs:
         assert call_count == 2
 
 
+    @pytest.mark.asyncio
+    async def test_check_signature_true_no_sig_key(self, unconfigured_authenticator, monkeypatch, key_pair):
+        public_key, _ = key_pair
+        jwks = _make_jwks(public_key, use_sig=False)
+
+        call_count = 0
+
+        async def mock_httpfetch(url, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return {**OIDC_DISCOVERY_DOC, "jwks_uri": "http://fake/certs"}
+            return jwks
+
+        monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
+        unconfigured_authenticator.config.check_signature = True
+
+        await unconfigured_authenticator._get_oidc_configs()
+
+        assert unconfigured_authenticator.public_key is not None
+
+
+
 @pytest.mark.asyncio
 async def test_refresh_user(monkeypatch):
     """
