@@ -1,4 +1,5 @@
 import json
+import asyncio
 
 import jwt
 import pytest
@@ -31,6 +32,68 @@ def _get_mock_token(private_key, token_id, expired=False):
         algorithm="RS256",
         headers={"kid": "dummy-key-id"},
     )
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def unconfigured_authenticator(monkeypatch):
+    monkeypatch.setattr(asyncio, "ensure_future", lambda coro: coro.close())
+    async def _break_retry_loop(_):
+        raise RuntimeError("asyncio.sleep called unexpectedly — check for uncaught exceptions in _get_oidc_configs")
+    monkeypatch.setattr(asyncio, "sleep", _break_retry_loop)
+    auth = KeyCloakAuthenticator(oidc_issuer="http://fake-issuer")
+    auth.config.check_signature = False  # disabled by default; check_signature tests enable it explicitly
+    return auth
+
+
+# ---------------------------------------------------------------------------
+# TestGetOidcConfigs
+# ---------------------------------------------------------------------------
+
+class TestGetOidcConfigs:
+    """
+    options are:
+     - authorize_url, token_url, userdata_url not all present, expect exception and have to break loop by patching sleep [test_missing_required_authorisation_fields]
+
+     - authorize_url, token_url, userdata_url all present, 
+        - enable_logout and end_session present
+            - logout_redirect_url not present
+            - logout_redirect_url present
+
+        - enable_logout and end_session not all present
+
+        - check_signature True
+            - sign_keys True
+            - sign_keys False
+        - check_signature False
+    """
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("doc", [
+        {},
+        {"authorization_endpoint": "http://fake/auth"},
+        {"authorization_endpoint": "http://fake/auth", "token_endpoint": "http://fake/token"},
+        {"token_endpoint": "http://fake/token"},
+    ])
+    async def test_missing_required_authorisation_fields(self, unconfigured_authenticator, monkeypatch, doc):
+        async def mock_httpfetch(url, **kwargs):
+            return doc
+
+        async def mock_sleep(_):
+            raise RuntimeError("breaking retry loop")
+
+        monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
+        monkeypatch.setattr(asyncio, "sleep", mock_sleep)
+
+        with pytest.raises(RuntimeError):
+            await unconfigured_authenticator._get_oidc_configs()
+
+        assert unconfigured_authenticator.configured is False
+
+
 
 @pytest.mark.asyncio
 async def test_refresh_user(monkeypatch):
