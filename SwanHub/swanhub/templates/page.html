@@ -18,43 +18,47 @@
 {% block logo %}
   <span id="jupyterhub-logo" class="navbar-brand">
     <a href="{{ base_url }}home">
-      <img src="{{ base_url }}logo" alt="SWAN logo" class="jpy-logo" title="Home" />
+      <img src="{{ base_url }}logo" alt="SWAN logo" class="jpy-logo logo-light" title="Home" />
+      <img src="{{ static_url('swan/logos/logo_swan_cloudhisto.png') }}" alt="SWAN logo" class="jpy-logo logo-dark" title="Home" />
     </a>
   </span>
 {% endblock logo %}
-
-{% block nav_bar_left_items %}
-  <li class="nav-item">
-    <a class="btn swan-nav-link" href="{{ base_url }}home">Home</a>
-  </li>
-  <li class="nav-item">
-    <a class="btn swan-nav-link" href="{{ base_url }}token">Token</a>
-  </li>
-  {% if 'admin-ui' in parsed_scopes %}
-    <li class="nav-item">
-      <a class="btn swan-nav-link" href="{{ base_url }}admin">Admin</a>
-    </li>
-  {% endif %}
-{% endblock nav_bar_left_items %}
-
-{% block theme_toggle %}
-  <button class="btn btn-sm me-3"
-          id="dark-theme-toggle"
-          aria-label="Toggle dark mode"
-          title="Toggle dark mode">
-    <i aria-hidden="true" class="fa fa-moon"></i>
-    <i aria-hidden="true" class="fa fa-sun"></i>
-  </button>
-{% endblock theme_toggle %}
+{% block nav_bar_left_items %}{% endblock nav_bar_left_items %}
+{% block theme_toggle %}{% endblock theme_toggle %}
 
 {% block login_widget %}
   <span id="login_widget">
     {% if user %}
-      <span class="me-1">{{ user.name }}</span>
-      <a id="logout"
-          role="button"
-          class="btn swan-nav-link"
-          href="{{ logout_url }}"><i aria-hidden="true" class="fa fa-sign-out me-1"></i>Logout</a>
+      <div class="swan-user-dropdown">
+        <span class="swan-username">{{ user.name }} <i aria-hidden="true" class="fa fa-caret-down ms-1"></i></span>
+        <ul class="swan-dropdown-menu">
+          <li>
+            <a class="swan-dropdown-item" href="{{ base_url }}token">
+              <i class="fa fa-key me-2"></i>Token
+            </a>
+          </li>
+          {% if 'admin-ui' in parsed_scopes %}
+          <li>
+            <a class="swan-dropdown-item" href="{{ base_url }}admin">
+              <i class="fa fa-cog me-2"></i>Admin
+            </a>
+          </li>
+          {% endif %}
+          <li>
+            <button class="swan-dropdown-item swan-dropdown-btn" id="dark-theme-toggle" aria-label="Toggle dark mode">
+              <i aria-hidden="true" class="fa fa-moon me-2"></i>
+              <i aria-hidden="true" class="fa fa-sun me-2"></i>
+              Dark Mode
+            </button>
+          </li>
+          <li class="swan-dropdown-divider"></li>
+          <li>
+            <a class="swan-dropdown-item" href="{{ logout_url }}">
+              <i class="fa fa-sign-out me-2"></i>Logout
+            </a>
+          </li>
+        </ul>
+      </div>
     {% else %}
       <a id="login"
           role="button"
@@ -66,62 +70,62 @@
 
 {% block footer %}
   <footer>
-    <div class="pt-2 pt-md-5"></div>
-    <div class="container-fluid py-4 px-3 py-md-2">
-      <div class="row align-items-center text-center row-gap-3">
-        <div class="col-12 col-md-3 order-2 order-md-0 text-md-start">
-          {{ render_copyright() }}
-        </div>
-        <div class="col-12 col-md-6 order-1 order-md-0">
-          {{ render_help_links() }}
-        </div>
-        <div class="col-12 col-md-3 order-3 order-md-0 text-md-end">
-          {{ render_logo() }}
-        </div>
+    <div class="container-fluid py-3 px-3">
+      <div class="d-flex flex-wrap align-items-center justify-content-center gap-3">
+        {{ render_copyright() }}
+        <span class="swan-footer-divider" aria-hidden="true"></span>
+        {{ render_help_links() }}
+        <span class="swan-footer-divider" aria-hidden="true"></span>
+        {{ render_logo() }}
       </div>
     </div>
   </footer>
 {% endblock footer %}
 
 {% macro render_copyright() %}
-  <span class="text-body-secondary small">SWAN | Copyright &copy; {{ current_year }} CERN</span>
+  <span class="text-body-secondary small">SWAN &copy; {{ current_year }} CERN</span>
 {% endmacro %}
 
 {% macro render_logo() %}
-  <img src="{{ static_url('swan/logos/logo_cern.svg') }}" alt="CERN logo">
+  <img src="{{ static_url('swan/logos/logo_cern.svg') }}" alt="CERN logo" style="max-height: 28px;">
 {% endmacro %}
 
 {% macro render_help_links() %}
-  <div class="d-flex flex-wrap justify-content-center gap-3">
+  <div class="d-flex align-items-center gap-1">
     <a href="https://cern.ch/swan/"
-       class="text-decoration-none link-secondary small">
-      <i class="fa fa-home me-1"></i>Home
+       class="swan-footer-link" aria-label="Home" title="Home">
+      <i class="fa fa-home"></i>
+      <span class="swan-footer-link-label">Home</span>
     </a>
     <a href="https://monit-grafana.cern.ch/d/afo7vryd75zwge/swan-service-status?orgId=53&refresh=auto&from=now-24h&to=now"
-       class="text-decoration-none link-secondary small">
-      <i class="fa fa-heart-pulse me-1"></i>Service Status
+       class="swan-footer-link" aria-label="Service Status" title="Service Status">
+      <i class="fa fa-heart-pulse me-1"></i>
+      <span class="swan-footer-link-label">Service Status</span>
     </a>
     <a href="https://swan-community.web.cern.ch/"
-       class="text-decoration-none link-secondary small">
-      <i class="fa fa-users me-1"></i>Community
+       class="swan-footer-link" aria-label="Community" title="Community">
+      <i class="fa fa-users"></i>
+      <span class="swan-footer-link-label">Community</span>
     </a>
     <a href="https://cern.service-now.com/service-portal/?id=functional_element&name=swan"
-       class="text-decoration-none link-secondary small">
-      <i class="fa fa-life-ring me-1"></i>Support
+       class="swan-footer-link" aria-label="Support" title="Support">
+      <i class="fa fa-life-ring"></i>
+      <span class="swan-footer-link-label">Support</span>
     </a>
     <a href="https://github.com/swan-cern"
-       class="text-decoration-none link-secondary small d-flex align-items-center">
-      {{ render_github_logo() -}}
-      GitHub
+       class="swan-footer-link" aria-label="GitHub" title="GitHub">
+      {{ render_github_logo() }}
+      <span class="swan-footer-link-label">GitHub</span>
     </a>
     <a href="https://cern.service-now.com/service-portal?id=privacy_policy&se=SWAN-Service&notice=swan"
-       class="text-decoration-none link-secondary small">
-      <i class="fa fa-shield-halved me-1"></i>Privacy
+       class="swan-footer-link" aria-label="Privacy" title="Privacy">
+      <i class="fa fa-shield-halved"></i>
+      <span class="swan-footer-link-label">Privacy</span>
     </a>
   </div>
 {% endmacro %}
 
-{# The github logo is only avaiable in the fa-brands pack,
+{# The github logo is only available in the fa-brands pack,
    which is not included in JupyterHub #}
 {% macro render_github_logo() %}
   <svg xmlns="http://www.w3.org/2000/svg"
