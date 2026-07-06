@@ -1,5 +1,5 @@
 @import "vars";
-@import url("icons.css");
+@import (inline) "icons.css";
 
 
 @font-face {
@@ -64,7 +64,7 @@ h1 {
         line-height: @size-1;
 
         &:before {
-            font-size: @size-1 / 2 !important;
+            font-size: (@size-1 / 2) !important;
             margin-left: 10px;
             vertical-align: middle !important;
         }
@@ -80,7 +80,7 @@ h1 {
         line-height: @size-2;
 
         &:before {
-            font-size: @size-2 / 2 !important;
+            font-size: (@size-2 / 2) !important;
             margin-left: 10px;
             vertical-align: middle !important;
         }
@@ -341,7 +341,7 @@ ul#options-menu {
         content: "\41 ";
         font-family: "swan-icons";
         color: @color-primary;
-        font-size: @size-4 / 2;
+        font-size: (@size-4 / 2);
         vertical-align: middle;
         padding: 0 5px 0 7px;
     }
@@ -1035,8 +1035,8 @@ span.save_widget {
         top: 40%;
         width: @loader-size;
         height: @loader-size;
-        margin-left: -@loader-size/2;
-        margin-top: -@loader-size/2;
+        margin-left: (-@loader-size/2);
+        margin-top: (-@loader-size/2);
 
         img {
             position: absolute;
@@ -1054,10 +1054,10 @@ span.save_widget {
         top: 40%;
         width: @loader-size;
         height: 350px;
-        margin-left: -@loader-size/2;
-        margin-top: -@loader-size/2;
+        margin-left: (-@loader-size/2);
+        margin-top: (-@loader-size/2);
         overflow: hidden;
-        transform-origin: @loader-size/2 @loader-size/2;
+        transform-origin: (@loader-size/2) (@loader-size/2);
         -webkit-mask-image: -webkit-linear-gradient(top, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0));
         mask-image: linear-gradient(top, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0));
         mask: url(loading_clip.svg#loading-mask);
