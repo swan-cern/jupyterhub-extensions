@@ -239,6 +239,32 @@ class TestGetOidcConfigs:
         assert call_count == 1
         assert unconfigured_authenticator.public_key is None
 
+    """
+    @pytest.mark.asyncio
+    async def test_retries_after_failure(self, unconfigured_authenticator, monkeypatch):
+        call_count = 0
+
+        async def mock_helper(self):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise Exception("transient failure")
+            unconfigured_authenticator.configured = True
+
+        sleep_calls = []
+
+        async def mock_sleep(duration):
+            sleep_calls.append(duration)
+
+        monkeypatch.setattr(KeyCloakAuthenticator, "_get_oidc_configs_helper", mock_helper)
+        monkeypatch.setattr(asyncio, "sleep", mock_sleep)
+
+        await unconfigured_authenticator._get_oidc_configs()
+
+        assert call_count == 2
+        assert len(sleep_calls) == 1
+        assert sleep_calls[0] == 60
+    """
 
 
 @pytest.mark.asyncio
