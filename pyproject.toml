@@ -7,7 +7,6 @@ dev = [
     "watchfiles==1.2.0",
     "keycloakauthenticator @ file:///${PROJECT_ROOT}/KeyCloakAuthenticator",
     "swanculler @ file:///${PROJECT_ROOT}/SwanCuller",
-    "swanhub @ file:///${PROJECT_ROOT}/SwanHub",
     "swanspawner @ file:///${PROJECT_ROOT}/SwanSpawner",
 ]
 

@@ -1,10 +1,10 @@
-import json
 import asyncio
+import json
 
 import jwt
-from jwt.algorithms import RSAAlgorithm
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
+from jwt.algorithms import RSAAlgorithm
 
 from ..auth import KeyCloakAuthenticator
 
@@ -222,7 +222,7 @@ class TestGetOidcConfigs:
 
         assert unconfigured_authenticator.public_key is not None
 
-    
+
 
     async def test_check_signature_false_skip_jwks_fetch(self, unconfigured_authenticator, monkeypatch):
         call_count = 0
@@ -239,7 +239,7 @@ class TestGetOidcConfigs:
         assert call_count == 1
         assert unconfigured_authenticator.public_key is None
 
-    
+
 
     async def test_retries_after_failure(self, unconfigured_authenticator, monkeypatch):
         call_count = 0
@@ -264,7 +264,7 @@ class TestGetOidcConfigs:
         assert call_count == 2
         assert len(sleep_calls) == 1
         assert sleep_calls[0] == 60
-    
+
 
 
 async def test_refresh_user(monkeypatch):
@@ -333,6 +333,33 @@ async def test_refresh_user(monkeypatch):
     assert updated_auth_state["auth_state"]["access_token"] == _get_mock_token(
         private_key, "new_access_token"
     )
+
+
+@pytest.fixture
+def authenticator(unconfigured_authenticator):
+    unconfigured_authenticator.token_url = "http://fake/token"
+    unconfigured_authenticator.client_id = "dummy-client"
+    unconfigured_authenticator.client_secret = "dummy-secret"
+    unconfigured_authenticator.configured = True
+    return unconfigured_authenticator
+
+
+class TestRefreshToken:
+    """
+    options are:
+    - response.body True
+        - access_token is None
+        - access_token non None
+        - refresh_token is None
+        - refresh_token non None
+        - both are None
+
+    - response.body False
+
+    """
+
+    def test_response_body_empty(self, authenticator):
+        pass
 
 
 async def test_refresh_user_with_expired_refresh_token(monkeypatch):
