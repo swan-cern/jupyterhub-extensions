@@ -239,7 +239,7 @@ class TestGetOidcConfigs:
         assert call_count == 1
         assert unconfigured_authenticator.public_key is None
 
-    """
+    
     @pytest.mark.asyncio
     async def test_retries_after_failure(self, unconfigured_authenticator, monkeypatch):
         call_count = 0
@@ -264,7 +264,7 @@ class TestGetOidcConfigs:
         assert call_count == 2
         assert len(sleep_calls) == 1
         assert sleep_calls[0] == 60
-    """
+    
 
 
 @pytest.mark.asyncio
