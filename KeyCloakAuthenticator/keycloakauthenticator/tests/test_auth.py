@@ -42,9 +42,6 @@ def _get_mock_token(private_key, token_id, expired=False):
 @pytest.fixture
 def unconfigured_authenticator(monkeypatch):
     monkeypatch.setattr(asyncio, "ensure_future", lambda coro: coro.close())
-    async def _break_retry_loop(_):
-        raise RuntimeError("asyncio.sleep called unexpectedly — check for uncaught exceptions in _get_oidc_configs")
-    monkeypatch.setattr(asyncio, "sleep", _break_retry_loop)
     auth = KeyCloakAuthenticator(oidc_issuer="http://fake-issuer")
     auth.config.check_signature = False  # disabled by default; check_signature tests enable it explicitly
     return auth
@@ -106,14 +103,10 @@ class TestGetOidcConfigs:
         async def mock_httpfetch(url, **kwargs):
             return doc
 
-        async def mock_sleep(_):
-            raise RuntimeError("breaking retry loop")
-
         monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
-        monkeypatch.setattr(asyncio, "sleep", mock_sleep)
 
-        with pytest.raises(RuntimeError):
-            await unconfigured_authenticator._get_oidc_configs()
+        with pytest.raises(Exception, match = "Unable to retrieve OIDC necessary values"):
+            await unconfigured_authenticator._get_oidc_configs_helper()
 
         assert unconfigured_authenticator.configured is False
 
@@ -125,7 +118,7 @@ class TestGetOidcConfigs:
 
         monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
 
-        await unconfigured_authenticator._get_oidc_configs()
+        await unconfigured_authenticator._get_oidc_configs_helper()
 
         assert unconfigured_authenticator.authorize_url == "http://fake/auth"
         assert unconfigured_authenticator.token_url == "http://fake/token"
@@ -143,7 +136,7 @@ class TestGetOidcConfigs:
 
         monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
 
-        await unconfigured_authenticator._get_oidc_configs()
+        await unconfigured_authenticator._get_oidc_configs_helper()
 
         assert unconfigured_authenticator.logout_redirect_url == "http://fake/logout"
 
@@ -158,7 +151,7 @@ class TestGetOidcConfigs:
 
         monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
 
-        await unconfigured_authenticator._get_oidc_configs()
+        await unconfigured_authenticator._get_oidc_configs_helper()
 
         assert unconfigured_authenticator.logout_redirect_url == (
             "http://fake/logout"
@@ -180,7 +173,7 @@ class TestGetOidcConfigs:
 
         monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
 
-        await unconfigured_authenticator._get_oidc_configs()
+        await unconfigured_authenticator._get_oidc_configs_helper()
 
         assert unconfigured_authenticator.logout_redirect_url == original_logout_url
 
@@ -202,7 +195,7 @@ class TestGetOidcConfigs:
         monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
         unconfigured_authenticator.config.check_signature = True
 
-        await unconfigured_authenticator._get_oidc_configs()
+        await unconfigured_authenticator._get_oidc_configs_helper()
 
         assert unconfigured_authenticator.public_key is not None
         assert call_count == 2
@@ -225,7 +218,7 @@ class TestGetOidcConfigs:
         monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
         unconfigured_authenticator.config.check_signature = True
 
-        await unconfigured_authenticator._get_oidc_configs()
+        await unconfigured_authenticator._get_oidc_configs_helper()
 
         assert unconfigured_authenticator.public_key is not None
 
@@ -241,7 +234,7 @@ class TestGetOidcConfigs:
 
         monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
 
-        await unconfigured_authenticator._get_oidc_configs()
+        await unconfigured_authenticator._get_oidc_configs_helper()
 
         assert call_count == 1
         assert unconfigured_authenticator.public_key is None

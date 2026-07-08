@@ -156,48 +156,51 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         asyncio.ensure_future(self._get_oidc_configs())
         self.login_handler = OIDCOAuthLoginHandler
 
-    async def _get_oidc_configs(self):
 
+    async def _get_oidc_configs_helper(self):
+        data = await self.httpfetch(f"{self.oidc_issuer}/.well-known/openid-configuration", label="fetching oidc config")
+
+        if not set(['authorization_endpoint', 'token_endpoint', 'userinfo_endpoint']).issubset(data.keys()):
+            raise Exception('Unable to retrieve OIDC necessary values')
+
+        self.authorize_url = data['authorization_endpoint']
+        self.token_url = data['token_endpoint']
+        self.userdata_url = data['userinfo_endpoint']
+
+        end_session_url = data.get('end_session_endpoint')
+        if self.enable_logout and end_session_url:
+            if self.logout_redirect_url:
+                end_session_url += '?post_logout_redirect_uri=%s' % self.logout_redirect_url
+                end_session_url += '&client_id=%s' % self.client_id
+            # Update parent class OAuthenticator.logout_redirect_url
+            self.logout_redirect_url = end_session_url
+
+        if self.config.check_signature :
+            jwks_uri = data['jwks_uri']
+
+            self.log.info("Fetching JWKs data")
+            jwk_data = await self.httpfetch(jwks_uri, label="fetching jwks")
+            # Find signature key out of keys provided at certs endpoint
+            sign_keys = [key for key in jwk_data['keys'] if key.get('use') == 'sig']
+            if not sign_keys:
+                # If no signature key is found, fallback to first key in the list
+                sign_keys = jwk_data['keys']
+            self.public_key = RSAAlgorithm(RSAAlgorithm.SHA256).from_jwk(sign_keys[0])
+            self.log.info(f"acquired public key from {jwks_uri}")
+        else:
+            self.public_key = None
+
+        self.configured = True
+        # All good, let's finish
+        self.log.info('KeycloakAuthenticator fully configured')
+
+    async def _get_oidc_configs(self):
         self.log.info('Configuring OIDC from %s' % self.oidc_issuer)
 
         # Try to load the configs until it succeeds
         while True:
             try:
-                data = await self.httpfetch(f"{self.oidc_issuer}/.well-known/openid-configuration", label="fetching oidc config")
-
-                if not set(['authorization_endpoint', 'token_endpoint', 'userinfo_endpoint']).issubset(data.keys()):
-                    raise Exception('Unable to retrieve OIDC necessary values')
-
-                self.authorize_url = data['authorization_endpoint']
-                self.token_url = data['token_endpoint']
-                self.userdata_url = data['userinfo_endpoint']
-
-                end_session_url = data.get('end_session_endpoint')
-                if self.enable_logout and end_session_url:
-                    if self.logout_redirect_url:
-                        end_session_url += '?post_logout_redirect_uri=%s' % self.logout_redirect_url
-                        end_session_url += '&client_id=%s' % self.client_id
-                    # Update parent class OAuthenticator.logout_redirect_url
-                    self.logout_redirect_url = end_session_url
-
-                if self.config.check_signature :
-                    jwks_uri = data['jwks_uri']
-
-                    self.log.info("Fetching JWKs data")
-                    jwk_data = await self.httpfetch(jwks_uri, label="fetching jwks")
-                    # Find signature key out of keys provided at certs endpoint
-                    sign_keys = [key for key in jwk_data['keys'] if key.get('use') == 'sig']
-                    if not sign_keys:
-                        # If no signature key is found, fallback to first key in the list
-                        sign_keys = jwk_data['keys']
-                    self.public_key = RSAAlgorithm(RSAAlgorithm.SHA256).from_jwk(sign_keys[0])
-                    self.log.info(f"acquired public key from {jwks_uri}")
-                else:
-                    self.public_key = None
-
-                self.configured = True
-                # All good, let's finish
-                self.log.info('KeycloakAuthenticator fully configured')
+                await self._get_oidc_configs_helper()
                 break
             except Exception:
                 self.log.error("Failure to retrieve the openid configuration, will try again in 1 min (auth calls will fail)", exc_info=True)
