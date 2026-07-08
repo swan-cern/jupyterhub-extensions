@@ -92,7 +92,7 @@ class TestGetOidcConfigs:
         - check_signature False
     """
 
-    @pytest.mark.asyncio
+
     @pytest.mark.parametrize("doc", [
         {},
         {"authorization_endpoint": "http://fake/auth"},
@@ -111,7 +111,7 @@ class TestGetOidcConfigs:
         assert unconfigured_authenticator.configured is False
 
 
-    @pytest.mark.asyncio
+
     async def test_set_urls(self, unconfigured_authenticator, monkeypatch):
         async def mock_httpfetch(url, **kwargs):
             return OIDC_DISCOVERY_DOC
@@ -126,7 +126,7 @@ class TestGetOidcConfigs:
         assert unconfigured_authenticator.configured is True
 
 
-    @pytest.mark.asyncio
+
     async def test_enable_logout_end_session_no_existing_redirect_url(self, unconfigured_authenticator, monkeypatch):
         unconfigured_authenticator.enable_logout = True
         unconfigured_authenticator.logout_redirect_url = ""
@@ -140,7 +140,7 @@ class TestGetOidcConfigs:
 
         assert unconfigured_authenticator.logout_redirect_url == "http://fake/logout"
 
-    @pytest.mark.asyncio
+
     async def test_enable_logout_end_session_existing_redirect_url(self, unconfigured_authenticator, monkeypatch):
         unconfigured_authenticator.enable_logout = True
         unconfigured_authenticator.logout_redirect_url = "http://fake/post-logout"
@@ -159,7 +159,7 @@ class TestGetOidcConfigs:
             "&client_id=dummy-client"
         )
 
-    @pytest.mark.asyncio
+
     @pytest.mark.parametrize("enable_logout,doc", [
         (False, {**OIDC_DISCOVERY_DOC, "end_session_endpoint": "http://fake/logout"}),
         (True, OIDC_DISCOVERY_DOC),
@@ -178,7 +178,7 @@ class TestGetOidcConfigs:
         assert unconfigured_authenticator.logout_redirect_url == original_logout_url
 
 
-    @pytest.mark.asyncio
+
     async def test_check_signature_true_sig_key_present(self, unconfigured_authenticator, monkeypatch, key_pair):
         public_key, _ = key_pair
         jwks = _make_jwks(public_key, use_sig=True)
@@ -201,7 +201,7 @@ class TestGetOidcConfigs:
         assert call_count == 2
 
 
-    @pytest.mark.asyncio
+
     async def test_check_signature_true_no_sig_key(self, unconfigured_authenticator, monkeypatch, key_pair):
         public_key, _ = key_pair
         jwks = _make_jwks(public_key, use_sig=False)
@@ -223,7 +223,7 @@ class TestGetOidcConfigs:
         assert unconfigured_authenticator.public_key is not None
 
     
-    @pytest.mark.asyncio
+
     async def test_check_signature_false_skip_jwks_fetch(self, unconfigured_authenticator, monkeypatch):
         call_count = 0
 
@@ -240,7 +240,7 @@ class TestGetOidcConfigs:
         assert unconfigured_authenticator.public_key is None
 
     
-    @pytest.mark.asyncio
+
     async def test_retries_after_failure(self, unconfigured_authenticator, monkeypatch):
         call_count = 0
 
@@ -267,7 +267,6 @@ class TestGetOidcConfigs:
     
 
 
-@pytest.mark.asyncio
 async def test_refresh_user(monkeypatch):
     """
     Test KeyCloakAuthenticator.refresh_user() when everything works fine.
@@ -336,7 +335,6 @@ async def test_refresh_user(monkeypatch):
     )
 
 
-@pytest.mark.asyncio
 async def test_refresh_user_with_expired_refresh_token(monkeypatch):
     """
     Test KeyCloakAuthenticator.refresh_user() when the refresh_token stored in the users auth_state
