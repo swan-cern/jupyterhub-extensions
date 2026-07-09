@@ -274,7 +274,19 @@ class TestKeyCloakAuthenticator:
             assert len(sleep_calls) == 1
             assert sleep_calls[0] == 60
 
-
+    class TestValidateRoles:
+        def test_empty_allowed_roles_permits_all(self, unconfigured_authenticator):
+            assert unconfigured_authenticator._validate_roles({"any-role"})
+            assert unconfigured_authenticator._validate_roles(set())
+    
+        def test_matching_role_permits(self, unconfigured_authenticator):
+            unconfigured_authenticator._allowed_roles = {"admin"}
+            assert unconfigured_authenticator._validate_roles({"admin", "user"})
+    
+        def test_no_matching_role_denies(self, unconfigured_authenticator):
+            unconfigured_authenticator._allowed_roles = {"admin"}
+            assert not unconfigured_authenticator._validate_roles({"user"})
+            
 
     async def test_refresh_user(self, monkeypatch):
         """
