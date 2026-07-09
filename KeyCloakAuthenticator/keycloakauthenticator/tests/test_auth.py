@@ -6,6 +6,7 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
 from jwt.algorithms import RSAAlgorithm
 from tornado import web
+from urllib.error import HTTPError
 
 from unittest.mock import MagicMock
 
@@ -341,136 +342,77 @@ class TestKeyCloakAuthenticator:
 
             assert result == {"service-a": "token-for-a"}
 
-    async def test_refresh_user(self, monkeypatch):
-        """
-        Test KeyCloakAuthenticator.refresh_user() when everything works fine.
-        Mocks the initial configuration with the server, and HTTP requests with a fake JWTs
-        """
-    
-        public_key, private_key = _generate_mock_public_private_key_pair()
-    
-        async def mock_get_oidc_config(self):
-            pass
-        
-        # The authenticator fetches OIDC configuration from KeyCloak on startup
-        # mock that step, and configure some dummy configuration
-        monkeypatch.setattr(
-            KeyCloakAuthenticator, "_get_oidc_configs", mock_get_oidc_config
-        )
-        monkeypatch.setattr(KeyCloakAuthenticator, "oidc_issuer", "dummy-oidc-url")
-    
-        # Mock the response from the server on refresh and exchange tokens
-        async def _mock_fetch(self, req, label, **kargs):
-            print(f"Mocking fetch for {req} ({label})")
-            mock_response_body = json.dumps({
-                "access_token": _get_mock_token(private_key, "new_access_token"),
-                "refresh_token": _get_mock_token(private_key, "new_refresh_token"),
-                })
-    
-            class MockResponse:
-                def __init__(self):
-                    self.code = 200
-                    self.body = mock_response_body.encode('utf-8')
-                    self.request_time = 0
-                    self.time_info = {
-                        "queue": 0
-                    }
-            return MockResponse()
-        monkeypatch.setattr(KeyCloakAuthenticator, "fetch", _mock_fetch)
-    
-        class MockUser:
-            """Fake user object, with dummy authentication state from DB"""
-            name = "dummy-user"
-    
-            async def get_auth_state(self):
-                return {
-                    "access_token": _get_mock_token(
-                        private_key, "old_access_token", expired=True
-                    ),
-                    "refresh_token": _get_mock_token(private_key, "old_refresh_token"),
-                }
-    
-        authenticator = KeyCloakAuthenticator()
-        authenticator.configured = True
-        authenticator.public_key = public_key
-        authenticator.client_id = "dummy-client-id"
-        authenticator.client_secret = "dummy-client-secret"
-        authenticator.exchange_tokens = ["another-service-audience"]
-    
-        updated_auth_state = await authenticator.refresh_user(MockUser())
-    
-        # Assert that the refreshed tokens are returned as the new auth_state
-        assert updated_auth_state["auth_state"]["refresh_token"] == _get_mock_token(
-            private_key, "new_refresh_token"
-        )
-    
-        assert updated_auth_state["auth_state"]["access_token"] == _get_mock_token(
-            private_key, "new_access_token"
-        )
-    
-    
-    
-    
-    async def test_refresh_user_with_expired_refresh_token(self, monkeypatch):
-        """
-        Test KeyCloakAuthenticator.refresh_user() when the refresh_token stored in the users auth_state
-        in the DB is expired, expecting the refresh to fail and return false.
-    
-        Mocks the initial configuration with the server, and HTTP requests with a fake JWTs that are expired
-        """
-    
-        public_key, private_key = _generate_mock_public_private_key_pair()
-    
-        async def mock_get_oidc_config(self):
-            pass
-        
-        # The authenticator fetches OIDC configuration from KeyCloak on startup
-        # mock that step, and configure some dummy configuration
-        monkeypatch.setattr(
-            KeyCloakAuthenticator, "_get_oidc_configs", mock_get_oidc_config
-        )
-        # Mock the response from the server on refresh and exchange tokens
-        monkeypatch.setattr(KeyCloakAuthenticator, "oidc_issuer", "dummy-oidc-url")
-    
-        async def _mock_httpfetch(self, url, label, **kargs):
-            print(f"Mocking httpfetch for {url} ({label})")
-            mock_response_body = json.dumps({
-                "access_token": _get_mock_token(private_key, "new_access_token"),
-                "refresh_token": _get_mock_token(private_key, "new_refresh_token"),
-                })
-    
-            class MockResponse:
-                def __init__(self):
-                    self.code = 200
-                    self.body = mock_response_body.encode('utf-8')
-                    self.request_time = 0
-                    self.time_info = {
-                        "queue": 0
-                    }
-            return MockResponse()
-        monkeypatch.setattr(KeyCloakAuthenticator, "httpfetch", _mock_httpfetch)
-    
-        class MockUser:
-            """Fake user object, with dummy authentication state from DB"""
-            name = "dummy-user"
-    
-            async def get_auth_state(self):
-                return {
-                    "access_token": _get_mock_token(
-                        private_key, "old_access_token", expired=True
-                    ),
-                    "refresh_token": _get_mock_token(
-                        private_key, "old_refresh_token", expired=True
-                    ),
-                }
-    
-        authenticator = KeyCloakAuthenticator()
-        authenticator.configured = True
-        authenticator.public_key = public_key
-        authenticator.client_id = "dummy-client-id"
-        authenticator.client_secret = "dummy-client-secret"
-        authenticator.exchange_tokens = ["another-service-audience"]
-    
-        refresh_result = await authenticator.refresh_user(MockUser())
-    
-        assert refresh_result is False
+    class TestRefreshUser:
+        def _make_mock_user(self, refresh_token="old-refresh", access_token="old-access"):
+            class MockUser:
+                name = "test-user"
+                async def get_auth_state(self_inner):
+                    return {"refresh_token": refresh_token, "access_token": access_token}
+            return MockUser()
+
+        async def test_returns_false_when_not_configured(self, authenticator):
+            authenticator.configured = False
+            result = await authenticator.refresh_user(self._make_mock_user())
+            assert result is False
+
+        async def test_returns_false_when_refresh_token_expired(self, authenticator, monkeypatch):
+            monkeypatch.setattr(authenticator, "_decode_token", lambda token, options=None: {"exp": 0})
+            result = await authenticator.refresh_user(self._make_mock_user())
+            assert result is False
+
+        async def test_proceeds_when_no_exp_in_refresh_token(self, authenticator, monkeypatch):
+            monkeypatch.setattr(authenticator, "_decode_token", lambda token, options=None: {})
+
+            async def mock_refresh_token(_):
+                return "new-access", "new-refresh"
+            async def mock_exchange_tokens(_):
+                return {}
+
+            monkeypatch.setattr(authenticator, "_refresh_token", mock_refresh_token)
+            monkeypatch.setattr(authenticator, "_exchange_tokens", mock_exchange_tokens)
+
+            result = await authenticator.refresh_user(self._make_mock_user())
+            assert result is not False
+
+        async def test_returns_updated_auth_state_on_success(self, authenticator, monkeypatch):
+            monkeypatch.setattr(authenticator, "_decode_token", lambda token, options=None: {"exp": 9999999999})
+
+            async def mock_refresh_token(_):
+                return "new-access", "new-refresh"
+            async def mock_exchange_tokens(_):
+                return {"service-a": "exchanged"}
+
+            monkeypatch.setattr(authenticator, "_refresh_token", mock_refresh_token)
+            monkeypatch.setattr(authenticator, "_exchange_tokens", mock_exchange_tokens)
+
+            result = await authenticator.refresh_user(self._make_mock_user())
+
+            assert result["auth_state"]["access_token"] == "new-access"
+            assert result["auth_state"]["refresh_token"] == "new-refresh"
+            assert result["auth_state"]["exchanged_tokens"] == {"service-a": "exchanged"}
+
+        async def test_returns_false_when_exchange_tokens_fails(self, authenticator, monkeypatch):
+            monkeypatch.setattr(authenticator, "_decode_token", lambda token, options=None: {"exp": 9999999999})
+
+            async def mock_refresh_token(_):
+                return "new-access", "new-refresh"
+            async def mock_exchange_tokens(_):
+                raise Exception("exchange failed")
+
+            monkeypatch.setattr(authenticator, "_refresh_token", mock_refresh_token)
+            monkeypatch.setattr(authenticator, "_exchange_tokens", mock_exchange_tokens)
+
+            result = await authenticator.refresh_user(self._make_mock_user())
+            assert result is False
+
+        async def test_returns_false_on_exception_in_get_auth_state(self, authenticator):
+            user = MagicMock()
+            user.get_auth_state = MagicMock(side_effect=Exception("db error"))
+            result = await authenticator.refresh_user(user)
+            assert result is False
+
+        async def test_returns_false_on_http_error(self, authenticator):
+            user = MagicMock()
+            user.get_auth_state = MagicMock(side_effect=HTTPError("http://fake", 500, "Server Error", {}, None))
+            result = await authenticator.refresh_user(user)
+            assert result is False
