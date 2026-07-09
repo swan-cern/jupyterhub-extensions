@@ -335,31 +335,6 @@ async def test_refresh_user(monkeypatch):
     )
 
 
-@pytest.fixture
-def authenticator(unconfigured_authenticator):
-    unconfigured_authenticator.token_url = "http://fake/token"
-    unconfigured_authenticator.client_id = "dummy-client"
-    unconfigured_authenticator.client_secret = "dummy-secret"
-    unconfigured_authenticator.configured = True
-    return unconfigured_authenticator
-
-
-class TestRefreshToken:
-    """
-    options are:
-    - response.body True
-        - access_token is None
-        - access_token non None
-        - refresh_token is None
-        - refresh_token non None
-        - both are None
-
-    - response.body False
-
-    """
-
-    def test_response_body_empty(self, authenticator):
-        pass
 
 
 async def test_refresh_user_with_expired_refresh_token(monkeypatch):
