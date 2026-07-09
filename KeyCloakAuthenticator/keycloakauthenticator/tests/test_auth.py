@@ -306,6 +306,46 @@ class TestKeyCloakAuthenticator:
             unconfigured_authenticator._allowed_roles = {"admin"}
             assert not unconfigured_authenticator._validate_roles({"user"})
 
+    class TestDecodeToken:
+        def _setup(self, authenticator, public_key):
+            authenticator.public_key = public_key
+            authenticator.client_id = "dummy-client-id"
+            authenticator.oidc_issuer = "dummy-oidc-url"
+            authenticator.config.check_signature = True
+
+        def test_returns_decoded_payload_for_valid_token(self, authenticator, key_pair):
+            public_key, private_key = key_pair
+            self._setup(authenticator, public_key)
+            token = _get_mock_token(private_key, "test-token")
+            result = authenticator._decode_token(token, options={})
+            assert result is not None
+            assert result["jti"] == "test-token"
+
+        def test_returns_none_for_expired_token(self, authenticator, key_pair):
+            public_key, private_key = key_pair
+            self._setup(authenticator, public_key)
+            token = _get_mock_token(private_key, "test-token", expired=True)
+            assert authenticator._decode_token(token, options={}) is None
+
+        def test_skips_signature_when_check_signature_disabled(self, authenticator, key_pair):
+            _, _ = key_pair
+            _, other_private_key = _generate_mock_public_private_key_pair()
+            # public_key from key_pair A, token signed with key B — signature mismatch
+            authenticator.public_key = key_pair[0]
+            authenticator.client_id = "dummy-client-id"
+            authenticator.oidc_issuer = "dummy-oidc-url"
+            authenticator.config.check_signature = False
+            token = _get_mock_token(other_private_key, "test-token")
+            assert authenticator._decode_token(token, options={}) is not None
+
+        def test_skips_audience_when_verify_aud_disabled(self, authenticator, key_pair):
+            public_key, private_key = key_pair
+            self._setup(authenticator, public_key)
+            authenticator.client_id = "wrong-audience"
+            authenticator.verify_aud = False
+            token = _get_mock_token(private_key, "test-token")
+            assert authenticator._decode_token(token, options={}) is not None
+
     class TestExchangeTokens:
         async def test_empty_response_body_skips_service(self, authenticator, monkeypatch):
             authenticator.exchange_tokens = ["service-a"]
