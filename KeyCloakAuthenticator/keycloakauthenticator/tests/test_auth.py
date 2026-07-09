@@ -342,6 +342,70 @@ class TestKeyCloakAuthenticator:
 
             assert result == {"service-a": "token-for-a"}
 
+    class TestRefreshToken:
+        async def test_empty_response_body_returns_none_tokens(self, authenticator, monkeypatch):
+            async def mock_httpfetch(*_, **_kw):
+                return MockFetchResponse(body="")
+            monkeypatch.setattr(authenticator, "httpfetch", mock_httpfetch)
+
+            access_t, refresh_t = await authenticator._refresh_token("old-refresh")
+
+            assert access_t is None
+            assert refresh_t is None
+
+        async def test_missing_access_token_in_body(self, authenticator, monkeypatch):
+            async def mock_httpfetch(*_, **_kw):
+                return MockFetchResponse(body=json.dumps({"refresh_token": "new-refresh"}).encode())
+            monkeypatch.setattr(authenticator, "httpfetch", mock_httpfetch)
+
+            access_t, refresh_t = await authenticator._refresh_token("old-refresh")
+
+            assert access_t is None
+            assert refresh_t == "new-refresh"
+
+        async def test_missing_refresh_token_in_body(self, authenticator, monkeypatch):
+            async def mock_httpfetch(*_, **_kw):
+                return MockFetchResponse(body=json.dumps({"access_token": "new-access"}).encode())
+            monkeypatch.setattr(authenticator, "httpfetch", mock_httpfetch)
+
+            access_t, refresh_t = await authenticator._refresh_token("old-refresh")
+
+            assert access_t == "new-access"
+            assert refresh_t is None
+
+        async def test_returns_both_tokens_on_success(self, authenticator, monkeypatch):
+            async def mock_httpfetch(*_, **_kw):
+                return MockFetchResponse(body=json.dumps({
+                    "access_token": "new-access",
+                    "refresh_token": "new-refresh",
+                }).encode())
+            monkeypatch.setattr(authenticator, "httpfetch", mock_httpfetch)
+
+            access_t, refresh_t = await authenticator._refresh_token("old-refresh")
+
+            assert access_t == "new-access"
+            assert refresh_t == "new-refresh"
+
+        async def test_request_contains_correct_params(self, authenticator, monkeypatch):
+            from urllib.parse import parse_qs
+            captured = {}
+
+            async def mock_httpfetch(url, **kwargs):
+                captured["url"] = url
+                captured["body"] = kwargs["body"]
+                return MockFetchResponse(body="")
+
+            monkeypatch.setattr(authenticator, "httpfetch", mock_httpfetch)
+
+            await authenticator._refresh_token("my-refresh-token")
+
+            assert captured["url"] == "http://fake/token"
+            params = parse_qs(captured["body"])
+            assert params["grant_type"] == ["refresh_token"]
+            assert params["client_id"] == ["dummy-client"]
+            assert params["client_secret"] == ["dummy-secret"]
+            assert params["refresh_token"] == ["my-refresh-token"]
+
     class TestRefreshUser:
         def _make_mock_user(self, refresh_token="old-refresh", access_token="old-access"):
             class MockUser:
