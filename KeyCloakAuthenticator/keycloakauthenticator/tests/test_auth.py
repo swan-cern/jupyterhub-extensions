@@ -72,24 +72,6 @@ def _make_jwks(public_key, *, use_sig=True):
 
 
 class TestGetOidcConfigs:
-    """
-    options are:
-     - authorize_url, token_url, userdata_url not all present, expect exception and have to break loop by patching sleep [test_missing_required_authorisation_fields]
-
-     - authorize_url, token_url, userdata_url all present, 
-        - enable_logout and end_session present
-            - logout_redirect_url not present
-            - logout_redirect_url present
-
-        - enable_logout and end_session not all present
-
-        - check_signature True
-            - sign_keys True
-            - sign_keys False
-        - check_signature False
-    """
-
-
     @pytest.mark.parametrize("doc", [
         {},
         {"authorization_endpoint": "http://fake/auth"},
