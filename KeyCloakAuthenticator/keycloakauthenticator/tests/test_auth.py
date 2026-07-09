@@ -5,8 +5,12 @@ import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
 from jwt.algorithms import RSAAlgorithm
+from tornado import web
 
-from ..auth import KeyCloakAuthenticator
+from unittest.mock import MagicMock
+
+from ..auth import KeyCloakAuthenticator, OIDCOAuthLoginHandler
+from oauthenticator.oauth2 import OAuthLoginHandler
 
 
 def _generate_mock_public_private_key_pair():
@@ -70,6 +74,26 @@ def _make_jwks(public_key, *, use_sig=True):
         jwk["use"] = "sig"
     return {"keys": [jwk]}
 
+
+class TestOIDCOAuthLoginHandler:
+    class TestGet:
+        def _make_handler(self, monkeypatch, configured):
+            handler = OIDCOAuthLoginHandler.__new__(OIDCOAuthLoginHandler)
+            monkeypatch.setattr(OIDCOAuthLoginHandler, "authenticator", property(lambda _: MagicMock(configured=configured)))
+            return handler
+
+        def test_raises_when_not_configured(self, monkeypatch):
+            handler = self._make_handler(monkeypatch, configured=False)
+            with pytest.raises(web.HTTPError) as exc_info:
+                handler.get()
+            assert exc_info.value.status_code == 500
+
+        def test_calls_super_when_configured(self, monkeypatch):
+            handler = self._make_handler(monkeypatch, configured=True)
+            super_called = []
+            monkeypatch.setattr(OAuthLoginHandler, "get", lambda _: super_called.append(True))
+            handler.get()
+            assert super_called
 
 class TestGetOidcConfigs:
     @pytest.mark.parametrize("doc", [
