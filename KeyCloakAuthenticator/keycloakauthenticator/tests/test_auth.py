@@ -95,311 +95,312 @@ class TestOIDCOAuthLoginHandler:
             handler.get()
             assert super_called
 
-class TestGetOidcConfigs:
-    @pytest.mark.parametrize("doc", [
-        {},
-        {"authorization_endpoint": "http://fake/auth"},
-        {"authorization_endpoint": "http://fake/auth", "token_endpoint": "http://fake/token"},
-        {"token_endpoint": "http://fake/token"},
-    ])
-    async def test_missing_required_authorisation_fields(self, unconfigured_authenticator, monkeypatch, doc):
-        async def mock_httpfetch(url, **kwargs):
-            return doc
+class TestKeyCloakAuthenticator:
+    class TestGetOidcConfigs:
+        @pytest.mark.parametrize("doc", [
+            {},
+            {"authorization_endpoint": "http://fake/auth"},
+            {"authorization_endpoint": "http://fake/auth", "token_endpoint": "http://fake/token"},
+            {"token_endpoint": "http://fake/token"},
+        ])
+        async def test_missing_required_authorisation_fields(self, unconfigured_authenticator, monkeypatch, doc):
+            async def mock_httpfetch(url, **kwargs):
+                return doc
 
-        monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
+            monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
 
-        with pytest.raises(Exception, match="Unable to retrieve OIDC necessary values"):
+            with pytest.raises(Exception, match="Unable to retrieve OIDC necessary values"):
+                await unconfigured_authenticator._get_oidc_configs_helper()
+
+            assert not unconfigured_authenticator.configured
+
+
+
+        async def test_set_urls(self, unconfigured_authenticator, monkeypatch):
+            async def mock_httpfetch(url, **kwargs):
+                return OIDC_DISCOVERY_DOC
+
+            monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
+
             await unconfigured_authenticator._get_oidc_configs_helper()
 
-        assert not unconfigured_authenticator.configured
+            assert unconfigured_authenticator.authorize_url == "http://fake/auth"
+            assert unconfigured_authenticator.token_url == "http://fake/token"
+            assert unconfigured_authenticator.userdata_url == "http://fake/userinfo"
+            assert unconfigured_authenticator.configured
 
 
 
-    async def test_set_urls(self, unconfigured_authenticator, monkeypatch):
-        async def mock_httpfetch(url, **kwargs):
-            return OIDC_DISCOVERY_DOC
+        async def test_enable_logout_end_session_no_existing_redirect_url(self, unconfigured_authenticator, monkeypatch):
+            unconfigured_authenticator.enable_logout = True
+            unconfigured_authenticator.logout_redirect_url = ""
 
-        monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
+            async def mock_httpfetch(url, **kwargs):
+                return {**OIDC_DISCOVERY_DOC, "end_session_endpoint": "http://fake/logout"}
 
-        await unconfigured_authenticator._get_oidc_configs_helper()
+            monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
 
-        assert unconfigured_authenticator.authorize_url == "http://fake/auth"
-        assert unconfigured_authenticator.token_url == "http://fake/token"
-        assert unconfigured_authenticator.userdata_url == "http://fake/userinfo"
-        assert unconfigured_authenticator.configured
+            await unconfigured_authenticator._get_oidc_configs_helper()
 
-
-
-    async def test_enable_logout_end_session_no_existing_redirect_url(self, unconfigured_authenticator, monkeypatch):
-        unconfigured_authenticator.enable_logout = True
-        unconfigured_authenticator.logout_redirect_url = ""
-
-        async def mock_httpfetch(url, **kwargs):
-            return {**OIDC_DISCOVERY_DOC, "end_session_endpoint": "http://fake/logout"}
-
-        monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
-
-        await unconfigured_authenticator._get_oidc_configs_helper()
-
-        assert unconfigured_authenticator.logout_redirect_url == "http://fake/logout"
+            assert unconfigured_authenticator.logout_redirect_url == "http://fake/logout"
 
 
-    async def test_enable_logout_end_session_existing_redirect_url(self, unconfigured_authenticator, monkeypatch):
-        unconfigured_authenticator.enable_logout = True
-        unconfigured_authenticator.logout_redirect_url = "http://fake/post-logout"
-        unconfigured_authenticator.client_id = "dummy-client"
+        async def test_enable_logout_end_session_existing_redirect_url(self, unconfigured_authenticator, monkeypatch):
+            unconfigured_authenticator.enable_logout = True
+            unconfigured_authenticator.logout_redirect_url = "http://fake/post-logout"
+            unconfigured_authenticator.client_id = "dummy-client"
 
-        async def mock_httpfetch(url, **kwargs):
-            return {**OIDC_DISCOVERY_DOC, "end_session_endpoint": "http://fake/logout"}
+            async def mock_httpfetch(url, **kwargs):
+                return {**OIDC_DISCOVERY_DOC, "end_session_endpoint": "http://fake/logout"}
 
-        monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
+            monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
 
-        await unconfigured_authenticator._get_oidc_configs_helper()
+            await unconfigured_authenticator._get_oidc_configs_helper()
 
-        assert unconfigured_authenticator.logout_redirect_url == (
-            "http://fake/logout"
-            "?post_logout_redirect_uri=http://fake/post-logout"
-            "&client_id=dummy-client"
+            assert unconfigured_authenticator.logout_redirect_url == (
+                "http://fake/logout"
+                "?post_logout_redirect_uri=http://fake/post-logout"
+                "&client_id=dummy-client"
+            )
+
+
+        @pytest.mark.parametrize("enable_logout,doc", [
+            (False, {**OIDC_DISCOVERY_DOC, "end_session_endpoint": "http://fake/logout"}),
+            (True, OIDC_DISCOVERY_DOC),
+        ])
+        async def test_logout_url_not_updated(self, unconfigured_authenticator, monkeypatch, enable_logout, doc):
+            unconfigured_authenticator.enable_logout = enable_logout
+            original_logout_url = unconfigured_authenticator.logout_redirect_url
+
+            async def mock_httpfetch(url, **kwargs):
+                return doc
+
+            monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
+
+            await unconfigured_authenticator._get_oidc_configs_helper()
+
+            assert unconfigured_authenticator.logout_redirect_url == original_logout_url
+
+
+
+        async def test_check_signature_true_sig_key_present(self, unconfigured_authenticator, monkeypatch, key_pair):
+            public_key, _ = key_pair
+            jwks = _make_jwks(public_key, use_sig=True)
+
+            call_count = 0
+
+            async def mock_httpfetch(url, **kwargs):
+                nonlocal call_count
+                call_count += 1
+                if call_count == 1:
+                    return {**OIDC_DISCOVERY_DOC, "jwks_uri": "http://fake/certs"}
+                return jwks
+
+            monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
+            unconfigured_authenticator.config.check_signature = True
+
+            await unconfigured_authenticator._get_oidc_configs_helper()
+
+            assert unconfigured_authenticator.public_key is not None
+            assert call_count == 2
+
+
+
+        async def test_check_signature_true_no_sig_key(self, unconfigured_authenticator, monkeypatch, key_pair):
+            public_key, _ = key_pair
+            jwks = _make_jwks(public_key, use_sig=False)
+
+            call_count = 0
+
+            async def mock_httpfetch(url, **kwargs):
+                nonlocal call_count
+                call_count += 1
+                if call_count == 1:
+                    return {**OIDC_DISCOVERY_DOC, "jwks_uri": "http://fake/certs"}
+                return jwks
+
+            monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
+            unconfigured_authenticator.config.check_signature = True
+
+            await unconfigured_authenticator._get_oidc_configs_helper()
+
+            assert unconfigured_authenticator.public_key is not None
+
+
+
+        async def test_check_signature_false_skip_jwks_fetch(self, unconfigured_authenticator, monkeypatch):
+            call_count = 0
+
+            async def mock_httpfetch(url, **kwargs):
+                nonlocal call_count
+                call_count += 1
+                return OIDC_DISCOVERY_DOC
+
+            monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
+
+            await unconfigured_authenticator._get_oidc_configs_helper()
+
+            assert call_count == 1
+            assert unconfigured_authenticator.public_key is None
+
+
+
+        async def test_retries_after_failure(self, unconfigured_authenticator, monkeypatch):
+            call_count = 0
+
+            async def mock_helper(self):
+                nonlocal call_count
+                call_count += 1
+                if call_count == 1:
+                    raise Exception("transient failure")
+                unconfigured_authenticator.configured = True
+
+            sleep_calls = []
+
+            async def mock_sleep(duration):
+                sleep_calls.append(duration)
+
+            monkeypatch.setattr(KeyCloakAuthenticator, "_get_oidc_configs_helper", mock_helper)
+            monkeypatch.setattr(asyncio, "sleep", mock_sleep)
+
+            await unconfigured_authenticator._get_oidc_configs()
+
+            assert call_count == 2
+            assert len(sleep_calls) == 1
+            assert sleep_calls[0] == 60
+
+
+
+    async def test_refresh_user(self, monkeypatch):
+        """
+        Test KeyCloakAuthenticator.refresh_user() when everything works fine.
+        Mocks the initial configuration with the server, and HTTP requests with a fake JWTs
+        """
+    
+        public_key, private_key = _generate_mock_public_private_key_pair()
+    
+        async def mock_get_oidc_config(self):
+            pass
+        
+        # The authenticator fetches OIDC configuration from KeyCloak on startup
+        # mock that step, and configure some dummy configuration
+        monkeypatch.setattr(
+            KeyCloakAuthenticator, "_get_oidc_configs", mock_get_oidc_config
         )
-
-
-    @pytest.mark.parametrize("enable_logout,doc", [
-        (False, {**OIDC_DISCOVERY_DOC, "end_session_endpoint": "http://fake/logout"}),
-        (True, OIDC_DISCOVERY_DOC),
-    ])
-    async def test_logout_url_not_updated(self, unconfigured_authenticator, monkeypatch, enable_logout, doc):
-        unconfigured_authenticator.enable_logout = enable_logout
-        original_logout_url = unconfigured_authenticator.logout_redirect_url
-
-        async def mock_httpfetch(url, **kwargs):
-            return doc
-
-        monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
-
-        await unconfigured_authenticator._get_oidc_configs_helper()
-
-        assert unconfigured_authenticator.logout_redirect_url == original_logout_url
-
-
-
-    async def test_check_signature_true_sig_key_present(self, unconfigured_authenticator, monkeypatch, key_pair):
-        public_key, _ = key_pair
-        jwks = _make_jwks(public_key, use_sig=True)
-
-        call_count = 0
-
-        async def mock_httpfetch(url, **kwargs):
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                return {**OIDC_DISCOVERY_DOC, "jwks_uri": "http://fake/certs"}
-            return jwks
-
-        monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
-        unconfigured_authenticator.config.check_signature = True
-
-        await unconfigured_authenticator._get_oidc_configs_helper()
-
-        assert unconfigured_authenticator.public_key is not None
-        assert call_count == 2
-
-
-
-    async def test_check_signature_true_no_sig_key(self, unconfigured_authenticator, monkeypatch, key_pair):
-        public_key, _ = key_pair
-        jwks = _make_jwks(public_key, use_sig=False)
-
-        call_count = 0
-
-        async def mock_httpfetch(url, **kwargs):
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                return {**OIDC_DISCOVERY_DOC, "jwks_uri": "http://fake/certs"}
-            return jwks
-
-        monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
-        unconfigured_authenticator.config.check_signature = True
-
-        await unconfigured_authenticator._get_oidc_configs_helper()
-
-        assert unconfigured_authenticator.public_key is not None
-
-
-
-    async def test_check_signature_false_skip_jwks_fetch(self, unconfigured_authenticator, monkeypatch):
-        call_count = 0
-
-        async def mock_httpfetch(url, **kwargs):
-            nonlocal call_count
-            call_count += 1
-            return OIDC_DISCOVERY_DOC
-
-        monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
-
-        await unconfigured_authenticator._get_oidc_configs_helper()
-
-        assert call_count == 1
-        assert unconfigured_authenticator.public_key is None
-
-
-
-    async def test_retries_after_failure(self, unconfigured_authenticator, monkeypatch):
-        call_count = 0
-
-        async def mock_helper(self):
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                raise Exception("transient failure")
-            unconfigured_authenticator.configured = True
-
-        sleep_calls = []
-
-        async def mock_sleep(duration):
-            sleep_calls.append(duration)
-
-        monkeypatch.setattr(KeyCloakAuthenticator, "_get_oidc_configs_helper", mock_helper)
-        monkeypatch.setattr(asyncio, "sleep", mock_sleep)
-
-        await unconfigured_authenticator._get_oidc_configs()
-
-        assert call_count == 2
-        assert len(sleep_calls) == 1
-        assert sleep_calls[0] == 60
-
-
-
-async def test_refresh_user(monkeypatch):
-    """
-    Test KeyCloakAuthenticator.refresh_user() when everything works fine.
-    Mocks the initial configuration with the server, and HTTP requests with a fake JWTs
-    """
-
-    public_key, private_key = _generate_mock_public_private_key_pair()
-
-    async def mock_get_oidc_config(self):
-        pass
-
-    # The authenticator fetches OIDC configuration from KeyCloak on startup
-    # mock that step, and configure some dummy configuration
-    monkeypatch.setattr(
-        KeyCloakAuthenticator, "_get_oidc_configs", mock_get_oidc_config
-    )
-    monkeypatch.setattr(KeyCloakAuthenticator, "oidc_issuer", "dummy-oidc-url")
-
-    # Mock the response from the server on refresh and exchange tokens
-    async def _mock_fetch(self, req, label, **kargs):
-        print(f"Mocking fetch for {req} ({label})")
-        mock_response_body = json.dumps({
-            "access_token": _get_mock_token(private_key, "new_access_token"),
-            "refresh_token": _get_mock_token(private_key, "new_refresh_token"),
-            })
-
-        class MockResponse:
-            def __init__(self):
-                self.code = 200
-                self.body = mock_response_body.encode('utf-8')
-                self.request_time = 0
-                self.time_info = {
-                    "queue": 0
+        monkeypatch.setattr(KeyCloakAuthenticator, "oidc_issuer", "dummy-oidc-url")
+    
+        # Mock the response from the server on refresh and exchange tokens
+        async def _mock_fetch(self, req, label, **kargs):
+            print(f"Mocking fetch for {req} ({label})")
+            mock_response_body = json.dumps({
+                "access_token": _get_mock_token(private_key, "new_access_token"),
+                "refresh_token": _get_mock_token(private_key, "new_refresh_token"),
+                })
+    
+            class MockResponse:
+                def __init__(self):
+                    self.code = 200
+                    self.body = mock_response_body.encode('utf-8')
+                    self.request_time = 0
+                    self.time_info = {
+                        "queue": 0
+                    }
+            return MockResponse()
+        monkeypatch.setattr(KeyCloakAuthenticator, "fetch", _mock_fetch)
+    
+        class MockUser:
+            """Fake user object, with dummy authentication state from DB"""
+            name = "dummy-user"
+    
+            async def get_auth_state(self):
+                return {
+                    "access_token": _get_mock_token(
+                        private_key, "old_access_token", expired=True
+                    ),
+                    "refresh_token": _get_mock_token(private_key, "old_refresh_token"),
                 }
-        return MockResponse()
-    monkeypatch.setattr(KeyCloakAuthenticator, "fetch", _mock_fetch)
-
-    class MockUser:
-        """Fake user object, with dummy authentication state from DB"""
-        name = "dummy-user"
-
-        async def get_auth_state(self):
-            return {
-                "access_token": _get_mock_token(
-                    private_key, "old_access_token", expired=True
-                ),
-                "refresh_token": _get_mock_token(private_key, "old_refresh_token"),
-            }
-
-    authenticator = KeyCloakAuthenticator()
-    authenticator.configured = True
-    authenticator.public_key = public_key
-    authenticator.client_id = "dummy-client-id"
-    authenticator.client_secret = "dummy-client-secret"
-    authenticator.exchange_tokens = ["another-service-audience"]
-
-    updated_auth_state = await authenticator.refresh_user(MockUser())
-
-    # Assert that the refreshed tokens are returned as the new auth_state
-    assert updated_auth_state["auth_state"]["refresh_token"] == _get_mock_token(
-        private_key, "new_refresh_token"
-    )
-
-    assert updated_auth_state["auth_state"]["access_token"] == _get_mock_token(
-        private_key, "new_access_token"
-    )
-
-
-
-
-async def test_refresh_user_with_expired_refresh_token(monkeypatch):
-    """
-    Test KeyCloakAuthenticator.refresh_user() when the refresh_token stored in the users auth_state
-    in the DB is expired, expecting the refresh to fail and return false.
-
-    Mocks the initial configuration with the server, and HTTP requests with a fake JWTs that are expired
-    """
-
-    public_key, private_key = _generate_mock_public_private_key_pair()
-
-    async def mock_get_oidc_config(self):
-        pass
-
-    # The authenticator fetches OIDC configuration from KeyCloak on startup
-    # mock that step, and configure some dummy configuration
-    monkeypatch.setattr(
-        KeyCloakAuthenticator, "_get_oidc_configs", mock_get_oidc_config
-    )
-    # Mock the response from the server on refresh and exchange tokens
-    monkeypatch.setattr(KeyCloakAuthenticator, "oidc_issuer", "dummy-oidc-url")
-
-    async def _mock_httpfetch(self, url, label, **kargs):
-        print(f"Mocking httpfetch for {url} ({label})")
-        mock_response_body = json.dumps({
-            "access_token": _get_mock_token(private_key, "new_access_token"),
-            "refresh_token": _get_mock_token(private_key, "new_refresh_token"),
-            })
-
-        class MockResponse:
-            def __init__(self):
-                self.code = 200
-                self.body = mock_response_body.encode('utf-8')
-                self.request_time = 0
-                self.time_info = {
-                    "queue": 0
+    
+        authenticator = KeyCloakAuthenticator()
+        authenticator.configured = True
+        authenticator.public_key = public_key
+        authenticator.client_id = "dummy-client-id"
+        authenticator.client_secret = "dummy-client-secret"
+        authenticator.exchange_tokens = ["another-service-audience"]
+    
+        updated_auth_state = await authenticator.refresh_user(MockUser())
+    
+        # Assert that the refreshed tokens are returned as the new auth_state
+        assert updated_auth_state["auth_state"]["refresh_token"] == _get_mock_token(
+            private_key, "new_refresh_token"
+        )
+    
+        assert updated_auth_state["auth_state"]["access_token"] == _get_mock_token(
+            private_key, "new_access_token"
+        )
+    
+    
+    
+    
+    async def test_refresh_user_with_expired_refresh_token(self, monkeypatch):
+        """
+        Test KeyCloakAuthenticator.refresh_user() when the refresh_token stored in the users auth_state
+        in the DB is expired, expecting the refresh to fail and return false.
+    
+        Mocks the initial configuration with the server, and HTTP requests with a fake JWTs that are expired
+        """
+    
+        public_key, private_key = _generate_mock_public_private_key_pair()
+    
+        async def mock_get_oidc_config(self):
+            pass
+        
+        # The authenticator fetches OIDC configuration from KeyCloak on startup
+        # mock that step, and configure some dummy configuration
+        monkeypatch.setattr(
+            KeyCloakAuthenticator, "_get_oidc_configs", mock_get_oidc_config
+        )
+        # Mock the response from the server on refresh and exchange tokens
+        monkeypatch.setattr(KeyCloakAuthenticator, "oidc_issuer", "dummy-oidc-url")
+    
+        async def _mock_httpfetch(self, url, label, **kargs):
+            print(f"Mocking httpfetch for {url} ({label})")
+            mock_response_body = json.dumps({
+                "access_token": _get_mock_token(private_key, "new_access_token"),
+                "refresh_token": _get_mock_token(private_key, "new_refresh_token"),
+                })
+    
+            class MockResponse:
+                def __init__(self):
+                    self.code = 200
+                    self.body = mock_response_body.encode('utf-8')
+                    self.request_time = 0
+                    self.time_info = {
+                        "queue": 0
+                    }
+            return MockResponse()
+        monkeypatch.setattr(KeyCloakAuthenticator, "httpfetch", _mock_httpfetch)
+    
+        class MockUser:
+            """Fake user object, with dummy authentication state from DB"""
+            name = "dummy-user"
+    
+            async def get_auth_state(self):
+                return {
+                    "access_token": _get_mock_token(
+                        private_key, "old_access_token", expired=True
+                    ),
+                    "refresh_token": _get_mock_token(
+                        private_key, "old_refresh_token", expired=True
+                    ),
                 }
-        return MockResponse()
-    monkeypatch.setattr(KeyCloakAuthenticator, "httpfetch", _mock_httpfetch)
-
-    class MockUser:
-        """Fake user object, with dummy authentication state from DB"""
-        name = "dummy-user"
-
-        async def get_auth_state(self):
-            return {
-                "access_token": _get_mock_token(
-                    private_key, "old_access_token", expired=True
-                ),
-                "refresh_token": _get_mock_token(
-                    private_key, "old_refresh_token", expired=True
-                ),
-            }
-
-    authenticator = KeyCloakAuthenticator()
-    authenticator.configured = True
-    authenticator.public_key = public_key
-    authenticator.client_id = "dummy-client-id"
-    authenticator.client_secret = "dummy-client-secret"
-    authenticator.exchange_tokens = ["another-service-audience"]
-
-    refresh_result = await authenticator.refresh_user(MockUser())
-
-    assert refresh_result is False
+    
+        authenticator = KeyCloakAuthenticator()
+        authenticator.configured = True
+        authenticator.public_key = public_key
+        authenticator.client_id = "dummy-client-id"
+        authenticator.client_secret = "dummy-client-secret"
+        authenticator.exchange_tokens = ["another-service-audience"]
+    
+        refresh_result = await authenticator.refresh_user(MockUser())
+    
+        assert refresh_result is False
