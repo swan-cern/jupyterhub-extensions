@@ -57,6 +57,15 @@ def key_pair():
     return private_key.public_key(), private_key
 
 
+@pytest.fixture
+def authenticator(unconfigured_authenticator):
+    unconfigured_authenticator.token_url = "http://fake/token"
+    unconfigured_authenticator.client_id = "dummy-client"
+    unconfigured_authenticator.client_secret = "dummy-secret"
+    unconfigured_authenticator.configured = True
+    return unconfigured_authenticator
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -73,6 +82,14 @@ def _make_jwks(public_key, *, use_sig=True):
     if use_sig:
         jwk["use"] = "sig"
     return {"keys": [jwk]}
+
+
+class MockFetchResponse:
+    def __init__(self, body=None, code=200):
+        self.body = body
+        self.code = code
+        self.request_time = 0.0
+        self.time_info = {"queue": 0.0}
 
 
 class TestOIDCOAuthLoginHandler:
@@ -286,7 +303,43 @@ class TestKeyCloakAuthenticator:
         def test_no_matching_role_denies(self, unconfigured_authenticator):
             unconfigured_authenticator._allowed_roles = {"admin"}
             assert not unconfigured_authenticator._validate_roles({"user"})
-            
+
+    class TestExchangeTokens:
+        async def test_empty_response_body_skips_service(self, authenticator, monkeypatch):
+            authenticator.exchange_tokens = ["service-a"]
+
+            async def mock_fetch(*_, **_kw):
+                return MockFetchResponse(body="")
+
+            monkeypatch.setattr(authenticator, "fetch", mock_fetch)
+
+            result = await authenticator._exchange_tokens("dummy-token")
+
+            assert "service-a" not in result
+
+        async def test_missing_access_token_in_body_skips_service(self, authenticator, monkeypatch):
+            authenticator.exchange_tokens = ["service-a"]
+
+            async def mock_fetch(*_, **_kw):
+                return MockFetchResponse(body=json.dumps({"other": "stuff"}).encode())
+
+            monkeypatch.setattr(authenticator, "fetch", mock_fetch)
+
+            result = await authenticator._exchange_tokens("dummy-token")
+
+            assert "service-a" not in result
+
+        async def test_returns_access_token_for_service(self, authenticator, monkeypatch):
+            authenticator.exchange_tokens = ["service-a"]
+
+            async def mock_fetch(*_, **_kw):
+                return MockFetchResponse(body=json.dumps({"access_token": "token-for-a"}).encode())
+
+            monkeypatch.setattr(authenticator, "fetch", mock_fetch)
+
+            result = await authenticator._exchange_tokens("dummy-token")
+
+            assert result == {"service-a": "token-for-a"}
 
     async def test_refresh_user(self, monkeypatch):
         """
