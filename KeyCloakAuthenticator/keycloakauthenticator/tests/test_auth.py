@@ -64,15 +64,12 @@ OIDC_DISCOVERY_DOC = {
 }
 
 
-def _make_jwks(public_key, use_sig=True):
+def _make_jwks(public_key, *, use_sig=True):
     jwk = json.loads(RSAAlgorithm.to_jwk(public_key))
     if use_sig:
         jwk["use"] = "sig"
     return {"keys": [jwk]}
 
-# ---------------------------------------------------------------------------
-# TestGetOidcConfigs
-# ---------------------------------------------------------------------------
 
 class TestGetOidcConfigs:
     """
@@ -105,10 +102,10 @@ class TestGetOidcConfigs:
 
         monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
 
-        with pytest.raises(Exception, match = "Unable to retrieve OIDC necessary values"):
+        with pytest.raises(Exception, match="Unable to retrieve OIDC necessary values"):
             await unconfigured_authenticator._get_oidc_configs_helper()
 
-        assert unconfigured_authenticator.configured is False
+        assert not unconfigured_authenticator.configured
 
 
 
@@ -123,7 +120,7 @@ class TestGetOidcConfigs:
         assert unconfigured_authenticator.authorize_url == "http://fake/auth"
         assert unconfigured_authenticator.token_url == "http://fake/token"
         assert unconfigured_authenticator.userdata_url == "http://fake/userinfo"
-        assert unconfigured_authenticator.configured is True
+        assert unconfigured_authenticator.configured
 
 
 
