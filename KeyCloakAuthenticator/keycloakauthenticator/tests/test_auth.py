@@ -96,6 +96,11 @@ class TestOIDCOAuthLoginHandler:
             assert super_called
 
 class TestKeyCloakAuthenticator:
+    class TestInit:
+        def test_raises_if_not_oidc_issuer(self):
+            with pytest.raises(Exception, match="No OIDC issuer url provided"):
+                KeyCloakAuthenticator()
+
     class TestGetOidcConfigs:
         @pytest.mark.parametrize("doc", [
             {},
