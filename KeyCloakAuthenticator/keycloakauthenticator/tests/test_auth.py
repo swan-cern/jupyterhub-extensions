@@ -12,6 +12,7 @@ from unittest.mock import MagicMock
 
 from ..auth import KeyCloakAuthenticator, OIDCOAuthLoginHandler
 from oauthenticator.oauth2 import OAuthLoginHandler
+from oauthenticator.generic import GenericOAuthenticator
 
 
 def _generate_mock_public_private_key_pair():
@@ -417,12 +418,12 @@ class TestKeyCloakAuthenticator:
         async def test_returns_false_when_not_configured(self, authenticator):
             authenticator.configured = False
             result = await authenticator.refresh_user(self._make_mock_user())
-            assert result is False
+            assert not result
 
         async def test_returns_false_when_refresh_token_expired(self, authenticator, monkeypatch):
             monkeypatch.setattr(authenticator, "_decode_token", lambda token, options=None: {"exp": 0})
             result = await authenticator.refresh_user(self._make_mock_user())
-            assert result is False
+            assert not result
 
         async def test_proceeds_when_no_exp_in_refresh_token(self, authenticator, monkeypatch):
             monkeypatch.setattr(authenticator, "_decode_token", lambda token, options=None: {})
@@ -436,7 +437,7 @@ class TestKeyCloakAuthenticator:
             monkeypatch.setattr(authenticator, "_exchange_tokens", mock_exchange_tokens)
 
             result = await authenticator.refresh_user(self._make_mock_user())
-            assert result is not False
+            assert result
 
         async def test_returns_updated_auth_state_on_success(self, authenticator, monkeypatch):
             monkeypatch.setattr(authenticator, "_decode_token", lambda token, options=None: {"exp": 9999999999})
@@ -467,16 +468,92 @@ class TestKeyCloakAuthenticator:
             monkeypatch.setattr(authenticator, "_exchange_tokens", mock_exchange_tokens)
 
             result = await authenticator.refresh_user(self._make_mock_user())
-            assert result is False
+            assert not result
 
         async def test_returns_false_on_exception_in_get_auth_state(self, authenticator):
             user = MagicMock()
             user.get_auth_state = MagicMock(side_effect=Exception("db error"))
             result = await authenticator.refresh_user(user)
-            assert result is False
+            assert not result
 
         async def test_returns_false_on_http_error(self, authenticator):
             user = MagicMock()
             user.get_auth_state = MagicMock(side_effect=HTTPError("http://fake", 500, "Server Error", {}, None))
             result = await authenticator.refresh_user(user)
-            assert result is False
+            assert not result
+
+    class TestAuthenticate:
+        def _make_mock_user(self):
+            return {"name": "test-user", "auth_state": {"access_token": "dummy-token"}}
+
+        def _patch_super(self, monkeypatch, return_value):
+            async def mock_super(self, handler, data=None):
+                return return_value
+            monkeypatch.setattr(GenericOAuthenticator, "authenticate", mock_super)
+
+        async def test_returns_none_when_super_returns_none(self, authenticator, monkeypatch):
+            self._patch_super(monkeypatch, None)
+            assert await authenticator.authenticate(None) is None
+
+        async def test_returns_none_when_decode_token_raises(self, authenticator, monkeypatch):
+            self._patch_super(monkeypatch, self._make_mock_user())
+            def mock_decode(*_):
+                raise Exception("bad token")
+            monkeypatch.setattr(authenticator, "_decode_token", mock_decode)
+            assert await authenticator.authenticate(None) is None
+
+        async def test_returns_none_when_claim_roles_key_raises(self, authenticator, monkeypatch):
+            self._patch_super(monkeypatch, self._make_mock_user())
+            monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
+            monkeypatch.setattr(authenticator, "claim_roles_key", lambda *_: (_ for _ in ()).throw(Exception("roles error")))
+            assert await authenticator.authenticate(None) is None
+
+        async def test_returns_none_when_user_roles_not_a_set(self, authenticator, monkeypatch):
+            self._patch_super(monkeypatch, self._make_mock_user())
+            monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
+            monkeypatch.setattr(authenticator, "claim_roles_key", lambda *_: ["not", "a", "set"])
+            assert await authenticator.authenticate(None) is None
+
+        async def test_returns_none_when_validate_roles_fails(self, authenticator, monkeypatch):
+            self._patch_super(monkeypatch, self._make_mock_user())
+            monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
+            monkeypatch.setattr(authenticator, "claim_roles_key", lambda *_: {"user-role"})
+            monkeypatch.setattr(authenticator, "_validate_roles", lambda *_: False)
+            assert await authenticator.authenticate(None) is None
+
+        async def test_returns_none_when_exchange_tokens_raises(self, authenticator, monkeypatch):
+            self._patch_super(monkeypatch, self._make_mock_user())
+            monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
+            monkeypatch.setattr(authenticator, "claim_roles_key", lambda *_: {"user-role"})
+            monkeypatch.setattr(authenticator, "_validate_roles", lambda *_: True)
+            async def mock_exchange_tokens(_):
+                raise Exception("exchange failed")
+            monkeypatch.setattr(authenticator, "_exchange_tokens", mock_exchange_tokens)
+            assert await authenticator.authenticate(None) is None
+
+        async def test_returns_user_on_success(self, authenticator, monkeypatch):
+            self._patch_super(monkeypatch, self._make_mock_user())
+            monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
+            monkeypatch.setattr(authenticator, "claim_roles_key", lambda *_: {"user-role"})
+            monkeypatch.setattr(authenticator, "_validate_roles", lambda *_: True)
+            async def mock_exchange_tokens(_):
+                return {"service-a": "exchanged"}
+            monkeypatch.setattr(authenticator, "_exchange_tokens", mock_exchange_tokens)
+
+            result = await authenticator.authenticate(None)
+
+            assert result is not None
+            assert result["auth_state"]["exchanged_tokens"] == {"service-a": "exchanged"}
+            assert not result["admin"]
+
+        async def test_sets_admin_flag_for_admin_role(self, authenticator, monkeypatch):
+            self._patch_super(monkeypatch, self._make_mock_user())
+            monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
+            monkeypatch.setattr(authenticator, "claim_roles_key", lambda *_: {"swan-admins"})
+            monkeypatch.setattr(authenticator, "_validate_roles", lambda *_: True)
+            async def mock_exchange_tokens(_):
+                return {}
+            monkeypatch.setattr(authenticator, "_exchange_tokens", mock_exchange_tokens)
+
+            result = await authenticator.authenticate(None)
+            assert result["admin"] is True
