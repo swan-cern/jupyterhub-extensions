@@ -1,19 +1,18 @@
 import asyncio
 import json
+from unittest.mock import MagicMock
+from urllib.error import HTTPError
 
 import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
 from jwt.algorithms import RSAAlgorithm
+from oauthenticator.generic import GenericOAuthenticator
+from oauthenticator.oauth2 import OAuthLoginHandler
 from tornado import web
-from urllib.error import HTTPError
-
-from unittest.mock import MagicMock
 from traitlets import TraitError
 
 from ..auth import KeyCloakAuthenticator, OIDCOAuthLoginHandler
-from oauthenticator.oauth2 import OAuthLoginHandler
-from oauthenticator.generic import GenericOAuthenticator
 
 
 def _generate_mock_public_private_key_pair():
@@ -124,7 +123,7 @@ class TestKeyCloakAuthenticator:
     class TestValidators:
         def test_pre_spawn_hook_raises_for_non_callable(self, unconfigured_authenticator):
             with pytest.raises(TraitError):
-                unconfigured_authenticator.pre_spawn_hook = "not callable" 
+                unconfigured_authenticator.pre_spawn_hook = "not callable"
 
         def test_claim_roles_key_raises_for_non_callable(self, unconfigured_authenticator):
             with pytest.raises(TraitError):
@@ -311,11 +310,11 @@ class TestKeyCloakAuthenticator:
         def test_empty_allowed_roles_permits_all(self, unconfigured_authenticator):
             assert unconfigured_authenticator._validate_roles({"any-role"})
             assert unconfigured_authenticator._validate_roles(set())
-    
+
         def test_matching_role_permits(self, unconfigured_authenticator):
             unconfigured_authenticator._allowed_roles = {"admin"}
             assert unconfigured_authenticator._validate_roles({"admin", "user"})
-    
+
         def test_no_matching_role_denies(self, unconfigured_authenticator):
             unconfigured_authenticator._allowed_roles = {"admin"}
             assert not unconfigured_authenticator._validate_roles({"user"})
