@@ -9,6 +9,7 @@ from tornado import web
 from urllib.error import HTTPError
 
 from unittest.mock import MagicMock
+from traitlets import TraitError
 
 from ..auth import KeyCloakAuthenticator, OIDCOAuthLoginHandler
 from oauthenticator.oauth2 import OAuthLoginHandler
@@ -119,6 +120,19 @@ class TestKeyCloakAuthenticator:
         def test_raises_if_not_oidc_issuer(self):
             with pytest.raises(Exception, match="No OIDC issuer url provided"):
                 KeyCloakAuthenticator()
+
+    class TestValidators:
+        def test_pre_spawn_hook_raises_for_non_callable(self, unconfigured_authenticator):
+            with pytest.raises(TraitError):
+                unconfigured_authenticator.pre_spawn_hook = "not callable" 
+
+        def test_claim_roles_key_raises_for_non_callable(self, unconfigured_authenticator):
+            with pytest.raises(TraitError):
+                unconfigured_authenticator.claim_roles_key = "not callable"
+
+        def test_default_claim_roles_key_returns_empty_set_when_no_resource_access(self, authenticator):
+            roles = authenticator.claim_roles_key(authenticator, {})
+            assert roles == set()
 
     class TestGetOidcConfigs:
         @pytest.mark.parametrize("doc", [
