@@ -34,3 +34,6 @@ version = { path = "keycloakauthenticator/_version.py" }
 packages = ["keycloakauthenticator"]
 # tests not needed in the built package
 exclude = ["tests/"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

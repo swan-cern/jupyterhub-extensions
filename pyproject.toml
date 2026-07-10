@@ -11,6 +11,9 @@ dev = [
     "swanspawner @ file:///${PROJECT_ROOT}/SwanSpawner",
 ]
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
 [tool.ruff]
 target-version = "py312"
 
