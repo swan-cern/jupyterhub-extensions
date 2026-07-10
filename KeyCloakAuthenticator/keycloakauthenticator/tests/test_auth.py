@@ -609,7 +609,7 @@ class TestKeyCloakAuthenticator:
             monkeypatch.setattr(authenticator, "_exchange_tokens", mock_exchange_tokens)
 
             result = await authenticator.authenticate(None)
-            assert result["admin"] is True
+            assert result["admin"]
 
     class TestPreSpawnStart:
         async def test_does_nothing_when_no_hook(self, authenticator):
