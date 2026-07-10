@@ -597,3 +597,27 @@ class TestKeyCloakAuthenticator:
 
             result = await authenticator.authenticate(None)
             assert result["admin"] is True
+
+    class TestPreSpawnStart:
+        async def test_does_nothing_when_no_hook(self, authenticator):
+            user = MagicMock()
+            await authenticator.pre_spawn_start(user, MagicMock())
+            user.get_auth_state.assert_not_called()
+
+        async def test_calls_sync_hook_with_auth_state(self, authenticator):
+            auth_state = {"access_token": "test-token"}
+            hook_calls = []
+
+            async def mock_get_auth_state():
+                return auth_state
+
+            def mock_hook(auth, spawner, state):
+                hook_calls.append(state)
+
+            user = MagicMock()
+            user.get_auth_state = mock_get_auth_state
+            authenticator.pre_spawn_hook = mock_hook
+
+            await authenticator.pre_spawn_start(user, MagicMock())
+
+            assert hook_calls == [auth_state]
