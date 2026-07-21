@@ -331,6 +331,78 @@ class TestCullIdle:
         assert ("server", "alice") in deleted   # DELETE was issued
         assert ("user", "alice") not in deleted  # but user not removed yet
 
+    async def test_legacy_user_with_running_server_is_culled(self, mock_http):
+        # JupyterHub < 0.9: no 'servers' key, server info lives on the user object
+        user = {
+            "name": "alice",
+            "server": "/user/alice/",
+            "last_activity": _ago(60),
+            "pending": None,
+            "created": _ago(120),
+        }
+        deleted = []
+        mock_http(handler=self._handler([user], deleted=deleted))
+
+        await cull_idle(HUB_URL, api_token=API_TOKEN, inactive_limit=self.INACTIVE_LIMIT)
+
+        assert ("server", "alice") in deleted
+
+    async def test_legacy_user_with_no_server_is_not_culled(self, mock_http):
+        # JupyterHub < 0.9: user['server'] is None → servers dict stays empty
+        user = {
+            "name": "alice",
+            "server": None,
+            "last_activity": _ago(60),
+            "pending": None,
+            "created": _ago(120),
+        }
+        deleted = []
+        mock_http(handler=self._handler([user], deleted=deleted))
+
+        await cull_idle(HUB_URL, api_token=API_TOKEN, inactive_limit=self.INACTIVE_LIMIT)
+
+        assert deleted == []
+
+    async def test_cull_users_max_age_culls_recently_active_user(self, mock_http):
+        # User was recently active but older than max_age → culled by age
+        user = _user_model("alice", servers={}, inactive_minutes=5, created_minutes=120)
+        deleted = []
+        mock_http(handler=self._handler([user], deleted=deleted))
+
+        await cull_idle(
+            HUB_URL, api_token=API_TOKEN, inactive_limit=self.INACTIVE_LIMIT,
+            cull_users=True, max_age=3600,
+        )
+
+        assert ("user", "alice") in deleted
+
+    async def test_cull_users_no_created_field_uses_last_activity(self, mock_http):
+        # No 'created' key → age = None, but last_activity is still used for inactivity check
+        user = {
+            "name": "alice",
+            "servers": {},
+            "last_activity": _ago(60),
+            "server": None,
+        }
+        deleted = []
+        mock_http(handler=self._handler([user], deleted=deleted))
+
+        await cull_idle(HUB_URL, api_token=API_TOKEN, inactive_limit=self.INACTIVE_LIMIT, cull_users=True)
+
+        assert ("user", "alice") in deleted
+
+    async def test_cull_users_no_last_activity_falls_back_to_age(self, mock_http):
+        # last_activity is None → inactive falls back to age (time since created)
+        user = _user_model("alice", servers={}, inactive_minutes=5, created_minutes=60)
+        user["last_activity"] = None
+        deleted = []
+        mock_http(handler=self._handler([user], deleted=deleted))
+
+        # age = 60 min = 3600s > 1800s inactive_limit → culled via age fallback
+        await cull_idle(HUB_URL, api_token=API_TOKEN, inactive_limit=self.INACTIVE_LIMIT, cull_users=True)
+
+        assert ("user", "alice") in deleted
+
     async def test_no_started_field_still_culls_by_inactivity(self, mock_http):
         server = _server_model(inactive_minutes=60)
         del server["started"]
@@ -373,6 +445,27 @@ class TestCullIdle:
         delete_calls = [c for c in client.calls if c.method == "DELETE"]
         assert len(delete_calls) == 1
         assert "/users/alice/servers/gpu" in delete_calls[0].url
+
+    async def test_exception_in_handle_user_is_caught_and_loop_continues(self, mock_http):
+        users = [
+            _user_model("alice", servers={"": _server_model(inactive_minutes=60)}),
+            _user_model("bob", servers={"": _server_model(inactive_minutes=60)}),
+        ]
+        deleted = []
+
+        def handler(req):
+            if req.method == "GET":
+                return MockHTTPResponse(200, json.dumps(users).encode())
+            if req.method == "DELETE" and "alice" in req.url:
+                raise RuntimeError("simulated failure")
+            deleted.append(req.url)
+            return MockHTTPResponse(204)
+
+        mock_http(handler=handler)
+
+        await cull_idle(HUB_URL, api_token=API_TOKEN, inactive_limit=self.INACTIVE_LIMIT)
+
+        assert any("bob" in url for url in deleted)
 
     async def test_disable_hooks_skips_check_ticket(self, mock_http, monkeypatch):
         ticket_calls = []
