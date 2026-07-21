@@ -331,6 +331,15 @@ class TestCullIdle:
         assert ("server", "alice") in deleted   # DELETE was issued
         assert ("user", "alice") not in deleted  # but user not removed yet
 
+    async def test_no_concurrency_limit_still_culls(self, mock_http):
+        user = _user_model("alice", servers={"": _server_model(inactive_minutes=60)})
+        deleted = []
+        mock_http(handler=self._handler([user], deleted=deleted))
+
+        await cull_idle(HUB_URL, api_token=API_TOKEN, inactive_limit=self.INACTIVE_LIMIT, concurrency=0)
+
+        assert ("server", "alice") in deleted
+
     async def test_named_server_uses_servers_url(self, mock_http):
         user = _user_model("alice", servers={"gpu": _server_model(inactive_minutes=60)})
         deleted = []
