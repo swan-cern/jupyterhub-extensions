@@ -4,6 +4,7 @@ dev = [
     "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
     "ruff==0.15.20",
+    "requests==2.34.2",
     "watchfiles==1.2.0",
     "keycloakauthenticator @ file:///${PROJECT_ROOT}/KeyCloakAuthenticator",
     "swanculler @ file:///${PROJECT_ROOT}/SwanCuller",
@@ -13,6 +14,10 @@ dev = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+addopts = "-m 'not integration'"
+markers = [
+    "integration: marks tests as integration tests requiring a running hub (deselect with '-m not integration')",
+]
 
 [tool.ruff]
 target-version = "py312"
