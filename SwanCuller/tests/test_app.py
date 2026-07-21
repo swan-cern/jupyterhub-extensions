@@ -331,6 +331,17 @@ class TestCullIdle:
         assert ("server", "alice") in deleted   # DELETE was issued
         assert ("user", "alice") not in deleted  # but user not removed yet
 
+    async def test_named_server_uses_servers_url(self, mock_http):
+        user = _user_model("alice", servers={"gpu": _server_model(inactive_minutes=60)})
+        deleted = []
+        client = mock_http(handler=self._handler([user], deleted=deleted))
+
+        await cull_idle(HUB_URL, api_token=API_TOKEN, inactive_limit=self.INACTIVE_LIMIT)
+
+        delete_calls = [c for c in client.calls if c.method == "DELETE"]
+        assert len(delete_calls) == 1
+        assert "/users/alice/servers/gpu" in delete_calls[0].url
+
     async def test_disable_hooks_skips_check_ticket(self, mock_http, monkeypatch):
         ticket_calls = []
         monkeypatch.setattr("swanculler.app.check_ticket", lambda name: ticket_calls.append(name))
