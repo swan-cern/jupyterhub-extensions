@@ -331,6 +331,29 @@ class TestCullIdle:
         assert ("server", "alice") in deleted   # DELETE was issued
         assert ("user", "alice") not in deleted  # but user not removed yet
 
+    async def test_no_started_field_still_culls_by_inactivity(self, mock_http):
+        server = _server_model(inactive_minutes=60)
+        del server["started"]
+        user = _user_model("alice", servers={"": server})
+        deleted = []
+        mock_http(handler=self._handler([user], deleted=deleted))
+
+        await cull_idle(HUB_URL, api_token=API_TOKEN, inactive_limit=self.INACTIVE_LIMIT)
+
+        assert ("server", "alice") in deleted
+
+    async def test_no_started_field_skips_max_age_check(self, mock_http):
+        # Without a start time age is None, so max_age cannot trigger culling
+        server = _server_model(inactive_minutes=5)
+        del server["started"]
+        user = _user_model("alice", servers={"": server})
+        deleted = []
+        mock_http(handler=self._handler([user], deleted=deleted))
+
+        await cull_idle(HUB_URL, api_token=API_TOKEN, inactive_limit=self.INACTIVE_LIMIT, max_age=1)
+
+        assert deleted == []
+
     async def test_no_concurrency_limit_still_culls(self, mock_http):
         user = _user_model("alice", servers={"": _server_model(inactive_minutes=60)})
         deleted = []
