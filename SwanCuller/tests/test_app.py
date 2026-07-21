@@ -130,6 +130,154 @@ class TestCheckBlockedUsers:
         else:
             assert len(delete_calls) == 0
 
+    async def test_token_fetch_failure_aborts_check(self, mock_http):
+        app.users = [make_user("alice")]
+        deleted = []
+
+        def handler(req):
+            if req.method == "POST":
+                raise RuntimeError("auth service down")
+            if req.method == "DELETE":
+                deleted.append(req.url)
+            return MockHTTPResponse(200, b"[]")
+
+        mock_http(handler=handler)
+        await check_blocked_users(
+            HUB_URL, API_TOKEN, CLIENT_ID, CLIENT_SECRET, AUTH_URL, AUDIENCE, AUTHZ_URL
+        )
+
+        assert deleted == []
+
+    async def test_empty_identity_data_skips_user(self, mock_http):
+        app.users = [make_user("alice")]
+        deleted = []
+
+        def handler(req):
+            if req.method == "POST":
+                return _token_ok()
+            if "/accounts" in req.url:
+                return MockHTTPResponse(200, json.dumps({"data": []}).encode())
+            if req.method == "DELETE":
+                deleted.append(req.url)
+            return MockHTTPResponse(200, b"[]")
+
+        mock_http(handler=handler)
+        await check_blocked_users(
+            HUB_URL, API_TOKEN, CLIENT_ID, CLIENT_SECRET, AUTH_URL, AUDIENCE, AUTHZ_URL
+        )
+
+        assert deleted == []
+
+    async def test_identity_404_skips_user(self, mock_http):
+        from tornado.httpclient import HTTPClientError
+        app.users = [make_user("alice")]
+        deleted = []
+
+        def handler(req):
+            if req.method == "POST":
+                return _token_ok()
+            if "/accounts" in req.url:
+                raise HTTPClientError(404)
+            if req.method == "DELETE":
+                deleted.append(req.url)
+            return MockHTTPResponse(200, b"[]")
+
+        mock_http(handler=handler)
+        await check_blocked_users(
+            HUB_URL, API_TOKEN, CLIENT_ID, CLIENT_SECRET, AUTH_URL, AUDIENCE, AUTHZ_URL
+        )
+
+        assert deleted == []
+
+    async def test_identity_other_http_error_skips_user(self, mock_http):
+        from tornado.httpclient import HTTPClientError
+        app.users = [make_user("alice")]
+        deleted = []
+
+        def handler(req):
+            if req.method == "POST":
+                return _token_ok()
+            if "/accounts" in req.url:
+                raise HTTPClientError(503)
+            if req.method == "DELETE":
+                deleted.append(req.url)
+            return MockHTTPResponse(200, b"[]")
+
+        mock_http(handler=handler)
+        await check_blocked_users(
+            HUB_URL, API_TOKEN, CLIENT_ID, CLIENT_SECRET, AUTH_URL, AUDIENCE, AUTHZ_URL
+        )
+
+        assert deleted == []
+
+    async def test_legacy_user_model_server_is_deleted(self, mock_http):
+        # No 'servers' key: server info lives on user['server'] (JupyterHub < 0.9)
+        app.users = [{
+            "name": "alice",
+            "server": "/user/alice/",
+            "last_activity": datetime.now(UTC).isoformat(),
+            "pending": None,
+        }]
+        deleted = []
+
+        def handler(req):
+            if req.method == "POST":
+                return _token_ok()
+            if "/accounts" in req.url:
+                return _identity(blocked=True)
+            if req.method == "DELETE":
+                deleted.append(req.url)
+                return MockHTTPResponse(204)
+            return MockHTTPResponse(200, b"[]")
+
+        mock_http(handler=handler)
+        await check_blocked_users(
+            HUB_URL, API_TOKEN, CLIENT_ID, CLIENT_SECRET, AUTH_URL, AUDIENCE, AUTHZ_URL
+        )
+
+        assert any("/users/alice/server" in url for url in deleted)
+
+    async def test_unexpected_delete_response_code_logs_warning(self, mock_http):
+        app.users = [make_user("alice")]
+
+        def handler(req):
+            if req.method == "POST":
+                return _token_ok()
+            if "/accounts" in req.url:
+                return _identity(blocked=True)
+            if req.method == "DELETE":
+                return MockHTTPResponse(500)
+            return MockHTTPResponse(200, b"[]")
+
+        mock_http(handler=handler)
+        # Should not raise — unexpected code is only logged as a warning
+        await check_blocked_users(
+            HUB_URL, API_TOKEN, CLIENT_ID, CLIENT_SECRET, AUTH_URL, AUDIENCE, AUTHZ_URL
+        )
+
+    async def test_exception_accessing_delete_result_is_caught(self, mock_http):
+        class BrokenResponse:
+            @property
+            def code(self):
+                raise RuntimeError("simulated broken response")
+
+        app.users = [make_user("alice")]
+
+        def handler(req):
+            if req.method == "POST":
+                return _token_ok()
+            if "/accounts" in req.url:
+                return _identity(blocked=True)
+            if req.method == "DELETE":
+                return BrokenResponse()
+            return MockHTTPResponse(200, b"[]")
+
+        mock_http(handler=handler)
+        # Should not raise — the exception is caught per-server in the results loop
+        await check_blocked_users(
+            HUB_URL, API_TOKEN, CLIENT_ID, CLIENT_SECRET, AUTH_URL, AUDIENCE, AUTHZ_URL
+        )
+
     async def test_only_blocked_user_is_culled_in_mixed_list(self, mock_http):
         app.users = [
             make_user("blocked_user"),
