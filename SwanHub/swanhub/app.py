@@ -30,7 +30,7 @@ class SWAN(app.JupyterHub):
     @default('logo_file')
     def _logo_file_default(self):
         return os.path.join(
-            self.data_files_path, 'static', 'swan', 'logos', 'logo_swan_cloudhisto.png'
+            self.data_files_path, 'static', 'swan', 'logos', 'logo_swan_cloud.png'
         )
 
     @default('load_roles')
@@ -73,11 +73,8 @@ class SWAN(app.JupyterHub):
 
     def init_tornado_settings(self):
         self.template_vars['current_year'] = datetime.datetime.now().year # For copyright message
-        if datetime.date.today().month == 12:
-            # It's Christmas time!
-            self.template_vars['swan_logo_filename'] = 'swan_letters_christmas.png'
-        else:
-            self.template_vars['swan_logo_filename'] = 'logo_swan_letters.png'
+        # It's Christmas time?
+        self.template_vars['swan_logo_filename'] = 'logo_swan_letters' + ('_christmas.png' if datetime.date.today().month == 12 else '.png')
 
         # Register SwanHub templates with the correct priority:
         # Hub config (c.JupyterHub.template_paths) >> SwanHub templates >> JupyterHub default templates
