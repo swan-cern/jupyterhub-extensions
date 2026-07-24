@@ -8,10 +8,20 @@ from swanhub.spawn_handler import SpawnHandler, sentry_set_spawn_tags
 # Helpers
 # ---------------------------------------------------------------------------
 
+class _MockUser:
+    name = "alice"
+
+
 class _MockHandler:
-    """Minimal stand-in for SpawnHandler — only request.files is accessed."""
+    """Minimal stand-in for SpawnHandler — only request.files and _log_metric are accessed."""
     class request:
         files = {}
+
+    def __init__(self):
+        self.logged_metrics = []
+
+    def _log_metric(self, user, host, metric, value):
+        self.logged_metrics.append((metric, value))
 
 
 def _validate(configs, raw_options, files=None):
@@ -34,8 +44,7 @@ def _b(value):
 @pytest.fixture(autouse=True)
 def configs():
     SpawnHandlersConfigs.clear_instance()
-    instance = SpawnHandlersConfigs.instance()
-    yield instance
+    yield SpawnHandlersConfigs.instance()
     SpawnHandlersConfigs.clear_instance()
 
 
@@ -90,6 +99,72 @@ class TestValidateMandatoryOptions:
         fake_file = object()
         _, decoded = _validate(configs, {}, files={"script": [fake_file]})
         assert decoded["script_file"] == [fake_file]
+
+
+# ---------------------------------------------------------------------------
+# TestLogSpawnMetrics
+# ---------------------------------------------------------------------------
+
+class TestLogSpawnMetrics:
+    @pytest.fixture(autouse=True)
+    def _no_sentry(self, monkeypatch):
+        self.sentry_captures = []
+        monkeypatch.setattr(
+            "swanhub.spawn_handler.sentry_sdk.capture_exception",
+            lambda e: self.sentry_captures.append(e),
+        )
+
+    def _run(self, options, duration=1.0, exception=None):
+        handler = _MockHandler()
+        SpawnHandler._log_spawn_metrics(handler, _MockUser(), options, duration, exception)
+        return handler.logged_metrics
+
+    def test_success_logs_exception_class_none(self):
+        metrics = self._run({"lcg": "LCG_105"})
+        assert any(k.endswith("exception_class") and v == "None" for k, v in metrics)
+
+    def test_success_logs_duration(self):
+        metrics = self._run({"lcg": "LCG_105"}, duration=42.5)
+        assert any(k.endswith("duration_sec") and v == 42.5 for k, v in metrics)
+
+    def test_success_does_not_call_sentry(self):
+        self._run({"lcg": "LCG_105"})
+        assert self.sentry_captures == []
+
+    def test_failure_logs_exception_class(self):
+        exc = ValueError("bad option")
+        metrics = self._run({}, exception=exc)
+        assert any(k.endswith("exception_class") and v == "ValueError" for k, v in metrics)
+
+    def test_failure_logs_exception_message(self):
+        exc = ValueError("bad option")
+        metrics = self._run({}, exception=exc)
+        assert any(k.endswith("exception_message") and v == "bad option" for k, v in metrics)
+
+    def test_failure_calls_sentry_capture(self):
+        exc = RuntimeError("spawn failed")
+        self._run({}, exception=exc)
+        assert self.sentry_captures == [exc]
+
+    def test_scriptenv_set_when_value_present(self):
+        metrics = self._run({"scriptenv": "#!/bin/bash"})
+        assert ("spawn_form.scriptenv", "set") in metrics
+
+    def test_scriptenv_not_set_when_empty(self):
+        metrics = self._run({"scriptenv": ""})
+        assert ("spawn_form.scriptenv", "not_set") in metrics
+
+    def test_slash_in_value_replaced_by_underscore(self):
+        metrics = self._run({"lcg": "LCG/105"})
+        assert ("spawn_form.lcg", "LCG_105") in metrics
+
+    def test_spawn_context_key_uses_lcg_and_cluster(self):
+        metrics = self._run({"lcg": "LCG_105", "clusters": "k8s"})
+        assert any("LCG_105.k8s" in k for k, _ in metrics)
+
+    def test_spawn_context_key_defaults_when_options_absent(self):
+        metrics = self._run({})
+        assert any("CustomEnv.none" in k for k, _ in metrics)
 
 
 # ---------------------------------------------------------------------------
