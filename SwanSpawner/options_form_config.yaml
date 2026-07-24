@@ -1,0 +1,77 @@
+lcg_options:
+- type: "label"
+  label:
+    value: "label1"
+    text: "Recommended releases (General Purpose)"
+- type: "selection"
+  lcg:
+    value: "LCG_110_swan"
+    text: "110"
+  platforms:
+  - value: "x86_64-el9-gcc13-opt"
+    text: "AlmaLinux 9 (gcc13)"
+  <<: *with_rucio
+  cores:
+  - value: "2"
+    text: "2"
+  - value: "4"
+    text: "4"
+  memory:
+  - value: "8"
+    text: "8 GB"
+  - value: "10"
+    text: "10 GB"
+  - value: "16"
+    text: "16 GB"
+  clusters:
+  - value: "none"
+    text: "None"
+  - value: "hadoop-analytix"
+    text: "General Purpose (Analytix)"
+  - value: "k8s"
+    text: "Cloud Containers (K8s)"
+  - value: "hadoop-qa"
+    text: "QA"
+  condor:
+  - value: "none"
+    text: "None"
+  - value: "cern_condor"
+    text: "CERN HTCondor pool"
+- type: "label"
+  label: 
+    value: "empty2"
+    text: ""
+- type: "label"
+  label: 
+    value: "label2"
+    text: "Development releases (might be unstable)"
+- type: "selection"
+  lcg: 
+    value: "devswan/latest"
+    text: "Bleeding Edge"
+  platforms: 
+  - value: "x86_64-el9-gcc13-opt"
+    text: "AlmaLinux 9 (gcc13)"
+  <<: *with_rucio
+  cores: 
+  - value: "2"
+    text: "2"
+  memory: 
+  - value: "8"
+    text: "8 GB"
+  - value: "16"
+    text: "16 GB"
+  clusters: 
+  - value: "none"
+    text: "None"
+  - value: "hadoop-analytix"
+    text: "General Purpose (Analytix)"
+  - value: "k8s"
+    text: "Cloud Containers (K8s)"
+  - value: "hadoop-qa"
+    text: "QA"
+  condor: 
+  - value: "none"
+    text: "None"
+  - value: "cern_condor"
+    text: "CERN HTCondor pool"

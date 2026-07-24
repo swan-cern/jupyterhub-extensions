@@ -59,78 +59,73 @@ c.SwanSpawner.options_form_config = '<path>'
 
 High level objects 
 
-```json
-{
- "header": <options header text>,
- "options": <array of options objects>
-...
-}
+```yaml
+optionsform:
+  header: <options header text>
+  enable_customenv_form: <boolean>
+  enable_generate_url_form: <boolean>
+  enable_network_form: <boolean>
+  with_rucio: <array of rucio options objects>
+  lcg_options: <array of lcg options objects>
+  customenv_options: <array of customenvs options objects>
 ```
 
 Options type label
 
-```json
-{
- "options": [
-    {
-      "type": "label",
-      "label": {
-        "value": <id of label>,
-        "text": <displayed text of label>
-      }
-    },
-    ...
-]
-...
-}
+```yaml
+  lcg_options:
+  - type: "label"
+    label: 
+      value: <id of label>,
+      text: <displayed text of label>
+  # ...
 ```
 
 Options type selection
 
-```json
-{
- "options": [
-    {
-      "type": "selection",
-      "lcg": {
-        "value": <id of lcg>,
-        "text": <displayed text of lcg>
-      },
-      "platforms": [
-        {
-            "value": <id of platform>,
-            "text": <displayed text of platform>
-        }
-        ...
-      ],
-      "cores": [
-        {
-            "value": <id of cores selection>,
-            "text": <displayed text of cores selection>
-        }
-        ...
-      ],
-      "memory": [
-        {
-            "value": <id of memory selection>,
-            "text": <displayed text of memory selection>
-        }
-        ...
-      ],
-      "clusters": [
-        {
-            "value": <id of cluster>,
-            "text": <displayed text of cluster>
-        }
-        ...
-      ]
-    },
-    ...
-]
-...
-}
+```yaml
+  lcg_options:
+  - type: "selection"
+    lcg:
+      value: <id of lcg>
+      text: <displayed text of lcg>
+    platforms:
+      - value: <id of platform>
+        text: <displayed text of platform>
+      # ...
+    cores:
+      - value: <id of cores selection>
+        text: <displayed text of cores selection>
+      # ...
+    memory:
+      - value: <id of memory selection>
+        text: <displayed text of memory selection>
+      # ...
+    clusters:
+      - value: <id of cluster>
+        text: <displayed text of cluster>
+      # ...
+  # ...
+  customenv_options:
+  - type: "selection"
+    builder:
+      value: <id of builder>
+      text: <displayed text of builder>
+    cores:
+      - value: <id of cores selection>
+        text: <displayed text of cores selection>
+      # ...
+    memory:
+      - value: <id of memory selection>
+        text: <displayed text of memory selection>
+      # ...
+    clusters:
+      - value: <id of cluster>
+        text: <displayed text of cluster>
+      # ...
+  # ...
 ```
-An example json file can be seen in [options_form_config.json]()
+An example yaml file can be seen in [options_form_config.yaml]()
 
 ## Mount options
 
