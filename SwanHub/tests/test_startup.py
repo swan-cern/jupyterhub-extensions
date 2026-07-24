@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 HUB_URL = "http://127.0.0.1:18000"
 ADMIN_TOKEN = "test-admin-token"
-OPTIONS_FORM_CONFIG = Path(__file__).parents[2] / "SwanSpawner" / "options_form_config.json"
+OPTIONS_FORM_CONFIG = Path(__file__).parents[2] / "SwanSpawner" / "options_form_config.yaml"
 
 # ---------------------------------------------------------------------------
 # User population — controls what gets inserted into the DB before hub start
