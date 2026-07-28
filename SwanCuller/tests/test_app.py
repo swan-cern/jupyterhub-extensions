@@ -615,6 +615,17 @@ class TestCullIdle:
 
         assert any("bob" in url for url in deleted)
 
+    async def test_hooks_called_for_non_culled_session(self, mock_http, monkeypatch):
+        ticket_calls = []
+        monkeypatch.setattr("swanculler.app.check_ticket", lambda name: ticket_calls.append(name))
+
+        user = _user_model("alice", servers={"": _server_model(inactive_minutes=5)})
+        mock_http(handler=self._handler([user]))
+
+        await cull_idle(HUB_URL, api_token=API_TOKEN, inactive_limit=self.INACTIVE_LIMIT)
+
+        assert "alice" in ticket_calls
+
     async def test_disable_hooks_skips_check_ticket(self, mock_http, monkeypatch):
         ticket_calls = []
         monkeypatch.setattr("swanculler.app.check_ticket", lambda name: ticket_calls.append(name))
