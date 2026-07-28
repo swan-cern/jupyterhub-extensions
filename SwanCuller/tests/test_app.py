@@ -617,7 +617,11 @@ class TestCullIdle:
 
     async def test_hooks_called_for_non_culled_session(self, mock_http, monkeypatch):
         ticket_calls = []
-        monkeypatch.setattr("swanculler.app.check_ticket", lambda name: ticket_calls.append(name))
+
+        def track(name):
+            ticket_calls.append(name)
+
+        monkeypatch.setattr("swanculler.app.check_ticket", track)
 
         user = _user_model("alice", servers={"": _server_model(inactive_minutes=5)})
         mock_http(handler=self._handler([user]))
@@ -628,7 +632,11 @@ class TestCullIdle:
 
     async def test_disable_hooks_skips_check_ticket(self, mock_http, monkeypatch):
         ticket_calls = []
-        monkeypatch.setattr("swanculler.app.check_ticket", lambda name: ticket_calls.append(name))
+
+        def track(name):
+            ticket_calls.append(name)
+
+        monkeypatch.setattr("swanculler.app.check_ticket", track)
 
         user = _user_model("alice", servers={"": _server_model(inactive_minutes=5)})
         mock_http(handler=self._handler([user]))
