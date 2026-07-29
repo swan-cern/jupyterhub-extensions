@@ -1,8 +1,8 @@
-import pytest
+import typing
 
+import pytest
 from swanhub.handlers_configs import SpawnHandlersConfigs
 from swanhub.spawn_handler import SpawnHandler, sentry_set_spawn_tags
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -15,7 +15,7 @@ class _MockUser:
 class _MockHandler:
     """Minimal stand-in for SpawnHandler — only request.files and _log_metric are accessed."""
     class request:
-        files = {}
+        files: typing.ClassVar[dict] = {}
 
     def __init__(self):
         self.logged_metrics = []
@@ -109,10 +109,10 @@ class TestLogSpawnMetrics:
     @pytest.fixture(autouse=True)
     def _no_sentry(self, monkeypatch):
         self.sentry_captures = []
-        monkeypatch.setattr(
-            "swanhub.spawn_handler.sentry_sdk.capture_exception",
-            lambda e: self.sentry_captures.append(e),
-        )
+        def capture(e):
+            self.sentry_captures.append(e)
+
+        monkeypatch.setattr("swanhub.spawn_handler.sentry_sdk.capture_exception", capture)
 
     def _run(self, options, duration=1.0, exception=None):
         handler = _MockHandler()
