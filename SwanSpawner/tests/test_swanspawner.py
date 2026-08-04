@@ -455,3 +455,70 @@ class TestOptionsFromForm:
         del formdata['repository']
         result = _SwanSpawner.options_from_form(mock, formdata)
         assert result['builder'] == 'docker'
+
+
+# ---------------------------------------------------------------------------
+# TestGetSelection
+# ---------------------------------------------------------------------------
+
+_LCG_CONFIG = {
+    'lcg_options': [
+        {'type': 'label', 'label': {'value': 'label1', 'text': 'Recommended'}},
+        {
+            'type': 'selection',
+            'lcg': {'value': 'LCG_110_swan'},
+            'cores': [{'value': '2'}, {'value': '4'}],
+        },
+        {
+            'type': 'selection',
+            'lcg': {'value': 'LCG_111_swan'},
+            'cores': [{'value': '2'}],
+        },
+    ],
+    'customenv_options': [
+        {
+            'type': 'selection',
+            'builder': {'value': 'docker'},
+            'cores': [{'value': '2'}],
+        },
+    ],
+}
+
+
+def _call_get_selection(config, options, parent):
+    mock = _MockSpawnerForForm(config_path=None)
+    return _SwanSpawner._get_selection(mock, config, options, parent)
+
+
+class TestGetSelection:
+    def test_lcg_selection_found(self):
+        options = {'software_source': 'lcg', 'lcg': 'LCG_110_swan'}
+        result = _call_get_selection(_LCG_CONFIG, options, 'lcg')
+        assert result['lcg']['value'] == 'LCG_110_swan'
+        assert result['type'] == 'selection'
+
+    def test_second_lcg_entry_found(self):
+        options = {'software_source': 'lcg', 'lcg': 'LCG_111_swan'}
+        result = _call_get_selection(_LCG_CONFIG, options, 'lcg')
+        assert result['lcg']['value'] == 'LCG_111_swan'
+
+    def test_label_entries_are_skipped(self):
+        # The label entry comes first; _get_selection must skip it and find the selection
+        options = {'software_source': 'lcg', 'lcg': 'LCG_110_swan'}
+        result = _call_get_selection(_LCG_CONFIG, options, 'lcg')
+        assert result['type'] == 'selection'
+
+    def test_customenv_selection_found(self):
+        options = {'software_source': 'customenv', 'builder': 'docker'}
+        result = _call_get_selection(_LCG_CONFIG, options, 'builder')
+        assert result['builder']['value'] == 'docker'
+
+    def test_no_matching_value_raises(self):
+        options = {'software_source': 'lcg', 'lcg': 'LCG_999_swan'}
+        with pytest.raises(ValueError, match="Invalid lcg selection"):
+            _call_get_selection(_LCG_CONFIG, options, 'lcg')
+
+    def test_unknown_software_source_raises(self):
+        options = {'software_source': 'unknown', 'lcg': 'LCG_110_swan'}
+        with pytest.raises(KeyError):
+            _call_get_selection(_LCG_CONFIG, options, 'lcg')
