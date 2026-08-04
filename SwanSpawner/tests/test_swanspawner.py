@@ -62,6 +62,91 @@ def _call_validate_selection(selection, options):
     return mock
 
 
+# All plain string constants from SwanSpawner — copied to avoid traitlet descriptor issues
+# (options_form_config / stacks_for_customenvs are traitlets, so we can't inherit and must
+# set them as plain instance attributes on a standalone class).
+class _MockSpawnerForForm:
+    software_source = 'software_source'
+    builder = 'builder'
+    builder_version = 'builder_version'
+    repository = 'repository'
+    lcg_rel_field = 'lcg'
+    use_local_packages_field = 'use-local-packages'
+    platform_field = 'platforms'
+    user_script_env_field = 'scriptenv'
+    user_n_cores = 'cores'
+    user_memory = 'memory'
+    gpu = 'gpu'
+    use_jupyterlab_field = 'use-jupyterlab'
+    spark_cluster_field = 'clusters'
+    condor_pool = 'condor'
+    rucio_instance = 'rucio'
+    rucio_rse = 'rucioRSE'
+    rucio_rse_mount_path = 'rse_mount_path'
+    rucio_path_begins_at = 'path_begins_at'
+    file = 'file'
+    user_interface = 'user_interface'
+    customenv_special_type = 'customenv'
+    lcg_special_type = 'lcg'
+
+    _get_selection = _SwanSpawner._get_selection
+    _validate_selection_options = _SwanSpawner._validate_selection_options
+    _popup_error = _SwanSpawner._popup_error
+
+    def __init__(self, config_path, stacks_for_customenvs=None):
+        self.log = _MockLog()
+        self.options_form_config = config_path
+        self.stacks_for_customenvs = stacks_for_customenvs or []
+        self.offload = False
+
+
+# Minimal YAML for tests — no YAML anchors, no rucio section
+_FORM_YAML = """
+lcg_options:
+- type: "selection"
+  lcg:
+    value: "LCG_110_swan"
+  platforms:
+  - value: "x86_64-el9-gcc13-opt"
+  cores:
+  - value: "2"
+  - value: "4"
+  memory:
+  - value: "8"
+  - value: "16"
+  clusters:
+  - value: "none"
+  - value: "spark"
+  condor:
+  - value: "none"
+
+customenv_options:
+- type: "selection"
+  builder:
+    value: "docker"
+  cores:
+  - value: "2"
+  - value: "4"
+  memory:
+  - value: "8"
+  - value: "16"
+- type: "selection"
+  builder:
+    value: "buildkit:2.0"
+  cores:
+  - value: "2"
+  memory:
+  - value: "8"
+"""
+
+
+@pytest.fixture
+def form_config(tmp_path):
+    p = tmp_path / "options_form.yaml"
+    p.write_text(_FORM_YAML)
+    return str(p)
+
+
 class TestGetRepoNameFromOptions:
     """Test suite for get_repo_name_from_options function"""
     PROJECT_FOLDER = "SWAN_projects"
@@ -279,3 +364,94 @@ class TestValidateSelectionOptions:
         }
         with pytest.raises(ValueError):
             _call_validate_selection(selection, {'cores': '999', 'memory': '8'})
+
+
+# ---------------------------------------------------------------------------
+# TestOptionsFromForm
+# ---------------------------------------------------------------------------
+
+class TestOptionsFromForm:
+    @staticmethod
+    def _lcg_formdata(**overrides):
+        data = {
+            'software_source': ['lcg'],
+            'lcg': ['LCG_110_swan'],
+            'platforms': ['x86_64-el9-gcc13-opt'],
+            'scriptenv': ['none'],
+            'condor': ['none'],
+            'cores': ['2'],
+            'memory': ['8'],
+        }
+        data.update(overrides)
+        return data
+
+    @staticmethod
+    def _customenv_formdata(**overrides):
+        data = {
+            'software_source': ['customenv'],
+            'builder': ['docker'],
+            'repository': ['https://github.com/user/repo'],
+            'cores': ['2'],
+            'memory': ['8'],
+        }
+        data.update(overrides)
+        return data
+
+    def test_lcg_common_fields_extracted(self, form_config):
+        mock = _MockSpawnerForForm(form_config)
+        result = _SwanSpawner.options_from_form(mock, self._lcg_formdata())
+        assert result['software_source'] == 'lcg'
+        assert result['lcg'] == 'LCG_110_swan'
+        assert result['platforms'] == 'x86_64-el9-gcc13-opt'
+
+    def test_cores_converted_to_int(self, form_config):
+        mock = _MockSpawnerForForm(form_config)
+        result = _SwanSpawner.options_from_form(mock, self._lcg_formdata())
+        assert result['cores'] == 2
+        assert isinstance(result['cores'], int)
+
+    def test_memory_gets_g_suffix(self, form_config):
+        mock = _MockSpawnerForForm(form_config)
+        result = _SwanSpawner.options_from_form(mock, self._lcg_formdata())
+        assert result['memory'] == '8G'
+
+    def test_offload_false_when_no_cluster(self, form_config):
+        mock = _MockSpawnerForForm(form_config)
+        _SwanSpawner.options_from_form(mock, self._lcg_formdata())
+        assert mock.offload is False
+
+    def test_offload_true_when_cluster_set(self, form_config):
+        mock = _MockSpawnerForForm(form_config)
+        _SwanSpawner.options_from_form(mock, self._lcg_formdata(clusters=['spark']))
+        assert mock.offload is True
+
+    def test_unknown_software_source_raises(self, form_config):
+        mock = _MockSpawnerForForm(form_config)
+        with pytest.raises(ValueError):
+            _SwanSpawner.options_from_form(mock, self._lcg_formdata(software_source=['unknown']))
+
+    def test_customenv_builder_and_repository_extracted(self, form_config):
+        mock = _MockSpawnerForForm(form_config)
+        result = _SwanSpawner.options_from_form(mock, self._customenv_formdata())
+        assert result['builder'] == 'docker'
+        assert result['repository'] == 'https://github.com/user/repo'
+
+    def test_customenv_builder_version_split(self, form_config):
+        mock = _MockSpawnerForForm(form_config)
+        result = _SwanSpawner.options_from_form(mock, self._customenv_formdata(builder=['buildkit:2.0']))
+        assert result['builder'] == 'buildkit'
+        assert result['builder_version'] == '2.0'
+
+    def test_customenv_missing_repository_raises(self, form_config):
+        mock = _MockSpawnerForForm(form_config)
+        formdata = self._customenv_formdata()
+        del formdata['repository']
+        with pytest.raises(ValueError, match="no repository specified"):
+            _SwanSpawner.options_from_form(mock, formdata)
+
+    def test_customenv_missing_repository_ok_for_stack(self, form_config):
+        mock = _MockSpawnerForForm(form_config, stacks_for_customenvs=['docker'])
+        formdata = self._customenv_formdata()
+        del formdata['repository']
+        result = _SwanSpawner.options_from_form(mock, formdata)
+        assert result['builder'] == 'docker'
