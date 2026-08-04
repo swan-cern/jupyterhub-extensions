@@ -13,6 +13,7 @@ _SwanSpawner = define_SwanSpawner_from(object)
 class _MockLog:
     def __init__(self):
         self.warnings = []
+        self.errors = []
 
     def info(self, *args, **kwargs):
         pass
@@ -20,8 +21,8 @@ class _MockLog:
     def warning(self, msg, *args, **kwargs):
         self.warnings.append(msg)
 
-    def error(self, *args, **kwargs):
-        pass
+    def error(self, msg, *args, **kwargs):
+        self.errors.append(msg)
 
 
 class _MockSpawner:
@@ -40,6 +41,25 @@ def _call_validate_rucio(selection, options):
     mock = _MockSpawner()
     result = _SwanSpawner._validate_rucio_options(mock, selection, options)
     return result, mock.log
+
+
+class _MockSpawnerForSelection(_MockSpawner):
+    """Extends _MockSpawner with tracked _validate_rucio_options and real _popup_error."""
+
+    def __init__(self):
+        super().__init__()
+        self.rucio_calls = []
+
+    def _validate_rucio_options(self, selection, options):
+        self.rucio_calls.append((selection, options))
+
+    _popup_error = _SwanSpawner._popup_error
+
+
+def _call_validate_selection(selection, options):
+    mock = _MockSpawnerForSelection()
+    _SwanSpawner._validate_selection_options(mock, selection, options)
+    return mock
 
 
 class TestGetRepoNameFromOptions:
@@ -199,3 +219,63 @@ class TestValidateRucioOptions:
             {'rucio': 'atlas', 'rucioRSE': 'ATLAS_CERN', 'rse_mount_path': '/eos/atlas', 'path_begins_at': '3'},
         )
         assert log.warnings == []
+
+
+# ---------------------------------------------------------------------------
+# TestValidateSelectionOptions
+# ---------------------------------------------------------------------------
+
+class TestValidateSelectionOptions:
+    def test_empty_selection_passes(self):
+        _call_validate_selection({}, {})
+
+    def test_valid_option_passes(self):
+        selection = {'cores': [{'value': '2'}, {'value': '4'}]}
+        _call_validate_selection(selection, {'cores': '2'})
+
+    def test_invalid_option_raises(self):
+        selection = {'cores': [{'value': '2'}, {'value': '4'}]}
+        with pytest.raises(ValueError, match="Invalid cores selection"):
+            _call_validate_selection(selection, {'cores': '8'})
+
+    def test_missing_option_raises(self):
+        # options.get('cores') → None, not in valid values → _popup_error called.
+        # _popup_error does options[attr] (not .get), so a missing key raises KeyError.
+        selection = {'cores': [{'value': '2'}, {'value': '4'}]}
+        with pytest.raises(KeyError):
+            _call_validate_selection(selection, {})
+
+    def test_non_list_attr_is_skipped(self):
+        # 'type' is a string, 'lcg' is a dict — neither triggers validation
+        selection = {'type': 'selection', 'lcg': {'value': 'LCG_110', 'text': '110'}}
+        _call_validate_selection(selection, {})
+
+    def test_rucio_attr_delegates_to_validate_rucio(self):
+        selection = {'rucio': [{'value': 'atlas', 'rse_options': []}]}
+        options = {'rucio': 'atlas'}
+        mock = _call_validate_selection(selection, options)
+        assert len(mock.rucio_calls) == 1
+        assert mock.rucio_calls[0] == (selection, options)
+
+    def test_rucio_sub_attrs_are_skipped(self):
+        selection = {
+            'rucioRSE': 'ATLAS_CERN',
+            'rse_mount_path': '/eos/atlas',
+            'path_begins_at': '3',
+        }
+        _call_validate_selection(selection, {})
+
+    def test_multiple_valid_options_all_pass(self):
+        selection = {
+            'cores': [{'value': '2'}, {'value': '4'}],
+            'memory': [{'value': '8'}, {'value': '16'}],
+        }
+        _call_validate_selection(selection, {'cores': '2', 'memory': '8'})
+
+    def test_first_invalid_option_raises(self):
+        selection = {
+            'cores': [{'value': '2'}, {'value': '4'}],
+            'memory': [{'value': '8'}, {'value': '16'}],
+        }
+        with pytest.raises(ValueError):
+            _call_validate_selection(selection, {'cores': '999', 'memory': '8'})
