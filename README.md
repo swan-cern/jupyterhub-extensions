@@ -111,7 +111,7 @@ c.Spawner.debug = True
 # ================================================
 
 c.JupyterHub.authenticator_class = 'keycloakauthenticator.auth.KeyCloakAuthenticator'
-c.KeyCloakAuthenticator.username_claim = 'preferred_username'
+c.KeyCloakAuthenticator.username_claim = 'cern_upn'
 
 # URL to redirect to after logout is complete with auth provider.
 c.KeyCloakAuthenticator.logout_redirect_url = 'https://cern.ch/swan'
