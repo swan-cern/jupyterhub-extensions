@@ -43,6 +43,32 @@ jobs:
           uv run --no-project ruff check .
 
       - name: Test code 🧪
-        run: uv run pytest
+        run: uv run pytest --ignore=SwanSpawner/tests
         env:
           SWANHUB_ENV: dev
+
+  integration:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install the latest version of uv and set the python version
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          python-version: "3.12"
+          activate-environment: true
+
+      - name: Install dependencies 📦
+        run: uv pip install --group dev
+
+      - name: Install configurable-http-proxy
+        run: npm install -g configurable-http-proxy
+
+      - name: Run integration tests 🧪
+        run: uv run pytest -m integration --ignore=SwanSpawner/tests
+        env:
+          SWANHUB_ENV: dev
+          JUPYTERHUB_CRYPT_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
