@@ -6,6 +6,7 @@
 
 {% block main %}
 <main class="container justify-content-start" style="max-width: 600px;">
+  {{ render_hub_announcement() }}
   <div class="row">
     <form enctype="multipart/form-data" id="spawn_form" action="{{ url | safe }}" method="post" role="form">
       {% if error_message %}
@@ -68,3 +69,49 @@
   window.onpageshow = () => updateUseTnCheckbox();
 </script>
 {% endblock %}
+
+{% macro render_hub_announcement() %}
+  <div id="swan-announcement-wrapper" class="row d-none">
+    <div class="alert alert-warning alert-dismissible" role="alert">
+      <span id="swan-announcement-text"></span>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <script>
+      async function showAnnouncement() {
+        const resp = await fetch('/hub/static/announcement/announcement.json', {cache: 'no-store'})
+        if (resp.status === 404) {
+          console.log('No announcement found');
+          return;
+        }
+
+        const announcement = (await resp.json()) || {};
+        const {message, expiresDt: _expiresDt} = announcement;
+        const expiresDt = Date.parse(_expiresDt);
+
+        if (!message || isNaN(expiresDt)) {
+          return;
+        }
+
+        if (localStorage.getItem('swan-announcement-dismissed') === message) {
+          return;
+        }
+
+        if (Date.now() > expiresDt) {
+          return;
+        }
+
+        const wrapper = document.getElementById('swan-announcement-wrapper');
+        const text = document.getElementById('swan-announcement-text');
+        const closeBtn = wrapper.querySelector('button');
+
+        text.innerHTML = message;
+        closeBtn.addEventListener('click', () => {
+          localStorage.setItem('swan-announcement-dismissed', message);
+        });
+        wrapper.classList.remove('d-none');
+      }
+
+      showAnnouncement().catch(e => console.error(e));
+    </script>
+  </div>
+{% endmacro %}
