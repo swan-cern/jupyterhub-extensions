@@ -359,6 +359,24 @@ class TestKeyCloakAuthenticator:
             token = _get_mock_token(private_key, "test-token")
             assert authenticator._decode_token(token, options={}) is not None
 
+        def test_does_not_leak_disabled_signature_check_across_calls(self, authenticator, key_pair):
+            # `options` used to default to a mutable `{}`, shared by every call
+            # that doesn't pass one explicitly. The first call below disables
+            # signature verification, which sets "verify_signature": False in
+            # that shared dict; a later call - with signature checking enabled
+            # again, and again relying on the default - must not inherit it.
+            public_key, _ = key_pair
+            self._setup(authenticator, public_key)
+            _, other_private_key = _generate_mock_public_private_key_pair()
+            token_wrong_sig = _get_mock_token(other_private_key, "test-token")
+
+            authenticator.config.check_signature = False
+            assert authenticator._decode_token(token_wrong_sig) is not None
+
+            authenticator.config.check_signature = True
+            with pytest.raises(jwt.exceptions.InvalidSignatureError):
+                authenticator._decode_token(token_wrong_sig)
+
     class TestExchangeTokens:
         async def test_empty_response_body_skips_service(self, authenticator, monkeypatch):
             authenticator.exchange_tokens = ["service-a"]
