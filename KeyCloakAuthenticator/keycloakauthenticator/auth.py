@@ -210,7 +210,9 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         return not self._allowed_roles or \
             (self._allowed_roles & user_roles)
 
-    def _decode_token(self, token, options={}):
+    def _decode_token(self, token, options=None):
+        if options is None:
+            options = {}
         if not self.config.check_signature:
             options.update({"verify_signature": False})
         if not self.verify_aud:
