@@ -316,7 +316,7 @@ class AvailableGPUs:
 
         # Check if the card is allocatable
         resource_name = 'nvidia.com/gpu'
-        count = int(node_status.allocatable[resource_name])
+        count = int(node_status.allocatable.get(resource_name, "0"))
         if count > 0:
             description = f'{gpu_model} ({memory} GB)'
             node_to_flavor[(node_name, resource_name)] = description
