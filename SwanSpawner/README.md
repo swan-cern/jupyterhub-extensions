@@ -1,8 +1,8 @@
 # SWAN Spawner
 
 Spawner for JupyterHub that enables configuring a session with CVMFS/LCG stacks, support for GPU, oAuth tokens, etc. 
-If Binder is used to configure the Docker image used, it reverts to the default upstream configuration.
-Works with both Docker and Kubernetes.
+If Binder is used to configure the container image used, it reverts to the default upstream configuration.
+Requires Kubernetes.
 
 ## Installation
 
@@ -13,12 +13,6 @@ pip3 install swanspawner
 ## Usage
 
 Add to your JupyterHub config file
-
-```python
-c.JupyterHub.spawner_class = 'swanspawner.SwanDockerSpawner'
-```
-
-If you deploy with Docker, or
 
 ```python
 c.JupyterHub.spawner_class = 'swanspawner.SwanKubeSpawner'
@@ -126,24 +120,3 @@ Options type selection
   # ...
 ```
 An example yaml file can be seen in [options_form_config.yaml]()
-
-## Mount options
-
-To mount EOS or CVMFS with SwanDockerSpawner (which requires a mount with propagation "shared"), a new configuration was introduced by upstream:
-
-```python
-c.SwanSpawner.mounts = [
-    {
-        'source': '/eos',
-        'target': '/eos',
-        'type': 'bind',
-        'propagation': 'shared'
-    },
-    {
-        'source': '/cvmfs',
-        'target': '/cvmfs',
-        'type': 'bind',
-        'propagation': 'shared'
-    }
-]
-```
