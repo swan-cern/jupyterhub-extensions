@@ -21,7 +21,7 @@ c.JupyterHub.spawner_class = 'swanspawner.SwanDockerSpawner'
 If you deploy with Docker, or
 
 ```python
-c.JupyterHub.spawner_class = 'swanspawner.SwanKubeSpawner'
+c.JupyterHub.spawner_class = 'swanspawner.swankubespawner.SwanKubeSpawner'
 ```
 
 If you deploy with Kubernetes.
