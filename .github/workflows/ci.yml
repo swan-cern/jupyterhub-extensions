@@ -44,5 +44,3 @@ jobs:
 
       - name: Test code 🧪
         run: uv run pytest
-        env:
-          SWANHUB_ENV: dev
