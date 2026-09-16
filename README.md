@@ -132,7 +132,6 @@ c.KeyCloakAuthenticator.admin_role = 'swan-admins'
 # ================================================
 
 # Use a custom local process spawner:
-# TODO: Figure out how to use our user image with a docker spawner
 c.JupyterHub.spawner_class = 'swanspawner.localswanspawner.LocalSwanSpawner'
 
 # Set the path to the options form config
