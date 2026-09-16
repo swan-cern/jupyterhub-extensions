@@ -359,6 +359,23 @@ class TestKeyCloakAuthenticator:
             token = _get_mock_token(private_key, "test-token")
             assert authenticator._decode_token(token, options={}) is not None
 
+        def test_default_options_immutability(self, authenticator, key_pair):
+            public_key, _ = key_pair
+            self._setup(authenticator, public_key)
+
+            # generate a bad token to check failure
+            _, other_private_key = _generate_mock_public_private_key_pair()
+            token = _get_mock_token(other_private_key, "test-token")
+
+            # first time bad token passes since check_signature is false
+            authenticator.config.check_signature = False
+            assert authenticator._decode_token(token) is not None
+
+            # make sure this fails since check_signature is now true
+            authenticator.config.check_signature = True
+            with pytest.raises(jwt.exceptions.InvalidSignatureError):
+                authenticator._decode_token(token)
+
     class TestExchangeTokens:
         async def test_empty_response_body_skips_service(self, authenticator, monkeypatch):
             authenticator.exchange_tokens = ["service-a"]

@@ -51,16 +51,10 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "KeyCloakAuthenticator/keycloakauthenticator/auth.py" = [
-    "B006",   # mutable-argument-default
     "RUF006", # asyncio-dangling-task
 ]
 "KeyCloakAuthenticator/keycloakauthenticator/__init__.py" = [
     "F403", # undefined-local-with-import-star
-]
-"SwanSpawner/swanspawner/swandockerspawner.py" = [
-    "ASYNC221", # run-process-in-async-function
-    "ASYNC230", # blocking-open-call-in-async-function
-    "ASYNC240", # blocking-path-method-in-async-function
 ]
 "SwanSpawner/swanspawner/_gpuinfo.py" = [
     "B007",    # unused-loop-control-variable
