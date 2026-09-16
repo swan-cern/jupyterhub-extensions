@@ -51,7 +51,6 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "KeyCloakAuthenticator/keycloakauthenticator/auth.py" = [
-    "B006",   # mutable-argument-default
     "RUF006", # asyncio-dangling-task
 ]
 "KeyCloakAuthenticator/keycloakauthenticator/__init__.py" = [
