@@ -15,7 +15,7 @@ pip3 install swanspawner
 Add to your JupyterHub config file
 
 ```python
-c.JupyterHub.spawner_class = 'swanspawner.SwanKubeSpawner'
+c.JupyterHub.spawner_class = 'swanspawner.swankubespawner.SwanKubeSpawner'
 ```
 
 If you deploy with Kubernetes.
