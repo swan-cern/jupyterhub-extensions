@@ -1,4 +1,5 @@
-import subprocess
+import asyncio
+from subprocess import CalledProcessError
 
 from kubernetes_asyncio.client.models import (
     V1Affinity,
@@ -165,15 +166,17 @@ class SwanComputingPodHookHandler(SwanProdPodHookHandler):
 
         try:
             # Setup the user and generate user kube config
-            k8suser_config_base64 = subprocess.check_output(
-                [
-                    "sudo",
-                    "--preserve-env=SWAN_DEV",
-                    "/srv/jupyterhub/private/sparkk8s_token.sh",
-                    username,
-                ],
-                timeout=60,
-            ).decode("ascii")
+            proc = await asyncio.create_subprocess_exec(
+                "sudo",
+                "--preserve-env=SWAN_DEV",
+                "/srv/jupyterhub/private/sparkk8s_token.sh",
+                username,
+                stdout=asyncio.subprocess.PIPE,
+            )
+            stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=60)
+            if proc.returncode != 0:
+                raise CalledProcessError
+            k8suser_config_base64 = stdout.decode("ascii")
         except Exception:
             # if no access, all good for now
             raise ValueError("Could not setup user on k8s")

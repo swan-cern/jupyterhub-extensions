@@ -1,4 +1,5 @@
-import subprocess
+import asyncio
+from subprocess import CalledProcessError
 
 import escapism
 from kubernetes_asyncio.client.models import (
@@ -63,15 +64,17 @@ class SwanProdPodHookHandler(SwanPodHookHandler):
 
         try:
             # Retrieve eos token for user
-            eos_token_base64 = subprocess.check_output(
-                [
-                    "sudo",
-                    "--preserve-env=SWAN_DEV",
-                    "/srv/jupyterhub/private/eos_token.sh",
-                    username,
-                ],
-                timeout=60,
-            ).decode("ascii")
+            proc = await asyncio.create_subprocess_exec(
+                "sudo",
+                "--preserve-env=SWAN_DEV",
+                "/srv/jupyterhub/private/eos_token.sh",
+                username,
+                stdout=asyncio.subprocess.PIPE,
+            )
+            stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=60)
+            if proc.returncode != 0:
+                raise CalledProcessError
+            eos_token_base64 = stdout.decode("ascii")
         except Exception:
             raise ValueError("Could not create required user credential")
 
