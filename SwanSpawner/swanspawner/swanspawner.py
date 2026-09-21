@@ -145,7 +145,7 @@ def define_SwanSpawner_from(base_class):
         cull_period = Int(
             default_value=600,
             config=True,
-            help="Cull period after which Kerberos tokens are refreshed."
+            help="Period after which Kerberos tokens are refreshed."
         )
 
         spark_configuration_path = Unicode(

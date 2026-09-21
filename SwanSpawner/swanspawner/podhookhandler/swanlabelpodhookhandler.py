@@ -1,9 +1,11 @@
 """
 Class handling KubeSpawner.modify_pod_hook(spawner,pod) call
+
+Add basic labels to the spawned pod.
 """
 
 
-class SwanPodHookHandler:
+class SwanLabelPodHookHandler:
     def __init__(self, spawner, pod):
         """
         :type spawner: swanspawner.swankubespawner.SwanKubeSpawner
@@ -12,8 +14,11 @@ class SwanPodHookHandler:
         self.spawner = spawner
         self.pod = pod
 
-    def get_swan_user_pod(self):
-
+    async def get_swan_user_pod(self):
+        """
+        :returns: the modified pod
+        :rtype: V1Pod
+        """
         # pod labels
         if (
             self.spawner.user_options[self.spawner.software_source]

@@ -19,19 +19,18 @@ from kubernetes_asyncio.client.models import (
 )
 from kubernetes_asyncio.client.rest import ApiException
 
-from .swanpodhookhandler import SwanPodHookHandler
+from .swantnpodhookhandler import SwanTNPodHookHandler
 
 """
 Class handling KubeSpawner.modify_pod_hook(spawner,pod) call
+
+Setup EOS for the spawned pod.
 """
 
 
-class SwanProdPodHookHandler(SwanPodHookHandler):
+class SwanEosPodHookHandler(SwanTNPodHookHandler):
     async def get_swan_user_pod(self):
-        super().get_swan_user_pod()
-
-        # Check if the user has access to the Technical Network
-        self._check_tn_access()
+        await super().get_swan_user_pod()
 
         # When eos is enabled, create eos token and side-container for token refresh
         # Note: Spark also requires the side container so Spark is disabled when EOS is disabled.
@@ -40,18 +39,6 @@ class SwanProdPodHookHandler(SwanPodHookHandler):
             self._init_eos_containers(eos_secret_name)
 
         return self.pod
-
-    def _check_tn_access(self):
-        """
-        Helper function to check if this SWAN deployment is exposed to the Technical Network
-        and, if so, validate if the user has access to it.
-        """
-        user_roles = self.spawner.user_roles
-        ats_role = self.spawner.ats_role
-        tn_enabled = self.spawner.tn_enabled
-
-        if tn_enabled and ats_role not in user_roles:
-            raise ValueError("Access to the Technical Network is not granted.")
 
     async def _init_eos_secret(self):
         # Get configuration parameters from environment variables
