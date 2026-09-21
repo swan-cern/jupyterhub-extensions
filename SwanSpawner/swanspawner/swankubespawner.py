@@ -3,7 +3,7 @@ from math import ceil
 
 from kubernetes_asyncio.client.rest import ApiException
 from kubespawner import KubeSpawner
-from traitlets import Dict, Float
+from traitlets import Dict, Float, Unicode
 
 from ._gpuinfo import AvailableGPUs
 from .swanspawner import define_SwanSpawner_from
@@ -21,6 +21,13 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
         config=True,
         help='URL of the Acc-Py user image.'
     )
+
+    swan_container_namespace = Unicode(
+        default_value="swan",
+        config=True,
+        help="Namespace the SWAN hub pod runs in."
+    )
+
     # Constant that sets a role name for participants of SWAN events
     SWAN_EVENTS_ROLE = 'swan-events'
     LHCB_SWAN_ROLE = 'lhcb-swan-users'
