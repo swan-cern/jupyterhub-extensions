@@ -1,1 +1,3 @@
-from .swanlabelpodhookhandler import SwanLabelPodHookHandler as SwanLabelPodHookHandler
+from .swanlabelpodhookhandler import SwanLabelPodHookHandler
+
+__all__ = ["SwanLabelPodHookHandler"]
