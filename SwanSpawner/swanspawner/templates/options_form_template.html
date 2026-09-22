@@ -24,6 +24,12 @@ label.form-label {
     const enable_customenv_form = form_config['enable_customenv_form'];
     const enable_generate_url_form = form_config['enable_generate_url_form'];
     const enable_network_form = form_config['enable_network_form'];
+    const force_jupyterlab = form_config['force_jupyterlab'] === "true";
+    // Hidden section ids. This is used for EOSC where some integrations
+    // are disabled so we just hide the inputs from the form.
+    // Elements stay in the DOM and enabled, so their (default)
+    // values are still submitted with the form.
+    const hidden_sections = new Set(form_config['hidden_sections'] || []);
 
     let form_initialized = false, previous_jupyterlab = undefined;
 
@@ -137,6 +143,7 @@ label.form-label {
      */
     function setVisible(id, visible) {
         const elem = document.getElementById(id);
+        visible = visible && !hidden_sections.has(id);
         elem.style.display = visible ? 'block' : 'none';
         // Enable all inputs if the element is visible, and disable them if it is not visible
         elem.querySelectorAll('input, select, textarea, button').forEach(input => setDisabled(input, !visible));
@@ -291,7 +298,7 @@ label.form-label {
             }
 
             setDisabledMany([jupyter_lab_option, use_local_packages_option], true);
-            jupyter_lab_option.checked = false;
+            jupyter_lab_option.checked = force_jupyterlab;
             use_local_packages_option.checked = false;
         }
     }
@@ -565,6 +572,7 @@ label.form-label {
             // Force the selection of the correct software source
             if (argument === 'use-'+selected_source) checked = true;
             if (argument === 'use-jupyterlab') {
+                if (force_jupyterlab) checked = true;
                 if (selected_source === customenv_source) checked = true;
                 else previous_jupyterlab = checked;
             }
@@ -617,7 +625,7 @@ label.form-label {
         if (is_lcg) {
             const file_option_visibility = document.getElementById('fileOption').checkVisibility();
             // Recover last value specified in LCG config; unblock jupyterlab option
-            jupyter_lab_option.checked = previous_jupyterlab !== undefined ? previous_jupyterlab : false;
+            jupyter_lab_option.checked = force_jupyterlab || (previous_jupyterlab !== undefined ? previous_jupyterlab : false);
 
             adjustOptions();
             adjustPlatforms();
@@ -649,6 +657,10 @@ label.form-label {
         if (enable_network_form !== "true") {
             document.getElementById('network_config').style.display = 'none';
         }
+        hidden_sections.forEach(id => {
+            const elem = document.getElementById(id);
+            if (elem) elem.style.display = 'none';
+        });
     }
 
     /**
@@ -702,7 +714,7 @@ label.form-label {
     <div id="software_sourceSection">
         <h4>Software</h4>
 
-        <div class="mb-3">
+        <div id="interfaceSection" class="mb-3">
             <div class="alert alert-info">
                 Try out our new experimental interface based on JupyterLab and let us know your feedback!
             </div>
@@ -755,7 +767,7 @@ label.form-label {
                 </label>
                 <select id="lcgOptions" name="lcg" onchange="adjustForm(lcg_source);" required class="form-select"></select>
             </div>
-            <div class="form-check mb-3">
+            <div id="localPackagesSection" class="form-check mb-3">
                 <input
                     id="use-local-packages"
                     type="checkbox"
