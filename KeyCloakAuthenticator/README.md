@@ -63,8 +63,8 @@ def pre_spawn_hook(authenticator, spawner, auth_state):
     spawner.user_roles = authenticator.claim_roles_key(authenticator, decoded_token)
 c.KeyCloakAuthenticator.pre_spawn_hook = pre_spawn_hook
 
-#Configure token signature verification
-c.KeyCloakAuthenticator.check_signature=True
+# Configure token signature verification
+c.KeyCloakAuthenticator.check_signature = True
 c.KeyCloakAuthenticator.jwt_signing_algorithms = ["HS256", "RS256"]
 
 # Once a token is refreshed, by default jupyterhub does not trigger a refresh again (triggered when receiving any authenticated request) in `Authenticator.auth_refresh_age` seconds (default 5 minutes)
