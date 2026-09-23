@@ -6,22 +6,17 @@
     font-style: normal;
     font-weight: 300;
     src:
-        local('Roboto Light'), 
+        local('Roboto Light'),
         url(fonts/Roboto-300.ttf) format('truetype');
-  }
+}
 @font-face {
     font-family: 'Roboto';
     font-style: normal;
     font-weight: 400;
     src:
-        local('Roboto'), 
-         url(fonts/Roboto-400.ttf) format('truetype');
+        local('Roboto'),
+        url(fonts/Roboto-400.ttf) format('truetype');
 }
-
-@swan-nav-color-dark: #0f3159;
-@swan-nav-color-dark-hover: #0053a1;
-@swan-nav-color-light: #0053a1;
-@swan-nav-color-light-hover: #00407b;
 
 @swan-heading-color-light: #0053a1;
 @swan-heading-color-dark: #60b2ff;
@@ -34,10 +29,10 @@ body {
     flex-direction: column;
 }
 
-// Navbar
+// Navbar — transparent
 nav.navbar {
-    // Same as mb-5 from bootstrap
-    margin-bottom: 3rem !important;
+    margin-bottom: 0rem !important;
+    background-color: transparent !important;
 
     ul.navbar-nav {
         align-items: center;
@@ -53,89 +48,50 @@ nav + .container, nav + .container-fluid {
     justify-content: center;
 }
 
-footer {
-    // Keep the footer at the bottom of the page, even if the content is short
-    margin-top: auto;
+// Footer — transparent
+footer .container-fluid {
+    background-color: transparent !important;
+    margin-top: 1rem;
 
-    img {
-        max-height: 55px;
-    }
+    img { max-height: 55px; }
 }
 
 [data-bs-theme="light"] {
-    h1, h2, h3, h4, h5, h6 {
-        color: @swan-heading-color-light;
-    }
+    // Change text color
+    h1, h2, h3, h4, h5, h6 { color: @swan-heading-color-light; }
 
-    nav {
-        background-color: @swan-nav-color-light !important;
+    // Invert CERN logo in light mode
+    footer img { filter: invert(1); }
 
-        li.nav-item {
-            color: white;
+    // Show sun; hide moon
+    #dark-theme-toggle { .fa-moon { display: none; } }
 
-            .swan-nav-link {
-                color: white;
-
-                &:hover {
-                    background-color: @swan-nav-color-light-hover !important;
-                }
-            }
-        }
-
-        #dark-theme-toggle {
-            .fa-sun {
-                color: white;
-            }
-
-            .fa-moon {
-                display: none;
-            }
-        }
-    }
+    // Switch to SWAN logo without background
+    .logo-light { display: inline-block; }
+    .logo-dark { display: none; }
 }
 
 [data-bs-theme="dark"] {
-    h1, h2, h3, h4, h5, h6 {
-        color: @swan-heading-color-dark;
+    // Change text color
+    h1, h2, h3, h4, h5, h6 { color: @swan-heading-color-dark; }
+
+    // Hide sun; show moon
+    #dark-theme-toggle { .fa-sun { display: none; } }
+
+    // Switch to SWAN logo with background
+    .logo-light { display: none; }
+    .logo-dark { display: inline-block; }
+
+    // Improve color contrast of outline buttons in dark mode
+    .btn-outline-secondary {
+        color: var(--bs-secondary-color);
+        &:hover { color: var(--bs-secondary-hover-color); }
     }
 
-    nav {
-        background-color: @swan-nav-color-dark !important;
-
-        li.nav-item .swan-nav-link:hover {
-            background-color: @swan-nav-color-dark-hover !important;
-        }
-
-        #dark-theme-toggle .fa-sun {
-            display: none;
-        }
-    }
-}
-
-footer .container-fluid {
-    background-color: var(--bs-tertiary-bg) !important;
-}
-
-// Improve color contrast of outline buttons in dark mode
-[data-bs-theme="dark"] .btn-outline-secondary {
-    color: var(--bs-secondary-color);
-
-    &:hover {
-        color: var(--bs-secondary-hover-color);
-    }
-}
-
-// Invert CERN logo in light mode
-[data-bs-theme="light"] footer img {
-    filter: invert(1);
-}
-
-// Fix color contrast of footer links in dark mode
-[data-bs-theme="dark"] footer a.link-secondary {
-    color: var(--bs-secondary-color) !important;
-
-    &:hover {
-        color: var(--bs-secondary-hover-color) !important;
+    // Fix color contrast of footer links in dark mode
+    footer a.link-secondary {
+        color: var(--bs-secondary-color) !important;
+        &:hover { color: var(--bs-secondary-hover-color) !important; }
     }
 }
 
@@ -186,6 +142,137 @@ footer .container-fluid {
     }
 
     @keyframes spin {
-      to { transform: rotate(360deg); }
+        to { transform: rotate(360deg); }
+    }
+}
+
+// Login button — subtle highlight so it stands out on a transparent nav
+#login_widget #login.swan-nav-link {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.375rem;
+    padding: 0.25rem 0.75rem;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+
+    &:hover {
+        background-color: var(--bs-tertiary-bg);
+        border-color: var(--bs-secondary-color);
+    }
+}
+
+// User dropdown
+.swan-user-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.swan-username {
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--bs-border-color);
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+
+    &:hover {
+        background-color: var(--bs-tertiary-bg);
+        border-color: var(--bs-secondary-color);
+    }
+}
+
+.swan-dropdown-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 4px);
+    min-width: 160px;
+    background-color: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    list-style: none;
+    padding: 0.375rem 0;
+    margin: 0;
+    z-index: 1050;
+
+    // Invisible bridge so the menu doesn't close when
+    // the cursor passes through the gap below the username
+    &::before {
+        content: '';
+        position: absolute;
+        top: -6px;
+        left: 0;
+        right: 0;
+        height: 6px;
+    }
+}
+
+.swan-user-dropdown:hover .swan-dropdown-menu {
+    display: block;
+}
+
+.swan-dropdown-item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 0.45rem 1rem;
+    font-size: 0.875rem;
+    color: var(--bs-body-color);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color 0.1s ease;
+
+    &:hover {
+        background-color: var(--bs-tertiary-bg);
+        color: var(--bs-emphasis-color);
+    }
+}
+
+.swan-dropdown-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+}
+
+.swan-dropdown-divider {
+    border-top: 1px solid var(--bs-border-color);
+    margin: 0.25rem 0;
+}
+
+// Spawn page — hero logo scales with viewport
+.swan-hero-logo {
+    max-width: 140px;
+    height: auto;
+}
+
+// Footer icon links — label hidden by default, revealed on hover
+.swan-footer-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    padding: 0.25rem 0.4rem;
+    border-radius: 0.3rem;
+    color: var(--bs-secondary-color);
+    text-decoration: none;
+    font-size: 0.8rem;
+    transition: color 0.15s ease;
+
+    .swan-footer-link-label {
+        max-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        opacity: 0;
+        transition: max-width 0.25s ease, opacity 0.2s ease, margin-left 0.25s ease;
+        margin-left: 0;
+    }
+
+    &:hover {
+        color: var(--bs-emphasis-color);
+        background-color: transparent;
+
+        .swan-footer-link-label {
+            max-width: 120px;
+            opacity: 1;
+            margin-left: 0.3rem;
+        }
     }
 }
