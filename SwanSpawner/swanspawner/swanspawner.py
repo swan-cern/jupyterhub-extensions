@@ -130,6 +130,12 @@ def define_SwanSpawner_from(base_class):
             help='Path format of the users home folder in EOS.'
         )
 
+        tn_enabled = Bool(
+            default_value=False,
+            config=True,
+            help="True if we are exposed to the Technical Network."
+        )
+
         extended_timeout = Int(
             default_value=120,
             config=True,
