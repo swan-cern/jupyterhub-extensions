@@ -148,6 +148,11 @@ def define_SwanSpawner_from(base_class):
             help="Period after which Kerberos tokens are refreshed."
         )
 
+        spark_configuration_path = Unicode(
+            config=True,
+            help="Spark configuration directory path."
+        )
+
         extended_timeout = Int(
             default_value=120,
             config=True,
