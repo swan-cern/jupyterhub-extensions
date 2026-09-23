@@ -175,7 +175,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             # Update parent class OAuthenticator.logout_redirect_url
             self.logout_redirect_url = end_session_url
 
-        if self.config.check_signature :
+        if self.check_signature:
             jwks_uri = data['jwks_uri']
 
             self.log.info("Fetching JWKs data")
@@ -188,6 +188,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             self.public_key = RSAAlgorithm(RSAAlgorithm.SHA256).from_jwk(sign_keys[0])
             self.log.info(f"acquired public key from {jwks_uri}")
         else:
+            self.log.info("JWT signature verification is disabled")
             self.public_key = None
 
         self.configured = True
@@ -213,7 +214,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
     def _decode_token(self, token, options=None):
         if options is None:
             options = {}
-        if not self.config.check_signature:
+        if not self.check_signature:
             options.update({"verify_signature": False})
         if not self.verify_aud:
             options.update({"verify_aud": False})

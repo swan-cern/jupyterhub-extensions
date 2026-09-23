@@ -336,18 +336,19 @@ label.form-label {
             const freeGpuFlavours = dynamicFormInfo['free_gpu_flavours'] || [];
             const addedFlavours = new Set();
                         
-            // Free GPU sorted by availability
-            if (freeGpuFlavours.length === 0) {
+            // Add None option if custom environment or if no GPU flavours available
+            if (selected_source === customenv_source || freeGpuFlavours.length === 0) {
                 selectGpu.add(noneOption);
-            } else {
-                freeGpuFlavours.forEach(flavourName => {
-                    const option = document.createElement("option");
-                    option.value = flavourName;
-                    option.text = flavourName;
-                    selectGpu.add(option);
-                    addedFlavours.add(flavourName);
-                });
             }
+
+            // Free GPU sorted by availability
+            freeGpuFlavours.forEach(flavourName => {
+                const option = document.createElement("option");
+                option.value = flavourName;
+                option.text = flavourName;
+                selectGpu.add(option);
+                addedFlavours.add(flavourName);
+            });
 
             // Add unavailable GPU options (disabled)
             gpuFlavours.forEach(flavourName => {
