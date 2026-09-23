@@ -25,7 +25,7 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
     swan_container_namespace = Unicode(
         default_value="swan",
         config=True,
-        help="Namespace the SWAN hub pod runs in."
+        help="Namespace SWAN runs in."
     )
 
     # Constant that sets a role name for participants of SWAN events
