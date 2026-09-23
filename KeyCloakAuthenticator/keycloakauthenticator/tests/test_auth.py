@@ -49,7 +49,7 @@ def _get_mock_token(private_key, token_id, expired=False):
 def unconfigured_authenticator(monkeypatch):
     monkeypatch.setattr(asyncio, "ensure_future", lambda coro: coro.close())
     auth = KeyCloakAuthenticator(oidc_issuer="http://fake-issuer")
-    auth.config.check_signature = False  # disabled by default; check_signature tests enable it explicitly
+    auth.check_signature = False  # disabled by default; check_signature tests enable it explicitly
     return auth
 
 
@@ -234,7 +234,7 @@ class TestKeyCloakAuthenticator:
                 return jwks
 
             monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
-            unconfigured_authenticator.config.check_signature = True
+            unconfigured_authenticator.check_signature = True
 
             await unconfigured_authenticator._get_oidc_configs_helper()
 
@@ -257,7 +257,7 @@ class TestKeyCloakAuthenticator:
                 return jwks
 
             monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
-            unconfigured_authenticator.config.check_signature = True
+            unconfigured_authenticator.check_signature = True
 
             await unconfigured_authenticator._get_oidc_configs_helper()
 
@@ -324,7 +324,7 @@ class TestKeyCloakAuthenticator:
             authenticator.public_key = public_key
             authenticator.client_id = "dummy-client-id"
             authenticator.oidc_issuer = "dummy-oidc-url"
-            authenticator.config.check_signature = True
+            authenticator.check_signature = True
 
         def test_returns_decoded_payload_for_valid_token(self, authenticator, key_pair):
             public_key, private_key = key_pair
@@ -347,7 +347,7 @@ class TestKeyCloakAuthenticator:
             authenticator.public_key = key_pair[0]
             authenticator.client_id = "dummy-client-id"
             authenticator.oidc_issuer = "dummy-oidc-url"
-            authenticator.config.check_signature = False
+            authenticator.check_signature = False
             token = _get_mock_token(other_private_key, "test-token")
             assert authenticator._decode_token(token, options={}) is not None
 
@@ -368,11 +368,11 @@ class TestKeyCloakAuthenticator:
             token = _get_mock_token(other_private_key, "test-token")
 
             # first time bad token passes since check_signature is false
-            authenticator.config.check_signature = False
+            authenticator.check_signature = False
             assert authenticator._decode_token(token) is not None
 
             # make sure this fails since check_signature is now true
-            authenticator.config.check_signature = True
+            authenticator.check_signature = True
             with pytest.raises(jwt.exceptions.InvalidSignatureError):
                 authenticator._decode_token(token)
 
