@@ -193,7 +193,7 @@ class SwanEosPodHookHandler(SwanTNPodHookHandler):
                 args=[
                     env["USER_ID"],
                     env["USER_ID"],
-                    str(self.spawner.cull_period),
+                    str(self.spawner.token_refresh_period),
                 ],
                 volume_mounts=side_container_volume_mounts,
                 security_context=V1SecurityContext(run_as_user=0),
