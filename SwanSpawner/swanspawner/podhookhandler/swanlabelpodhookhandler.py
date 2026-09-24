@@ -20,22 +20,10 @@ class SwanLabelPodHookHandler:
         :rtype: V1Pod
         """
         # pod labels
-        if (
-            self.spawner.user_options[self.spawner.software_source]
-            == self.spawner.lcg_special_type
-        ):
-            pod_labels = dict(
-                software_source=self.spawner.user_options[
-                    self.spawner.lcg_rel_field
-                ].split("/")[0]
-            )
-        elif (
-            self.spawner.user_options[self.spawner.software_source]
-            == self.spawner.customenv_special_type
-        ):
-            pod_labels = dict(
-                software_source=f"customenv-{self.spawner.builder}_{self.spawner.builder_version}"
-            )
+        if self.spawner.user_options[self.spawner.software_source] == self.spawner.lcg_special_type:
+            pod_labels = dict(software_source=self.spawner.user_options[self.spawner.lcg_rel_field].split("/")[0])
+        elif self.spawner.user_options[self.spawner.software_source] == self.spawner.customenv_special_type:
+            pod_labels = dict(software_source=f"customenv-{self.spawner.builder}_{self.spawner.builder_version}")
         else:
             pod_labels = {}
 

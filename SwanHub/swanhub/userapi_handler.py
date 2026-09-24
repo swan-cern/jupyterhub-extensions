@@ -1,4 +1,3 @@
-
 import json
 
 from jupyterhub.apihandlers.base import APIHandler
@@ -10,18 +9,18 @@ from tornado import web
 
 class SelfAPIHandler(APIHandler):
     """
-        Handler for the user api endpoint.
-        This allows us to force the visibility of the auth state
+    Handler for the user api endpoint.
+    This allows us to force the visibility of the auth state
 
-        FIXME this is no longer needed, as the RBAC system allows us to get the auth_state
-        from `/api/users/<username>`.
-        But this change was kept to also allow the auth_state from `/api/user`, thus
-        making it compatible across k8s (running this new version) and puppet (running the old JH version).
-        Once puppet is removed, we can remove this code and update SwanOauthRenew
+    FIXME this is no longer needed, as the RBAC system allows us to get the auth_state
+    from `/api/users/<username>`.
+    But this change was kept to also allow the auth_state from `/api/user`, thus
+    making it compatible across k8s (running this new version) and puppet (running the old JH version).
+    Once puppet is removed, we can remove this code and update SwanOauthRenew
 
 
-        Return the authenticated user's model
-        Based on the authentication info. Acts as a 'whoami' for auth tokens.
+    Return the authenticated user's model
+    Based on the authentication info. Acts as a 'whoami' for auth tokens.
     """
 
     async def get(self):
@@ -62,5 +61,5 @@ class SelfAPIHandler(APIHandler):
         # but not the scopes we added to ensure we could read our own model
         model["scopes"] = sorted(self.expanded_scopes.difference(_added_scopes))
         # SWAN the line bellow was added
-        model['auth_state'] = await user.get_auth_state()
+        model["auth_state"] = await user.get_auth_state()
         self.write(json.dumps(model))

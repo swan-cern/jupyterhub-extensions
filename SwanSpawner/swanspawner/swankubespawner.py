@@ -10,27 +10,26 @@ from .swanspawner import define_SwanSpawner_from
 
 
 class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
-
     mem_request_fraction = Float(
         default_value=0.5,
         config=True,
-        help="Fraction of the memory value selected by the user that will be requested"
+        help="Fraction of the memory value selected by the user that will be requested",
     )
 
     accpy = Dict(
         config=True,
-        help='URL of the Acc-Py user image.'
+        help="URL of the Acc-Py user image.",
     )
 
     swan_container_namespace = Unicode(
         default_value="swan",
         config=True,
-        help="Namespace SWAN runs in."
+        help="Namespace SWAN runs in.",
     )
 
     # Constant that sets a role name for participants of SWAN events
-    SWAN_EVENTS_ROLE = 'swan-events'
-    LHCB_SWAN_ROLE = 'lhcb-swan-users'
+    SWAN_EVENTS_ROLE = "swan-events"
+    LHCB_SWAN_ROLE = "lhcb-swan-users"
 
     gpus = AvailableGPUs(SWAN_EVENTS_ROLE, LHCB_SWAN_ROLE)
 
@@ -51,10 +50,13 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
 
         # If the user selected an Acc-Py based custom environment,
         # use the corresponding image.
-        if self.user_options[self.software_source] == self.customenv_special_type and self.user_options.get(self.builder) == 'accpy':
-            image = self.accpy['image']['name'] + ':' + self.accpy['image']['tag']
+        if (
+            self.user_options[self.software_source] == self.customenv_special_type
+            and self.user_options.get(self.builder) == "accpy"
+        ):
+            image = self.accpy["image"]["name"] + ":" + self.accpy["image"]["tag"]
             if not image:
-                raise RuntimeError('The user selected an Acc-Py environment, but no Acc-Py image was configured')
+                raise RuntimeError("The user selected an Acc-Py environment, but no Acc-Py image was configured")
             self.image = image
 
         try:
@@ -67,47 +69,47 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
             raise e
 
     async def stop(self, now=False):
-        '''Do custom cleanup after terminating user pod'''
+        """Do custom cleanup after terminating user pod"""
         try:
             await super().stop()
         finally:
             username = self.user.name
-            namespace = os.environ.get('POD_NAMESPACE', 'default')
+            namespace = os.environ.get("POD_NAMESPACE", "default")
 
             # Delete Kubernetes secret storing EOS kerberos ticket of the user
             # Only needed when EOS is enabled (== local_home is False)
             if not self.local_home:
-                eos_secret_name = f'eos-tokens-{username}'
-                self.log.info(f'Deleting secret {namespace}:{eos_secret_name}')
+                eos_secret_name = f"eos-tokens-{username}"
+                self.log.info(f"Deleting secret {namespace}:{eos_secret_name}")
                 try:
                     await self.api.delete_namespaced_secret(eos_secret_name, namespace)
                 except ApiException:
-                    self.log.error(f'Error deleting secret {namespace}:{eos_secret_name}')
+                    self.log.error(f"Error deleting secret {namespace}:{eos_secret_name}")
 
             # Cleanup for computing integrations (Spark, HTCondor)
-            clean_spark = self.user_options.get(self.spark_cluster_field, 'none') != 'none'
-            clean_condor = self.user_options.get(self.condor_pool, 'none') != 'none'
+            clean_spark = self.user_options.get(self.spark_cluster_field, "none") != "none"
+            clean_condor = self.user_options.get(self.condor_pool, "none") != "none"
             if clean_spark or clean_condor:
                 # Delete NodePort service opening ports for computing integrations
-                computing_ports_service = f'computing-ports-{username}'
-                self.log.info(f'Deleting service {namespace}:{computing_ports_service}')
+                computing_ports_service = f"computing-ports-{username}"
+                self.log.info(f"Deleting service {namespace}:{computing_ports_service}")
                 try:
                     await self.api.delete_namespaced_service(computing_ports_service, namespace)
                 except ApiException:
-                    self.log.error('Error deleting service {namespace}:{computing_ports_service}: {e}')
+                    self.log.error("Error deleting service {namespace}:{computing_ports_service}: {e}")
 
                 if clean_spark:
                     # Delete Kubernetes secret with Hadoop delegation tokens
-                    hadoop_secret_name = f'hadoop-tokens-{username}'
-                    self.log.info(f'Deleting secret {namespace}:{hadoop_secret_name}')
+                    hadoop_secret_name = f"hadoop-tokens-{username}"
+                    self.log.info(f"Deleting secret {namespace}:{hadoop_secret_name}")
                     try:
                         await self.api.delete_namespaced_secret(hadoop_secret_name, namespace)
                     except ApiException:
-                        self.log.error('Error deleting secret {namespace}:{hadoop_secret_name}: {e}')
+                        self.log.error("Error deleting secret {namespace}:{hadoop_secret_name}: {e}")
 
             # free GPU update
-            gpu_flavour = self.user_options.get('gpu')
-            if gpu_flavour and gpu_flavour.lower() != 'none':
+            gpu_flavour = self.user_options.get("gpu")
+            if gpu_flavour and gpu_flavour.lower() != "none":
                 try:
                     self.gpus._update_free_gpu_flavours()
                     self.log.info(f"Update free GPU count for {gpu_flavour} after user stop.")
@@ -135,6 +137,8 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
 
         # Sort flavours by count so the most common one appears first in the list,
         # and therefore is rendered first in the form.
-        self._dynamic_form_info['gpu_flavours'] = list(gpu_flavours.keys())
-        self._dynamic_form_info['free_gpu_flavours'] = sorted(free_gpu_flavours, key=lambda x: free_gpu_flavours[x].free, reverse=True)
+        self._dynamic_form_info["gpu_flavours"] = list(gpu_flavours.keys())
+        self._dynamic_form_info["free_gpu_flavours"] = sorted(
+            free_gpu_flavours, key=lambda x: free_gpu_flavours[x].free, reverse=True
+        )
         return super()._render_templated_options_form(spawner)

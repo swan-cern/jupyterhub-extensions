@@ -1,13 +1,12 @@
-
 from jupyterhub.handlers import pages
 
 
 class ProxyErrorHandler(pages.ProxyErrorHandler):
     """
-        Handler for rendering proxy error pages.
-        We need to overwrite the default to redirect users to the proper place. The default
-        error message adds a link to the home, but since we removed the "Shutdown my container"
-        button, users are unable to clear their states.
+    Handler for rendering proxy error pages.
+    We need to overwrite the default to redirect users to the proper place. The default
+    error message adds a link to the home, but since we removed the "Shutdown my container"
+    button, users are unable to clear their states.
     """
 
     async def get(self, status_code_s):
@@ -18,7 +17,7 @@ class ProxyErrorHandler(pages.ProxyErrorHandler):
         # which might be causing the problem)
         if status_code == 503:
             html = await self.render_template(
-                'unreachable_container.html',
+                "unreachable_container.html",
             )
             self.finish(html)
 

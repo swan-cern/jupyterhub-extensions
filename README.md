@@ -67,13 +67,13 @@ script to do so:
 # ///
 import yaml
 
-values_options_form = '../gitops/swan-cern/qa/values_options_form.yaml'
+values_options_form = "../gitops/swan-cern/qa/values_options_form.yaml"
 with open(values_options_form) as f:
     data = yaml.safe_load(f)
 
-optionsform = data['optionsform']
+optionsform = data["optionsform"]
 
-with open('options_form.yaml', 'w') as f:
+with open("options_form.yaml", "w") as f:
     yaml.dump(optionsform, f)
 ```
 
@@ -103,38 +103,38 @@ import os
 # Enable debug mode
 # ================================================
 
-c.Application.log_level = 'DEBUG'
+c.Application.log_level = "DEBUG"
 c.Spawner.debug = True
 
 # Auth configuration
 # ================================================
 
-c.JupyterHub.authenticator_class = 'keycloakauthenticator.auth.KeyCloakAuthenticator'
-c.KeyCloakAuthenticator.username_claim = 'cern_upn'
+c.JupyterHub.authenticator_class = "keycloakauthenticator.auth.KeyCloakAuthenticator"
+c.KeyCloakAuthenticator.username_claim = "cern_upn"
 
 # URL to redirect to after logout is complete with auth provider.
-c.KeyCloakAuthenticator.logout_redirect_url = 'https://cern.ch/swan'
-c.KeyCloakAuthenticator.oauth_callback_url = 'http://localhost:8000/hub/oauth_callback'
+c.KeyCloakAuthenticator.logout_redirect_url = "https://cern.ch/swan"
+c.KeyCloakAuthenticator.oauth_callback_url = "http://localhost:8000/hub/oauth_callback"
 
 # Specify the issuer url, to get all the endpoints automatically from .well-known/openid-configuration
-c.KeyCloakAuthenticator.oidc_issuer = 'https://auth.cern.ch/auth/realms/cern'
+c.KeyCloakAuthenticator.oidc_issuer = "https://auth.cern.ch/auth/realms/cern"
 
 # If you need to set a different scope, like adding the offline option for longer lived refresh token
-c.KeyCloakAuthenticator.scope = ['profile', 'email', 'offline_access', 'openid']
+c.KeyCloakAuthenticator.scope = ["profile", "email", "offline_access", "openid"]
 # Only allow users with this specific roles (none, to allow all)
 c.KeyCloakAuthenticator.allowed_roles = []
 # Specify the role to set a user as admin
-c.KeyCloakAuthenticator.admin_role = 'swan-admins'
+c.KeyCloakAuthenticator.admin_role = "swan-admins"
 
 
 # Spawner configuration
 # ================================================
 
 # Use a custom local process spawner:
-c.JupyterHub.spawner_class = 'swanspawner.localswanspawner.LocalSwanSpawner'
+c.JupyterHub.spawner_class = "swanspawner.localswanspawner.LocalSwanSpawner"
 
 # Set the path to the options form config
-c.LocalSwanSpawner.options_form_config = 'options_form.yaml'
+c.LocalSwanSpawner.options_form_config = "options_form.yaml"
 
 
 # Proxy configuration (Optional)
