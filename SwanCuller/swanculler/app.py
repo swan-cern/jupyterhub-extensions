@@ -32,6 +32,7 @@ users and servers, you should add this script to the services list
 twice, just with different ``name``s, different values, and one with
 the ``--cull-users`` option.
 """
+
 import json
 import os
 from datetime import UTC, datetime
@@ -57,10 +58,14 @@ from tornado.options import define, options, parse_command_line
 # sessions and the one that validates wether a user is blocked
 users = []
 
+
 def check_ticket(username):
     app_log.info("Checking ticket for user %s", username)
-    call(['sudo', '--preserve-env=SWAN_DEV', "%s/check_ticket.sh" % options.hooks_dir, username])
+    call(["sudo", "--preserve-env=SWAN_DEV", "%s/check_ticket.sh" % options.hooks_dir, username])
+
+
 # End SWAN code
+
 
 def parse_date(date_string):
     """Parse a timestamp
@@ -93,6 +98,7 @@ def format_td(td):
     seconds = seconds % 60
     return f"{h:02}:{m:02}:{seconds:02}"
 
+
 @coroutine
 def delete_server(user_name, server_name, url, auth_header, fetch):
     if server_name:
@@ -102,30 +108,28 @@ def delete_server(user_name, server_name, url, auth_header, fetch):
             quote(server_name),
         )
     else:
-        delete_url = url + '/users/%s/server' % quote(user_name)
+        delete_url = url + "/users/%s/server" % quote(user_name)
 
-    req = HTTPRequest(url=delete_url, method='DELETE', headers=auth_header)
+    req = HTTPRequest(url=delete_url, method="DELETE", headers=auth_header)
     resp = yield fetch(req)
     return resp
+
 
 @coroutine
 def delete_user(user_name, url, auth_header, fetch):
-    req = HTTPRequest(
-        url=url + '/users/%s' % user_name, method='DELETE', headers=auth_header
-    )
+    req = HTTPRequest(url=url + "/users/%s" % user_name, method="DELETE", headers=auth_header)
     resp = yield fetch(req)
     return resp
 
+
 @coroutine
-def cull_idle(
-    url, api_token, inactive_limit, cull_users=False, disable_hooks=False, max_age=0, concurrency=10
-):
+def cull_idle(url, api_token, inactive_limit, cull_users=False, disable_hooks=False, max_age=0, concurrency=10):
     """Shutdown idle single-user servers
 
     If cull_users, inactive *users* will be deleted as well.
     """
-    auth_header = {'Authorization': 'token %s' % api_token}
-    req = HTTPRequest(url=url + '/users', headers=auth_header)
+    auth_header = {"Authorization": "token %s" % api_token}
+    req = HTTPRequest(url=url + "/users", headers=auth_header)
     now = datetime.now(UTC)
     client = AsyncHTTPClient()
 
@@ -147,7 +151,7 @@ def cull_idle(
     resp = yield fetch(req)
 
     global users
-    users = json.loads(resp.body.decode('utf8', 'replace'))
+    users = json.loads(resp.body.decode("utf8", "replace"))
     futures = []
 
     @coroutine
@@ -159,13 +163,11 @@ def cull_idle(
         Returns True if server is now stopped (user removable),
         False otherwise.
         """
-        log_name = user['name']
+        log_name = user["name"]
         if server_name:
-            log_name = '%s/%s' % (user['name'], server_name)
-        if server.get('pending'):
-            app_log.warning(
-                "Not culling server %s with pending %s", log_name, server['pending']
-            )
+            log_name = "%s/%s" % (user["name"], server_name)
+        if server.get("pending"):
+            app_log.warning("Not culling server %s with pending %s", log_name, server["pending"])
             return False
 
         # jupyterhub < 0.9 defined 'server.url' once the server was ready
@@ -175,22 +177,20 @@ def cull_idle(
         # events and are not ready shouldn't be in the model,
         # but let's check just to be safe.
 
-        if not server.get('ready', bool(server['url'])):
-            app_log.warning(
-                "Not culling not-ready not-pending server %s: %s", log_name, server
-            )
+        if not server.get("ready", bool(server["url"])):
+            app_log.warning("Not culling not-ready not-pending server %s: %s", log_name, server)
             return False
 
-        if server.get('started'):
-            age = now - parse_date(server['started'])
+        if server.get("started"):
+            age = now - parse_date(server["started"])
         else:
             # started may be undefined on jupyterhub < 0.9
             age = None
 
         # check last activity
         # last_activity can be None in 0.9
-        if server['last_activity']:
-            inactive = now - parse_date(server['last_activity'])
+        if server["last_activity"]:
+            inactive = now - parse_date(server["last_activity"])
         else:
             # no activity yet, use start date
             # last_activity may be None with jupyterhub 0.9,
@@ -212,13 +212,9 @@ def cull_idle(
         #     return False
         # inactive_limit = server['state']['culltime']
 
-        should_cull = (
-            inactive is not None and inactive.total_seconds() >= inactive_limit
-        )
+        should_cull = inactive is not None and inactive.total_seconds() >= inactive_limit
         if should_cull:
-            app_log.info(
-                "Culling server %s (inactive for %s)", log_name, format_td(inactive)
-            )
+            app_log.info("Culling server %s (inactive for %s)", log_name, format_td(inactive))
 
         if max_age and not should_cull:
             # only check started if max_age is specified
@@ -242,7 +238,7 @@ def cull_idle(
             )
             return False
 
-        resp = yield delete_server(user['name'], server_name, url, auth_header, fetch)
+        resp = yield delete_server(user["name"], server_name, url, auth_header, fetch)
         if resp.code == 202:
             app_log.warning("Server %s is slow to stop", log_name)
             # return False to prevent culling user with pending shutdowns
@@ -261,23 +257,22 @@ def cull_idle(
         # Hub doesn't allow deleting users with running servers.
         # jupyterhub 0.9 always provides a 'servers' model.
         # 0.8 only does this when named servers are enabled.
-        if 'servers' in user:
-            servers = user['servers']
+        if "servers" in user:
+            servers = user["servers"]
         else:
             # jupyterhub < 0.9 without named servers enabled.
             # create servers dict with one entry for the default server
             # from the user model.
             # only if the server is running.
             servers = {}
-            if user['server']:
-                servers[''] = {
-                    'last_activity': user['last_activity'],
-                    'pending': user['pending'],
-                    'url': user['server'],
+            if user["server"]:
+                servers[""] = {
+                    "last_activity": user["last_activity"],
+                    "pending": user["pending"],
+                    "url": user["server"],
                 }
         server_futures = [
-            handle_server(user, server_name, server, max_age, inactive_limit)
-            for server_name, server in servers.items()
+            handle_server(user, server_name, server, max_age, inactive_limit) for server_name, server in servers.items()
         ]
         results = yield multi(server_futures)
 
@@ -292,33 +287,31 @@ def cull_idle(
         if still_alive:
             app_log.debug(
                 "Not culling user %s with %i servers still alive",
-                user['name'],
+                user["name"],
                 still_alive,
             )
             return False
 
         should_cull = False
-        if user.get('created'):
-            age = now - parse_date(user['created'])
+        if user.get("created"):
+            age = now - parse_date(user["created"])
         else:
             # created may be undefined on jupyterhub < 0.9
             age = None
 
         # check last activity
         # last_activity can be None in 0.9
-        if user['last_activity']:
-            inactive = now - parse_date(user['last_activity'])
+        if user["last_activity"]:
+            inactive = now - parse_date(user["last_activity"])
         else:
             # no activity yet, use start date
             # last_activity may be None with jupyterhub 0.9,
             # which introduces the 'created' field which is never None
             inactive = age
 
-        should_cull = (
-            inactive is not None and inactive.total_seconds() >= inactive_limit
-        )
+        should_cull = inactive is not None and inactive.total_seconds() >= inactive_limit
         if should_cull:
-            app_log.info("Culling user %s (inactive for %s)", user['name'], inactive)
+            app_log.info("Culling user %s (inactive for %s)", user["name"], inactive)
 
         if max_age and not should_cull:
             # only check created if max_age is specified
@@ -327,7 +320,7 @@ def cull_idle(
             if age is not None and age.total_seconds() >= max_age:
                 app_log.info(
                     "Culling user %s (age: %s, inactive for %s)",
-                    user['name'],
+                    user["name"],
                     format_td(age),
                     format_td(inactive),
                 )
@@ -336,19 +329,19 @@ def cull_idle(
         if not should_cull:
             app_log.debug(
                 "Not culling user %s (created: %s, last active: %s)",
-                user['name'],
+                user["name"],
                 format_td(age),
                 format_td(inactive),
             )
             return False
 
-        yield delete_user(user['name'], url, auth_header, fetch)
+        yield delete_user(user["name"], url, auth_header, fetch)
         return True
 
     for user in users:
-        futures.append((user['name'], handle_user(user)))
+        futures.append((user["name"], handle_user(user)))
 
-    for (name, f) in futures:
+    for name, f in futures:
         try:
             result = yield f
         except Exception:
@@ -357,7 +350,9 @@ def cull_idle(
             if result:
                 app_log.debug("Finished culling %s", name)
             else:
-                if not disable_hooks: check_ticket(name)
+                if not disable_hooks:
+                    check_ticket(name)
+
 
 @coroutine
 def check_blocked_users(url, api_token, client_id, client_secret, auth_url, audience, authz_api_url):
@@ -369,9 +364,9 @@ def check_blocked_users(url, api_token, client_id, client_secret, auth_url, audi
     token_req = HTTPRequest(
         url=auth_url,
         method="POST",
-        headers={'Content-Type': 'application/x-www-form-urlencoded'},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
         body="grant_type=client_credentials&client_id=%s&client_secret=%s&audience=%s"
-            % (quote(client_id), quote(client_secret), quote(audience)),
+        % (quote(client_id), quote(client_secret), quote(audience)),
     )
 
     client = AsyncHTTPClient()
@@ -386,7 +381,7 @@ def check_blocked_users(url, api_token, client_id, client_secret, auth_url, audi
 
     # Step 2: Check each user - Get their identity from the Authorization Service API using the obtained token as Bearer
     for user in users:
-        app_log.info("Checking if user %s is blocked", user['name'])
+        app_log.info("Checking if user %s is blocked", user["name"])
         query = urlencode([("field", "uniqueIdentifier"), ("field", "blocked"), ("field", "disabled")])
         id_url = f"{authz_api_url}/{quote(user['name'])}/accounts?{query}"
         id_req = HTTPRequest(
@@ -394,7 +389,7 @@ def check_blocked_users(url, api_token, client_id, client_secret, auth_url, audi
             headers={
                 "Authorization": "Bearer %s" % access_token,
                 "Accept": "*/*",
-            }
+            },
         )
 
         try:
@@ -414,26 +409,24 @@ def check_blocked_users(url, api_token, client_id, client_secret, auth_url, audi
                 continue
 
         if is_blocked or is_disabled:
-            app_log.warning("User %s is blocked. Terminating their sessions.", user['name'])
-            auth_header = {'Authorization': 'token %s' % api_token}
+            app_log.warning("User %s is blocked. Terminating their sessions.", user["name"])
+            auth_header = {"Authorization": "token %s" % api_token}
 
             # collect user's server
-            if 'servers' in user:
-                servers = user['servers']
+            if "servers" in user:
+                servers = user["servers"]
             else:
                 servers = {}
-                if user.get('server'):
-                    servers[''] = {
-                        'last_activity': user.get('last_activity'),
-                        'pending': user.get('pending'),
-                        'url': user['server'],
+                if user.get("server"):
+                    servers[""] = {
+                        "last_activity": user.get("last_activity"),
+                        "pending": user.get("pending"),
+                        "url": user["server"],
                     }
 
             delete_futures = []
             for server_name in servers:
-                delete_futures.append(
-                    delete_server(user['name'], server_name, url, auth_header, client.fetch)
-                )
+                delete_futures.append(delete_server(user["name"], server_name, url, auth_header, client.fetch))
             # wait for all delete requests to complete
             results = yield multi(delete_futures)
 
@@ -441,40 +434,45 @@ def check_blocked_users(url, api_token, client_id, client_secret, auth_url, audi
                 try:
                     resp = results[i]
                     if resp.code in (204, 202):
-                        app_log.info("Deleted server '%s' for user %s", server_name, user['name'])
+                        app_log.info("Deleted server '%s' for user %s", server_name, user["name"])
                     else:
-                        app_log.warning("Unexpected response deleting server %s for user %s: %s",
-                                        server_name, user['name'], resp.code)
+                        app_log.warning(
+                            "Unexpected response deleting server %s for user %s: %s",
+                            server_name,
+                            user["name"],
+                            resp.code,
+                        )
                 except Exception:
-                    app_log.exception("Failed to delete server %s for user %s", server_name, user['name'])
+                    app_log.exception("Failed to delete server %s for user %s", server_name, user["name"])
 
-            yield delete_user(user['name'], url, auth_header, client.fetch)
+            yield delete_user(user["name"], url, auth_header, client.fetch)
+
 
 def main():
     define(
-        'url',
-        default=os.environ.get('JUPYTERHUB_API_URL'),
+        "url",
+        default=os.environ.get("JUPYTERHUB_API_URL"),
         help="The JupyterHub API URL",
     )
-    define('timeout', default=600, help="The idle timeout (in seconds)")
+    define("timeout", default=600, help="The idle timeout (in seconds)")
     define(
-        'cull_every',
+        "cull_every",
         default=0,
         help="The interval (in seconds) for checking for idle servers to cull",
     )
     define(
-        'max_age',
+        "max_age",
         default=0,
         help="The maximum age (in seconds) of servers that should be culled even if they are active",
     )
     define(
-        'cull_users',
+        "cull_users",
         default=False,
         help="""Cull users in addition to servers.
                 This is for use in temporary-user cases such as tmpnb.""",
     )
     define(
-        'concurrency',
+        "concurrency",
         default=10,
         help="""Limit the number of concurrent requests made to the Hub.
 
@@ -482,27 +480,35 @@ def main():
                 so limit the number of API requests we have outstanding at any given time.
                 """,
     )
-    define('hooks_dir', default="/srv/jupyterhub/culler", help="Path to the directory for the krb tickets script (check_ticket.sh)")
-    define('disable_hooks', default=False, help="The user's home is a temporary scratch directory and we should not check krb tickets")
-    define('auth_url', default='', help="URL to fetch CERN access token")
-    define('auth_client_id', default=os.environ.get('AUTH_CLIENT_ID'), help="Client ID for blocked user check")
-    define('auth_client_secret', default=os.environ.get('AUTH_CLIENT_SECRET'), help="Client secret for blocked user check")
-    define('audience', default='', help="Audience for CERN access token")
-    define('auth_check_interval', default=0, help="The interval (in seconds) for checking blocked users")
-    define('authz_api_url', default='', help="URL to fetch user identity from authorization service")
-
+    define(
+        "hooks_dir",
+        default="/srv/jupyterhub/culler",
+        help="Path to the directory for the krb tickets script (check_ticket.sh)",
+    )
+    define(
+        "disable_hooks",
+        default=False,
+        help="The user's home is a temporary scratch directory and we should not check krb tickets",
+    )
+    define("auth_url", default="", help="URL to fetch CERN access token")
+    define("auth_client_id", default=os.environ.get("AUTH_CLIENT_ID"), help="Client ID for blocked user check")
+    define(
+        "auth_client_secret", default=os.environ.get("AUTH_CLIENT_SECRET"), help="Client secret for blocked user check"
+    )
+    define("audience", default="", help="Audience for CERN access token")
+    define("auth_check_interval", default=0, help="The interval (in seconds) for checking blocked users")
+    define("authz_api_url", default="", help="URL to fetch user identity from authorization service")
 
     parse_command_line()
     if not options.cull_every:
         options.cull_every = options.timeout // 2
-    api_token = os.environ['JUPYTERHUB_API_TOKEN']
+    api_token = os.environ["JUPYTERHUB_API_TOKEN"]
 
     try:
         AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
     except ImportError as e:
         app_log.warning(
-            "Could not load pycurl: %s\n"
-            "pycurl is recommended if you have a large number of users.",
+            "Could not load pycurl: %s\npycurl is recommended if you have a large number of users.",
             e,
         )
 
@@ -528,10 +534,10 @@ def main():
         check_blocked_users,
         url=options.url,
         api_token=api_token,
-        auth_url = options.auth_url,
+        auth_url=options.auth_url,
         client_id=options.auth_client_id,
         client_secret=options.auth_client_secret,
-        audience = options.audience,
+        audience=options.audience,
         authz_api_url=options.authz_api_url,
     )
     # schedule first blocked user check

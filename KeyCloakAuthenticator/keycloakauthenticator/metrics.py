@@ -62,7 +62,7 @@ metric_pre_spawn_start = _METHOD_DURATION_SECONDS.labels("pre_spawn_start")
 
 metric_refresh_token = _REQUEST_DURATION_SECONDS.labels("refresh_token")
 
-metric_exchange_tornado_request_time = _TORNADO_REQUEST_DURATION_SECONDS # Label 'request' set dynamically
-metric_exchange_tornado_queue_time = _TORNADO_QUEUE_DURATION_SECONDS # Label 'request' set dynamically
-metric_refresh_tornado_request_time = _TORNADO_REQUEST_DURATION_SECONDS # Label 'request' set dynamically
+metric_exchange_tornado_request_time = _TORNADO_REQUEST_DURATION_SECONDS  # Label 'request' set dynamically
+metric_exchange_tornado_queue_time = _TORNADO_QUEUE_DURATION_SECONDS  # Label 'request' set dynamically
+metric_refresh_tornado_request_time = _TORNADO_REQUEST_DURATION_SECONDS  # Label 'request' set dynamically
 metric_refresh_tornado_queue_time = _TORNADO_QUEUE_DURATION_SECONDS.labels("refresh_token")

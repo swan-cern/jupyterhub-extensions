@@ -45,6 +45,7 @@ def _get_mock_token(private_key, token_id, expired=False):
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def unconfigured_authenticator(monkeypatch):
     monkeypatch.setattr(asyncio, "ensure_future", lambda coro: coro.close())
@@ -98,7 +99,9 @@ class TestOIDCOAuthLoginHandler:
     class TestGet:
         def _make_handler(self, monkeypatch, configured):
             handler = OIDCOAuthLoginHandler.__new__(OIDCOAuthLoginHandler)
-            monkeypatch.setattr(OIDCOAuthLoginHandler, "authenticator", property(lambda _: MagicMock(configured=configured)))
+            monkeypatch.setattr(
+                OIDCOAuthLoginHandler, "authenticator", property(lambda _: MagicMock(configured=configured))
+            )
             return handler
 
         def test_raises_when_not_configured(self, monkeypatch):
@@ -113,6 +116,7 @@ class TestOIDCOAuthLoginHandler:
             monkeypatch.setattr(OAuthLoginHandler, "get", lambda _: super_called.append(True))
             handler.get()
             assert super_called
+
 
 class TestKeyCloakAuthenticator:
     class TestInit:
@@ -134,12 +138,15 @@ class TestKeyCloakAuthenticator:
             assert roles == set()
 
     class TestGetOidcConfigs:
-        @pytest.mark.parametrize("doc", [
-            {},
-            {"authorization_endpoint": "http://fake/auth"},
-            {"authorization_endpoint": "http://fake/auth", "token_endpoint": "http://fake/token"},
-            {"token_endpoint": "http://fake/token"},
-        ])
+        @pytest.mark.parametrize(
+            "doc",
+            [
+                {},
+                {"authorization_endpoint": "http://fake/auth"},
+                {"authorization_endpoint": "http://fake/auth", "token_endpoint": "http://fake/token"},
+                {"token_endpoint": "http://fake/token"},
+            ],
+        )
         async def test_missing_required_authorisation_fields(self, unconfigured_authenticator, monkeypatch, doc):
             async def mock_httpfetch(url, **kwargs):
                 return doc
@@ -150,8 +157,6 @@ class TestKeyCloakAuthenticator:
                 await unconfigured_authenticator._get_oidc_configs_helper()
 
             assert not unconfigured_authenticator.configured
-
-
 
         async def test_set_urls(self, unconfigured_authenticator, monkeypatch):
             async def mock_httpfetch(url, **kwargs):
@@ -166,9 +171,9 @@ class TestKeyCloakAuthenticator:
             assert unconfigured_authenticator.userdata_url == "http://fake/userinfo"
             assert unconfigured_authenticator.configured
 
-
-
-        async def test_enable_logout_end_session_no_existing_redirect_url(self, unconfigured_authenticator, monkeypatch):
+        async def test_enable_logout_end_session_no_existing_redirect_url(
+            self, unconfigured_authenticator, monkeypatch
+        ):
             unconfigured_authenticator.enable_logout = True
             unconfigured_authenticator.logout_redirect_url = ""
 
@@ -180,7 +185,6 @@ class TestKeyCloakAuthenticator:
             await unconfigured_authenticator._get_oidc_configs_helper()
 
             assert unconfigured_authenticator.logout_redirect_url == "http://fake/logout"
-
 
         async def test_enable_logout_end_session_existing_redirect_url(self, unconfigured_authenticator, monkeypatch):
             unconfigured_authenticator.enable_logout = True
@@ -195,16 +199,16 @@ class TestKeyCloakAuthenticator:
             await unconfigured_authenticator._get_oidc_configs_helper()
 
             assert unconfigured_authenticator.logout_redirect_url == (
-                "http://fake/logout"
-                "?post_logout_redirect_uri=http://fake/post-logout"
-                "&client_id=dummy-client"
+                "http://fake/logout?post_logout_redirect_uri=http://fake/post-logout&client_id=dummy-client"
             )
 
-
-        @pytest.mark.parametrize("enable_logout,doc", [
-            (False, {**OIDC_DISCOVERY_DOC, "end_session_endpoint": "http://fake/logout"}),
-            (True, OIDC_DISCOVERY_DOC),
-        ])
+        @pytest.mark.parametrize(
+            "enable_logout,doc",
+            [
+                (False, {**OIDC_DISCOVERY_DOC, "end_session_endpoint": "http://fake/logout"}),
+                (True, OIDC_DISCOVERY_DOC),
+            ],
+        )
         async def test_logout_url_not_updated(self, unconfigured_authenticator, monkeypatch, enable_logout, doc):
             unconfigured_authenticator.enable_logout = enable_logout
             original_logout_url = unconfigured_authenticator.logout_redirect_url
@@ -217,8 +221,6 @@ class TestKeyCloakAuthenticator:
             await unconfigured_authenticator._get_oidc_configs_helper()
 
             assert unconfigured_authenticator.logout_redirect_url == original_logout_url
-
-
 
         async def test_check_signature_true_sig_key_present(self, unconfigured_authenticator, monkeypatch, key_pair):
             public_key, _ = key_pair
@@ -241,8 +243,6 @@ class TestKeyCloakAuthenticator:
             assert unconfigured_authenticator.public_key is not None
             assert call_count == 2
 
-
-
         async def test_check_signature_true_no_sig_key(self, unconfigured_authenticator, monkeypatch, key_pair):
             public_key, _ = key_pair
             jwks = _make_jwks(public_key, use_sig=False)
@@ -263,8 +263,6 @@ class TestKeyCloakAuthenticator:
 
             assert unconfigured_authenticator.public_key is not None
 
-
-
         async def test_check_signature_false_skip_jwks_fetch(self, unconfigured_authenticator, monkeypatch):
             call_count = 0
 
@@ -279,8 +277,6 @@ class TestKeyCloakAuthenticator:
 
             assert call_count == 1
             assert unconfigured_authenticator.public_key is None
-
-
 
         async def test_retries_after_failure(self, unconfigured_authenticator, monkeypatch):
             call_count = 0
@@ -417,6 +413,7 @@ class TestKeyCloakAuthenticator:
         async def test_empty_response_body_returns_none_tokens(self, authenticator, monkeypatch):
             async def mock_httpfetch(*_, **_kw):
                 return MockFetchResponse(body="")
+
             monkeypatch.setattr(authenticator, "httpfetch", mock_httpfetch)
 
             access_t, refresh_t = await authenticator._refresh_token("old-refresh")
@@ -427,6 +424,7 @@ class TestKeyCloakAuthenticator:
         async def test_missing_access_token_in_body(self, authenticator, monkeypatch):
             async def mock_httpfetch(*_, **_kw):
                 return MockFetchResponse(body=json.dumps({"refresh_token": "new-refresh"}).encode())
+
             monkeypatch.setattr(authenticator, "httpfetch", mock_httpfetch)
 
             access_t, refresh_t = await authenticator._refresh_token("old-refresh")
@@ -437,6 +435,7 @@ class TestKeyCloakAuthenticator:
         async def test_missing_refresh_token_in_body(self, authenticator, monkeypatch):
             async def mock_httpfetch(*_, **_kw):
                 return MockFetchResponse(body=json.dumps({"access_token": "new-access"}).encode())
+
             monkeypatch.setattr(authenticator, "httpfetch", mock_httpfetch)
 
             access_t, refresh_t = await authenticator._refresh_token("old-refresh")
@@ -446,10 +445,15 @@ class TestKeyCloakAuthenticator:
 
         async def test_returns_both_tokens_on_success(self, authenticator, monkeypatch):
             async def mock_httpfetch(*_, **_kw):
-                return MockFetchResponse(body=json.dumps({
-                    "access_token": "new-access",
-                    "refresh_token": "new-refresh",
-                }).encode())
+                return MockFetchResponse(
+                    body=json.dumps(
+                        {
+                            "access_token": "new-access",
+                            "refresh_token": "new-refresh",
+                        }
+                    ).encode()
+                )
+
             monkeypatch.setattr(authenticator, "httpfetch", mock_httpfetch)
 
             access_t, refresh_t = await authenticator._refresh_token("old-refresh")
@@ -459,6 +463,7 @@ class TestKeyCloakAuthenticator:
 
         async def test_request_contains_correct_params(self, authenticator, monkeypatch):
             from urllib.parse import parse_qs
+
             captured = {}
 
             async def mock_httpfetch(url, **kwargs):
@@ -481,8 +486,10 @@ class TestKeyCloakAuthenticator:
         def _make_mock_user(self, refresh_token="old-refresh", access_token="old-access"):
             class MockUser:
                 name = "test-user"
+
                 async def get_auth_state(self_inner):
                     return {"refresh_token": refresh_token, "access_token": access_token}
+
             return MockUser()
 
         async def test_returns_false_when_not_configured(self, authenticator):
@@ -500,6 +507,7 @@ class TestKeyCloakAuthenticator:
 
             async def mock_refresh_token(_):
                 return "new-access", "new-refresh"
+
             async def mock_exchange_tokens(_):
                 return {}
 
@@ -514,6 +522,7 @@ class TestKeyCloakAuthenticator:
 
             async def mock_refresh_token(_):
                 return "new-access", "new-refresh"
+
             async def mock_exchange_tokens(_):
                 return {"service-a": "exchanged"}
 
@@ -531,6 +540,7 @@ class TestKeyCloakAuthenticator:
 
             async def mock_refresh_token(_):
                 return "new-access", "new-refresh"
+
             async def mock_exchange_tokens(_):
                 raise Exception("exchange failed")
 
@@ -559,6 +569,7 @@ class TestKeyCloakAuthenticator:
         def _patch_super(self, monkeypatch, return_value):
             async def mock_super(self, handler, data=None):
                 return return_value
+
             monkeypatch.setattr(GenericOAuthenticator, "authenticate", mock_super)
 
         async def test_returns_none_when_super_returns_none(self, authenticator, monkeypatch):
@@ -567,15 +578,19 @@ class TestKeyCloakAuthenticator:
 
         async def test_returns_none_when_decode_token_raises(self, authenticator, monkeypatch):
             self._patch_super(monkeypatch, self._make_mock_user())
+
             def mock_decode(*_):
                 raise Exception("bad token")
+
             monkeypatch.setattr(authenticator, "_decode_token", mock_decode)
             assert await authenticator.authenticate(None) is None
 
         async def test_returns_none_when_claim_roles_key_raises(self, authenticator, monkeypatch):
             self._patch_super(monkeypatch, self._make_mock_user())
             monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
-            monkeypatch.setattr(authenticator, "claim_roles_key", lambda *_: (_ for _ in ()).throw(Exception("roles error")))
+            monkeypatch.setattr(
+                authenticator, "claim_roles_key", lambda *_: (_ for _ in ()).throw(Exception("roles error"))
+            )
             assert await authenticator.authenticate(None) is None
 
         async def test_returns_none_when_user_roles_not_a_set(self, authenticator, monkeypatch):
@@ -596,8 +611,10 @@ class TestKeyCloakAuthenticator:
             monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
             monkeypatch.setattr(authenticator, "claim_roles_key", lambda *_: {"user-role"})
             monkeypatch.setattr(authenticator, "_validate_roles", lambda *_: True)
+
             async def mock_exchange_tokens(_):
                 raise Exception("exchange failed")
+
             monkeypatch.setattr(authenticator, "_exchange_tokens", mock_exchange_tokens)
             assert await authenticator.authenticate(None) is None
 
@@ -606,8 +623,10 @@ class TestKeyCloakAuthenticator:
             monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
             monkeypatch.setattr(authenticator, "claim_roles_key", lambda *_: {"user-role"})
             monkeypatch.setattr(authenticator, "_validate_roles", lambda *_: True)
+
             async def mock_exchange_tokens(_):
                 return {"service-a": "exchanged"}
+
             monkeypatch.setattr(authenticator, "_exchange_tokens", mock_exchange_tokens)
 
             result = await authenticator.authenticate(None)
@@ -621,8 +640,10 @@ class TestKeyCloakAuthenticator:
             monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
             monkeypatch.setattr(authenticator, "claim_roles_key", lambda *_: {"swan-admins"})
             monkeypatch.setattr(authenticator, "_validate_roles", lambda *_: True)
+
             async def mock_exchange_tokens(_):
                 return {}
+
             monkeypatch.setattr(authenticator, "_exchange_tokens", mock_exchange_tokens)
 
             result = await authenticator.authenticate(None)

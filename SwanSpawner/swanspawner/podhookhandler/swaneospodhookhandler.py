@@ -44,9 +44,7 @@ class SwanEosPodHookHandler(SwanTNPodHookHandler):
         # Get configuration parameters from environment variables
         swan_container_namespace = self.spawner.swan_container_namespace
 
-        username = escapism.escape(
-            self.spawner.user.name, safe=self.spawner.safe_chars, escape_char="-"
-        ).lower()
+        username = escapism.escape(self.spawner.user.name, safe=self.spawner.safe_chars, escape_char="-").lower()
         eos_secret_name = "eos-tokens-%s" % username
 
         try:
@@ -79,15 +77,11 @@ class SwanEosPodHookHandler(SwanTNPodHookHandler):
 
         try:
             # eos-tokens secret is cleaned when user session ends, so try creating it
-            await self.spawner.api.create_namespaced_secret(
-                swan_container_namespace, secret_data
-            )
+            await self.spawner.api.create_namespaced_secret(swan_container_namespace, secret_data)
         except ApiException:
             # A secret with the same name exists, probably a remnant of a wrongly-terminated session, then replace it
             try:
-                await self.spawner.api.replace_namespaced_secret(
-                    eos_secret_name, swan_container_namespace, secret_data
-                )
+                await self.spawner.api.replace_namespaced_secret(eos_secret_name, swan_container_namespace, secret_data)
             except ApiException as e:
                 raise Exception("Could not create required eos secret: %s\n" % e)
 
@@ -110,14 +104,10 @@ class SwanEosPodHookHandler(SwanTNPodHookHandler):
                 empty_dir=V1EmptyDirVolumeSource(medium="Memory"),
             )
         )
-        side_container_volume_mounts.append(
-            V1VolumeMount(name="shared-pod-volume", mount_path="/srv/notebook")
-        )
+        side_container_volume_mounts.append(V1VolumeMount(name="shared-pod-volume", mount_path="/srv/notebook"))
 
         # Mount shared tokens volume that contains tokens with correct permissions
-        notebook_container.volume_mounts.append(
-            V1VolumeMount(name="shared-pod-volume", mount_path="/srv/notebook")
-        )
+        notebook_container.volume_mounts.append(V1VolumeMount(name="shared-pod-volume", mount_path="/srv/notebook"))
 
         # pod volume to mount generated eos tokens and
         # side-container volume mount with generated tokens
@@ -129,9 +119,7 @@ class SwanEosPodHookHandler(SwanTNPodHookHandler):
                 ),
             )
         )
-        side_container_volume_mounts.append(
-            V1VolumeMount(name=eos_secret_name, mount_path="/srv/side-container/eos")
-        )
+        side_container_volume_mounts.append(V1VolumeMount(name=eos_secret_name, mount_path="/srv/side-container/eos"))
 
         # define eos kerberos credentials path for Jupyter server in notebook container
         notebook_container.env = self._add_or_replace_by_name(
@@ -153,9 +141,7 @@ class SwanEosPodHookHandler(SwanTNPodHookHandler):
             notebook_container.env,
             V1EnvVar(
                 name="SERVER_HOSTNAME",
-                value_from=V1EnvVarSource(
-                    field_ref=V1ObjectFieldSelector(field_path="spec.nodeName")
-                ),
+                value_from=V1EnvVarSource(field_ref=V1ObjectFieldSelector(field_path="spec.nodeName")),
             ),
         )
 

@@ -15,6 +15,7 @@ from the JupyterHub static assets directory to the source files in this repo.
 That way, JupyterHub always serves the latest files without needing to
 reinstall the packages.
 """
+
 import subprocess
 import sys
 from pathlib import Path
@@ -34,6 +35,7 @@ packages = {
     "SwanSpawner/swanspawner": "swanspawner",
 }
 
+
 def create_symlinks():
     """
     Create symlinks between source directories and the output share folder.
@@ -46,6 +48,7 @@ def create_symlinks():
             path.unlink(missing_ok=True)
         except IsADirectoryError:
             import shutil
+
             shutil.rmtree(path)
 
         # Create symlink from the source files to the share directory
@@ -56,8 +59,9 @@ def create_symlinks():
 
 def recompile_package(pkg_path: Path):
     subprocess.run(
-        ["npm", "run", "build"], cwd=pkg_path,
-        check=False  # Don't raise error on failure
+        ["npm", "run", "build"],
+        cwd=pkg_path,
+        check=False,  # Don't raise error on failure
     )
 
 
@@ -78,10 +82,12 @@ def watch_for_changes():
     existing_paths = [p for p in existing_paths if p.exists()]
 
     # style.css is a generated file, ignore changes to it
-    ignore_filter = DefaultFilter(ignore_paths=[
-        REPO_ROOT / "SwanHub/swanhub/static/css/style.css",
-        REPO_ROOT / "SwanHub/swanhub/static/css/style_legacy.css",
-    ])
+    ignore_filter = DefaultFilter(
+        ignore_paths=[
+            REPO_ROOT / "SwanHub/swanhub/static/css/style.css",
+            REPO_ROOT / "SwanHub/swanhub/static/css/style_legacy.css",
+        ]
+    )
 
     click.secho("Watching for changes...", fg="green")
     for _ in watch(*existing_paths, watch_filter=ignore_filter):

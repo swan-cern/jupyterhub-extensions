@@ -9,13 +9,16 @@ from swanculler.app import check_blocked_users
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def make_user(name):
     now = datetime.now(UTC).isoformat()
     return {
         "name": name,
-        "servers": {'': {
-            "last_activity": now,
-        }},
+        "servers": {
+            "": {
+                "last_activity": now,
+            }
+        },
     }
 
 
@@ -36,9 +39,7 @@ class MockHTTPClient:
 
 
 def _token_ok():
-    return MockHTTPResponse(
-        200, json.dumps({"access_token": "mock-token"}).encode()
-    )
+    return MockHTTPResponse(200, json.dumps({"access_token": "mock-token"}).encode())
 
 
 def _identity(blocked=False, disabled=False):
@@ -60,6 +61,7 @@ AUDIENCE = "aud"
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(autouse=True)
 def _reset_global_users():
     """Reset the global users list between tests."""
@@ -77,9 +79,11 @@ def mock_http(monkeypatch):
 
     return _create
 
+
 # ---------------------------------------------------------------------------
 # check_blocked_users smoke tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("is_blocked", (True, False))
@@ -97,9 +101,7 @@ async def test_check_blocked(mock_http, is_blocked, is_disabled):
         return MockHTTPResponse(200, b"[]")
 
     client = mock_http(handler=handler)
-    await check_blocked_users(
-        HUB_URL, API_TOKEN, CLIENT_ID, CLIENT_SECRET, AUTH_URL, AUDIENCE, AUTHZ_URL
-    )
+    await check_blocked_users(HUB_URL, API_TOKEN, CLIENT_ID, CLIENT_SECRET, AUTH_URL, AUDIENCE, AUTHZ_URL)
     delete_calls = [c for c in client.calls if c.method == "DELETE"]
     if is_blocked or is_disabled:
         # 2 delete calls (server DELETE + user DELETE) if the user is blocked or disabled
@@ -128,9 +130,7 @@ async def test_check_blocked_mix_of_users(mock_http):
         return MockHTTPResponse(200, b"[]")
 
     client = mock_http(handler=handler)
-    await check_blocked_users(
-        HUB_URL, API_TOKEN, CLIENT_ID, CLIENT_SECRET, AUTH_URL, AUDIENCE, AUTHZ_URL
-    )
+    await check_blocked_users(HUB_URL, API_TOKEN, CLIENT_ID, CLIENT_SECRET, AUTH_URL, AUDIENCE, AUTHZ_URL)
     delete_calls = [c for c in client.calls if c.method == "DELETE"]
     # Only blocked_user: server DELETE + user DELETE
     assert len(delete_calls) == 2

@@ -92,9 +92,7 @@ class SwanSparkCondorPodHookHandler(SwanGPUPodHookHandler):
             secret_data.data["k8s-user.config"] = k8suser_config_base64
 
             try:
-                await self.spawner.api.read_namespaced_secret(
-                    hadoop_secret_name, swan_container_namespace
-                )
+                await self.spawner.api.read_namespaced_secret(hadoop_secret_name, swan_container_namespace)
                 exists = True
             except ApiException:
                 exists = False
@@ -104,9 +102,7 @@ class SwanSparkCondorPodHookHandler(SwanGPUPodHookHandler):
                     hadoop_secret_name, swan_container_namespace, secret_data
                 )
             else:
-                await self.spawner.api.create_namespaced_secret(
-                    swan_container_namespace, secret_data
-                )
+                await self.spawner.api.create_namespaced_secret(swan_container_namespace, secret_data)
         except ApiException as e:
             raise RuntimeError("Could not create required hadoop secret") from e
 
@@ -132,9 +128,7 @@ class SwanSparkCondorPodHookHandler(SwanGPUPodHookHandler):
             )
         )
         side_container.volume_mounts.append(
-            V1VolumeMount(
-                name=hadoop_secret_name, mount_path="/srv/side-container/hadoop"
-            )
+            V1VolumeMount(name=hadoop_secret_name, mount_path="/srv/side-container/hadoop")
         )
 
         # configuration to access Spark k8s cluster
@@ -152,9 +146,7 @@ class SwanSparkCondorPodHookHandler(SwanGPUPodHookHandler):
         """
 
         user_roles = self.spawner.user_roles
-        cluster = self.spawner.user_options.get(
-            self.spawner.spark_cluster_field, "none"
-        )
+        cluster = self.spawner.user_options.get(self.spawner.spark_cluster_field, "none")
 
         if cluster == "hadoop-analytix" and "analytix" not in user_roles:
             raise ValueError(
@@ -239,9 +231,7 @@ class SwanSparkCondorPodHookHandler(SwanGPUPodHookHandler):
             # Define `num_ports` random NodePorts on the cluster using V1Service
             service_template_ports = []
             for port_id in range(1, num_ports + 1):
-                service_template_ports.append(
-                    V1ServicePort(name=f"comp-port-{port_id}", port=port_id)
-                )
+                service_template_ports.append(V1ServicePort(name=f"comp-port-{port_id}", port=port_id))
             service_template = V1Service(
                 api_version="v1",
                 kind="Service",

@@ -15,7 +15,7 @@ pip3 install swanspawner
 Add to your JupyterHub config file
 
 ```python
-c.JupyterHub.spawner_class = 'swanspawner.swankubespawner.SwanKubeSpawner'
+c.JupyterHub.spawner_class = "swanspawner.swankubespawner.SwanKubeSpawner"
 ```
 
 If you deploy with Kubernetes.
@@ -48,7 +48,7 @@ If you deploy with Kubernetes.
 To configure custom form, please set path to config file as below
 
 ```python
-c.SwanSpawner.options_form_config = '<path>'
+c.SwanSpawner.options_form_config = "<path>"
 ```
 
 High level objects 

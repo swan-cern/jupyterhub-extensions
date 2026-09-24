@@ -68,18 +68,12 @@ class SwanGPUPodHookHandler(SwanEosPodHookHandler):
         )
         node_selector_term = V1NodeSelectorTerm(match_expressions=[node_selector_req])
         node_selector = V1NodeSelector(node_selector_terms=[node_selector_term])
-        node_affinity = V1NodeAffinity(
-            required_during_scheduling_ignored_during_execution=node_selector
-        )
+        node_affinity = V1NodeAffinity(required_during_scheduling_ignored_during_execution=node_selector)
         self.pod.spec.affinity = V1Affinity(node_affinity=node_affinity)
 
         # Allow scheduling on Oracle for any user requesting a GPU
         tolerations = self.pod.spec.tolerations or []
-        tolerations.append(
-            V1Toleration(
-                key="oracle/gpu", operator="Equal", value="true", effect="NoSchedule"
-            )
-        )
+        tolerations.append(V1Toleration(key="oracle/gpu", operator="Equal", value="true", effect="NoSchedule"))
         self.pod.spec.tolerations = tolerations
 
         if spawner.SWAN_EVENTS_ROLE in spawner.user_roles:
@@ -89,16 +83,12 @@ class SwanGPUPodHookHandler(SwanEosPodHookHandler):
 
             # Add affinity to nodes that have been provisioned for the
             # event, i.e. labeled with the events role name
-            node_selector_req = V1NodeSelectorRequirement(
-                key=spawner.SWAN_EVENTS_ROLE, operator="Exists"
-            )
+            node_selector_req = V1NodeSelectorRequirement(key=spawner.SWAN_EVENTS_ROLE, operator="Exists")
             node_selector_term.match_expressions.append(node_selector_req)
 
             # Add toleration to nodes that have been provisioned for the
             # event, i.e. tainted with the events role name
-            toleration = V1Toleration(
-                key=spawner.SWAN_EVENTS_ROLE, operator="Exists", effect="NoSchedule"
-            )
+            toleration = V1Toleration(key=spawner.SWAN_EVENTS_ROLE, operator="Exists", effect="NoSchedule")
             tolerations.append(toleration)
 
         # The GPU flavour requested by the user is available, proceed with user pod creation
