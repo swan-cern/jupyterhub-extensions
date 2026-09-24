@@ -42,5 +42,9 @@ jobs:
         run: |
           uv run --no-project ruff check .
 
+      - name: Check formatting 🎨
+        run: |
+          uv run --no-project ruff format --check --output-format=github .
+
       - name: Test code 🧪
         run: uv run pytest
