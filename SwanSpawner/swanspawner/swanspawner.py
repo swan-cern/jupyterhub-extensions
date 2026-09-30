@@ -142,7 +142,7 @@ def define_SwanSpawner_from(base_class):
             help="True if we are exposed to the Technical Network.",
         )
 
-        cull_period = Int(
+        token_refresh_period = Int(
             default_value=600,
             config=True,
             help="Period after which Kerberos tokens are refreshed.",
