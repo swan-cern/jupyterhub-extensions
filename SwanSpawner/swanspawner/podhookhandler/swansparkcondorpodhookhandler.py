@@ -194,7 +194,7 @@ class SwanSparkCondorPodHookHandler(SwanGPUPodHookHandler):
             notebook_container.env,
             V1EnvVar(
                 name="SPARK_AUTH_REQUIRED",
-                value="true",
+                value="true" if cluster == "hadoop-nxcals" else "false",
             ),
         )
 
