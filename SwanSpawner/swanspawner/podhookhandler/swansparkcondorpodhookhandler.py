@@ -189,11 +189,11 @@ class SwanSparkCondorPodHookHandler(SwanGPUPodHookHandler):
             notebook_container.env, V1EnvVar(name="MAX_MEMORY", value=max_mem)
         )
 
-        # add spark auth required env
+        # add spark password prompt env
         notebook_container.env = self._add_or_replace_by_name(
             notebook_container.env,
             V1EnvVar(
-                name="SPARK_AUTH_REQUIRED",
+                name="SPARK_PASSWORD_PROMPT_REQUIRED",
                 value="true" if cluster == "hadoop-nxcals" else "false",
             ),
         )
