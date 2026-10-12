@@ -1,5 +1,4 @@
 import asyncio
-import os
 from math import ceil
 
 from kubernetes_asyncio.client.rest import ApiException
@@ -55,10 +54,9 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
             self.user_options[self.software_source] == self.customenv_special_type
             and self.user_options.get(self.builder) == "accpy"
         ):
-            image = self.accpy["image"]["name"] + ":" + self.accpy["image"]["tag"]
-            if not image:
+            if "image" not in self.accpy:
                 raise RuntimeError("The user selected an Acc-Py environment, but no Acc-Py image was configured")
-            self.image = image
+            self.image = f"{self.accpy['image']['name']}:{self.accpy['image']['tag']}"
 
         try:
             # start configured container
@@ -102,7 +100,7 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
             await super().stop()
         finally:
             username = self.user.name
-            namespace = os.environ.get("POD_NAMESPACE", "default")
+            namespace = self.swan_container_namespace
 
             # Delete Kubernetes secret storing EOS kerberos ticket of the user
             # Only needed when EOS is enabled (== local_home is False)
@@ -123,8 +121,8 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
                 self.log.info(f"Deleting service {namespace}:{computing_ports_service}")
                 try:
                     await self.api.delete_namespaced_service(computing_ports_service, namespace)
-                except ApiException:
-                    self.log.error("Error deleting service {namespace}:{computing_ports_service}: {e}")
+                except ApiException as e:
+                    self.log.error(f"Error deleting service {namespace}:{computing_ports_service}: {e}")
 
                 if clean_spark:
                     # Delete Kubernetes secret with Hadoop delegation tokens
@@ -132,8 +130,8 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
                     self.log.info(f"Deleting secret {namespace}:{hadoop_secret_name}")
                     try:
                         await self.api.delete_namespaced_secret(hadoop_secret_name, namespace)
-                    except ApiException:
-                        self.log.error("Error deleting secret {namespace}:{hadoop_secret_name}: {e}")
+                    except ApiException as e:
+                        self.log.error(f"Error deleting secret {namespace}:{hadoop_secret_name}: {e}")
 
             # free GPU update
             gpu_flavour = self.user_options.get("gpu")
