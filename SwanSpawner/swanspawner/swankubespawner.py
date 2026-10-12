@@ -1,3 +1,4 @@
+import asyncio
 import os
 from math import ceil
 
@@ -68,8 +69,35 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
             self.log.error("Error while spawning the user container: %s", e, exc_info=True)
             raise e
 
+    async def _get_pod_events_and_logs(self, *, tail_lines=1000):
+        """Retrieve pod events and logs for the notebook container"""
+        events = "\n".join(f"{e['lastTimestamp'] or e['eventTime']} {e['reason']}: {e['message']}" for e in self.events)
+        try:
+            # use a timeout as this must not prevent actually stopping the pod
+            logs = await asyncio.wait_for(
+                self.api.read_namespaced_pod_log(
+                    self.pod_name,
+                    self.swan_container_namespace,
+                    container="notebook",
+                    tail_lines=tail_lines,
+                    timestamps=True,
+                ),
+                self.k8s_api_request_timeout,
+            )
+        except ApiException as e:
+            logs = f"<error retrieving logs: {e}>"
+        except TimeoutError:
+            logs = "<timeout while retrieving logs>"
+        return f"=== {self.pod_name} pod events ===\n{events}\n\n=== notebook container logs ===\n{logs}"
+
     async def stop(self, now=False):
         """Do custom cleanup after terminating user pod"""
+        if self._spawn_future and not self._spawn_future.done():
+            # Failed spawn: retrieve pod logs before the pod is deleted
+            try:
+                self.spawn_failure_logs = await self._get_pod_events_and_logs()
+            except Exception:
+                self.log.exception("Failed to collect spawn failure logs")
         try:
             await super().stop()
         finally:

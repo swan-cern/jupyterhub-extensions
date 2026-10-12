@@ -301,9 +301,19 @@ class SpawnHandler(JHSpawnHandler):
                 user.name, host, ".".join(["spawn", spawn_context_key, "exception_message"]), str(spawn_exception)
             )
 
-            # Report spawn exception to Sentry. The user and spawn options
-            # were already set in the _post method.
-            sentry_sdk.capture_exception(spawn_exception)
+            with sentry_sdk.new_scope() as scope:
+                # Attach Jupyter notebook pod logs in Sentry
+                # (in a new scope so we only upload it once and not for every error after this)
+                if spawn_failure_logs := user.spawner.spawn_failure_logs:
+                    scope.add_attachment(
+                        bytes=spawn_failure_logs.encode(),
+                        filename=f"{user.spawner.pod_name}-notebook.log",
+                        content_type="text/plain",
+                    )
+
+                # Report spawn exception to Sentry. The user and spawn options
+                # were already set in the _post method.
+                sentry_sdk.capture_exception(spawn_exception)
 
     def _log_metric(self, user, host, metric, value):
         self.log.info("user: %s, host: %s, metric: %s, value: %s" % (user, host, metric, value))
