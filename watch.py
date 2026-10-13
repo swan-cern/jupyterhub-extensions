@@ -30,7 +30,6 @@ JUPYTER_STATIC_DIR = Path(sys.prefix) / "share/jupyterhub/static"
 # For example swanhub installs into "share/jupyterhub/static/swan"
 packages = {
     "KeyCloakAuthenticator/keycloackauthenticator": "keycloackauthenticator",
-    "SwanCuller/swanculler": "swanculler",
     "SwanHub/swanhub": "swan",
     "SwanSpawner/swanspawner": "swanspawner",
 }

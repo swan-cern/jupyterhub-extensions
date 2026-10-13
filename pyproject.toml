@@ -6,7 +6,6 @@ dev = [
     "ruff==0.16.7",
     "watchfiles==1.2.0",
     "keycloakauthenticator @ file:///${PROJECT_ROOT}/KeyCloakAuthenticator",
-    "swanculler @ file:///${PROJECT_ROOT}/SwanCuller",
     "swanhub @ file:///${PROJECT_ROOT}/SwanHub",
     "swanspawner @ file:///${PROJECT_ROOT}/SwanSpawner",
 ]
@@ -82,8 +81,4 @@ ignore = [
 ]
 "SwanHub/swanhub/spawn_handler.py" = [
     "LOG014", # exc-info-outside-except-handler
-]
-"SwanCuller/swanculler/app.py" = [
-    "E701",    # multiple-statements-on-one-line-colon
-    "PLW0603", # global-statement
 ]

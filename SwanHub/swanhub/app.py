@@ -60,7 +60,6 @@ class SWAN(app.JupyterHub):
             traces_sample_rate=0.01,
             in_app_include=[
                 "keycloakauthenticator",
-                "swanculler",
                 "swanhub",
                 "swanspawner",
             ],

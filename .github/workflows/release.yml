@@ -10,7 +10,6 @@ on:
         type: choice
         options:
           - KeyCloakAuthenticator
-          - SwanCuller
           - SwanHub
           - SwanSpawner
       bump:

@@ -3,7 +3,6 @@
 Repository that stores all the JupyterHub extensions for SWAN.
 
 * [KeyCloakAuthenticator](KeyCloakAuthenticator) - OIDC authenticator for SWAN, compatible with KeyCloak
-* [SwanCuller](SwanCuller) - JupyterHub service that checks and cleans user sessions
 * [SwanHub](SwanHub) - JupyterHub wrapper that automatically configures the SWAN templates and handlers
 * [SwanSpawner](SwanSpawner) - Spawner for JupyterHub that enables configuring a session with CVMFS/LCG stacks, support for GPU, oAuth tokens, etc
 
@@ -29,7 +28,6 @@ source .venv/bin/activate
 
 ```bash
 uv pip install -e KeyCloakAuthenticator/
-uv pip install -e SwanCuller/
 uv pip install -e SwanHub/
 uv pip install -e SwanSpawner/
 ```
