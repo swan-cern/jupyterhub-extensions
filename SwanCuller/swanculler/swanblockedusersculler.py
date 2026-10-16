@@ -88,7 +88,8 @@ def check_blocked_users(url, api_token, client_id, client_secret, auth_url, audi
         return
 
     # Step 2: Check each user - Get their identity from the Authorization Service API using the obtained token as Bearer
-    for user in users:
+    @coroutine
+    def handle_user(user):
         app_log.info("Checking if user %s is blocked", user["name"])
         query = urlencode([("field", "uniqueIdentifier"), ("field", "blocked"), ("field", "disabled")])
         id_url = f"{authz_api_url}/{quote(user['name'])}/accounts?{query}"
@@ -105,16 +106,16 @@ def check_blocked_users(url, api_token, client_id, client_secret, auth_url, audi
             data = json.loads(id_resp.body.decode("utf-8")).get("data", [])
             if not data:
                 app_log.warning(f"No identity data returned for user {user['name']}")
-                continue
+                return
             is_blocked = data[0].get("blocked", False)
             is_disabled = data[0].get("disabled", False)
         except HTTPClientError as e:
             if e.code == 404:
                 app_log.info(f"User {user['name']} not found for blocked user check, skipping.")
-                continue
+                return
             else:
                 app_log.warning(f"Failed to check identity for {user['name']}: {e}")
-                continue
+                return
 
         if is_blocked or is_disabled:
             app_log.warning("User %s is blocked. Terminating their sessions.", user["name"])
@@ -154,6 +155,16 @@ def check_blocked_users(url, api_token, client_id, client_secret, auth_url, audi
                     app_log.exception("Failed to delete server %s for user %s", server_name, user["name"])
 
             yield delete_user(user["name"], url, auth_header, fetch)
+
+    futures = []
+    for user in users:
+        futures.append((user["name"], handle_user(user)))
+
+    for name, f in futures:
+        try:
+            yield f
+        except Exception:
+            app_log.exception("Error processing %s", name)
 
 
 def main():
