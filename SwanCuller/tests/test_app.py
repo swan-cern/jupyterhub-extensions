@@ -62,14 +62,6 @@ AUDIENCE = "aud"
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture(autouse=True)
-def _reset_global_users():
-    """Reset the global users list between tests."""
-    app.users = []
-    yield
-    app.users = []
-
-
 @pytest.fixture
 def mock_http(monkeypatch):
     def _create(handler=None):
@@ -89,9 +81,11 @@ def mock_http(monkeypatch):
 @pytest.mark.parametrize("is_blocked", (True, False))
 @pytest.mark.parametrize("is_disabled", (True, False))
 async def test_check_blocked(mock_http, is_blocked, is_disabled):
-    app.users = [make_user("alice")]
+    users = [make_user("alice")]
 
     def handler(req):
+        if req.method == "GET" and req.url == f"{HUB_URL}/users":
+            return MockHTTPResponse(200, json.dumps(users).encode())
         if req.method == "POST":
             return _token_ok()
         if "/accounts" in req.url:
@@ -113,12 +107,14 @@ async def test_check_blocked(mock_http, is_blocked, is_disabled):
 
 @pytest.mark.asyncio
 async def test_check_blocked_mix_of_users(mock_http):
-    app.users = [
+    users = [
         make_user("blocked_user"),
         make_user("ok_user"),
     ]
 
     def handler(req):
+        if req.method == "GET" and req.url == f"{HUB_URL}/users":
+            return MockHTTPResponse(200, json.dumps(users).encode())
         if req.method == "POST":
             return _token_ok()
         if "/blocked_user/accounts" in req.url:
