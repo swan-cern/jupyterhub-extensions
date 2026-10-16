@@ -2,8 +2,7 @@ import json
 from datetime import UTC, datetime
 
 import pytest
-from swanculler import app
-from swanculler.app import check_blocked_users
+from swanculler.swanblockedusersculler import check_blocked_users
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -66,7 +65,7 @@ AUDIENCE = "aud"
 def mock_http(monkeypatch):
     def _create(handler=None):
         client = MockHTTPClient(handler=handler)
-        monkeypatch.setattr("swanculler.app.AsyncHTTPClient", lambda: client)
+        monkeypatch.setattr("swanculler.swanblockedusersculler.AsyncHTTPClient", lambda: client)
         return client
 
     return _create
