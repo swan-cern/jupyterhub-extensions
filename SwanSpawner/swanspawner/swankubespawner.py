@@ -1,12 +1,33 @@
 import asyncio
+import ssl
 from math import ceil
 
 from kubernetes_asyncio.client.rest import ApiException
+from kubernetes_asyncio.config.incluster_config import SERVICE_CERT_FILENAME
 from kubespawner import KubeSpawner
 from traitlets import Dict, Float, Unicode
 
 from ._gpuinfo import AvailableGPUs
 from .swanspawner import define_SwanSpawner_from
+
+# Python >= 3.13 adds ssl.VERIFY_X509_STRICT which rejects the old Kubernetes
+# API server certificate. We remove that strict check but only for in-cluster
+# The Hub also uses a connection to the API for getting available GPUs so
+# this must be run before that
+# TEMPORARY: Recently created clusters already have the Authority Key
+# Identifier extension, so we can soon 'openstack coe ca rotate', or
+# recreate the cluster (and update everyone and Argo's kubeconfigs)
+
+_load_verify_locations = ssl.SSLContext.load_verify_locations
+
+
+def _load_verify_locations_relaxed(self, cafile=None, *args, **kwargs):
+    if cafile == SERVICE_CERT_FILENAME:
+        self.verify_flags &= ~ssl.VERIFY_X509_STRICT
+    return _load_verify_locations(self, cafile, *args, **kwargs)
+
+
+ssl.SSLContext.load_verify_locations = _load_verify_locations_relaxed
 
 
 class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
