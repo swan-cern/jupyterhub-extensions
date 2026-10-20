@@ -10,23 +10,24 @@ from traitlets import Dict, Float, Unicode
 from ._gpuinfo import AvailableGPUs
 from .swanspawner import define_SwanSpawner_from
 
-# No need for the following once the Kubernetes API server adds the
-# Authority Key Identifier to their certificate, already there for dev?
-# Python >= 3.13 adds ssl.VERIFY_X509_STRICT which rejects the Kubernetes
-# API server certificate. We remove that strict ccheck but only for in-cluster
+# Python >= 3.13 adds ssl.VERIFY_X509_STRICT which rejects the old Kubernetes
+# API server certificate. We remove that strict check but only for in-cluster
 # The Hub also uses a connection to the API for getting available GPUs so
 # this must be run before that
+# TEMPORARY: Recently created clusters already have the Authority Key
+# Identifier extension, so we can soon 'openstack coe ca rotate', or
+# recreate the cluster (and update everyone and Argo's kubeconfigs)
 
 _load_verify_locations = ssl.SSLContext.load_verify_locations
 
 
-def _load_verify_locations_k8s(self, cafile=None, *args, **kwargs):
+def _load_verify_locations_relaxed(self, cafile=None, *args, **kwargs):
     if cafile == SERVICE_CERT_FILENAME:
         self.verify_flags &= ~ssl.VERIFY_X509_STRICT
     return _load_verify_locations(self, cafile, *args, **kwargs)
 
 
-ssl.SSLContext.load_verify_locations = _load_verify_locations_k8s
+ssl.SSLContext.load_verify_locations = _load_verify_locations_relaxed
 
 
 class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
