@@ -31,25 +31,6 @@ class SWAN(app.JupyterHub):
     def _logo_file_default(self):
         return os.path.join(self.data_files_path, "static", "swan", "logos", "logo_swan_cloudhisto.png")
 
-    @default("load_roles")
-    def _load_roles_default(self):
-        # Ensure that users can see their own auth_state
-        # This allows retrieving the up to date tokens and put them inside
-        # the user container
-        # Replace this config with care
-        return [
-            {"name": "user", "scopes": ["self", "admin:auth_state!user"]},
-            {
-                "name": "server",
-                "scopes": [
-                    "access:servers!user",
-                    "read:users:activity!user",
-                    "users:activity!user",
-                    "admin:auth_state!user",
-                ],
-            },
-        ]
-
     async def start(self):
         # Sentry recommends initializing the SDK at the beginning of the first async function called:
         # https://docs.sentry.io/platforms/python/
