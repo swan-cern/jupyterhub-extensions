@@ -19,12 +19,16 @@ dependencies = [
     "psutil",
     "jupyterhub-kubespawner==6.1.0",
     "kubernetes==35.0.0",
-    "kubernetes-asyncio==35.0.0"
+    "kubernetes-asyncio==35.0.0",
+    "tornado",
 ]
 
 [project.urls]
 Homepage = "https://github.com/swan-cern/jupyterhub-extensions"
 GitHub = "https://github.com/swan-cern/jupyterhub-extensions"
+
+[project.scripts]
+swanticketrefresher = "swanspawner.services.swanticketrefresher:main"
 
 [build-system]
 requires = ["hatchling==1.27.0"]
