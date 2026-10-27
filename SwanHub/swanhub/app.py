@@ -6,6 +6,7 @@ import os
 
 import sentry_sdk
 from jupyterhub import app
+from jupyterhub.apihandlers import users
 from jupyterhub.handlers import pages
 from sentry_sdk.integrations.asyncio import AsyncioIntegration
 from sentry_sdk.integrations.pure_eval import PureEvalIntegration
@@ -14,10 +15,12 @@ from traitlets import default
 from . import get_templates
 from .error_handler import ProxyErrorHandler
 from .spawn_handler import SpawnHandler
+from .userapi_handler import SelfAPIHandler
 
 handlers_map = {
     pages.SpawnHandler: SpawnHandler,
     pages.ProxyErrorHandler: ProxyErrorHandler,
+    users.SelfAPIHandler: SelfAPIHandler,
 }
 
 
