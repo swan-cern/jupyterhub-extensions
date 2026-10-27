@@ -2,7 +2,7 @@
 
 JupyterHub wrapper that automatically configures the SWAN templates and handlers.
 
-These handlers replace the default ones with slightly modified versions (for example, the user info api endpoint provides information about the auth state, which is hidden in the default implementation).
+These handlers replace the default ones with slightly modified versions.
 
 ## Requirements
 
