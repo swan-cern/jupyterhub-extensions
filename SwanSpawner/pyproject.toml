@@ -15,7 +15,7 @@ classifiers = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "jupyterhub==5.4.3",
+    "jupyterhub==5.5.0",
     "psutil",
     "jupyterhub-kubespawner==6.1.0",
     "kubernetes==35.0.0",
