@@ -21,7 +21,7 @@ def check_ticket(username):
 def check_tickets(url, api_token):
     """Check & refresh tickets for all users with an open session"""
     auth_header = {"Authorization": "token %s" % api_token}
-    req = HTTPRequest(url=url + "/users", headers=auth_header)
+    req = HTTPRequest(url=url + "/users?state=active", headers=auth_header)
     client = AsyncHTTPClient()
 
     resp = yield client.fetch(req)
@@ -29,8 +29,7 @@ def check_tickets(url, api_token):
     users = json.loads(resp.body.decode("utf8", "replace"))
 
     for user in users:
-        if user.get("servers", {}) or "server" in user:
-            check_ticket(user["name"])
+        check_ticket(user["name"])
 
 
 def main():
