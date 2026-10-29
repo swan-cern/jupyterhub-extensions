@@ -29,15 +29,15 @@ jobs:
         id: version
         run: |
           # Based on the jupyter-images release workflow
-          LAST_TAG=$(git tag -l "JupyterHubImage/v*" --sort=-v:refname | head -n 1)
+          LAST_TAG=$(git tag -l "image/v*" --sort=-v:refname | head -n 1)
           if [ -z "$LAST_TAG" ]; then
-            echo "::error::No existing tag found for JupyterHubImage"
+            echo "::error::No existing image/v* tag found"
             exit 1
           fi
-          LAST_VERSION="${LAST_TAG#JupyterHubImage/v}"
+          LAST_VERSION="${LAST_TAG#image/v}"
           IFS='.' read -r MAJOR MINOR <<< "$LAST_VERSION"
           VERSION="v${MAJOR}.$((MINOR + 1))"
-          echo "new_tag=JupyterHubImage/${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "new_tag=image/${VERSION}" >> "$GITHUB_OUTPUT"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "last_tag=${LAST_TAG}" >> "$GITHUB_OUTPUT"
 
@@ -55,7 +55,7 @@ jobs:
           NEW_TAG: ${{ steps.version.outputs.new_tag }}
           LAST_TAG: ${{ steps.version.outputs.last_tag }}
         run: |
-          NOTES=$(git log "${LAST_TAG}..${NEW_TAG}" --pretty='- %h %s' -- JupyterHubImage)
+          NOTES=$(git log "${LAST_TAG}..${NEW_TAG}" --pretty='- %h %s' -- image)
           gh release create "$NEW_TAG" --notes "$NOTES"
 
   build-and-push:
@@ -78,7 +78,7 @@ jobs:
       - name: Build and push image to GitLab
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          context: ./JupyterHubImage
+          context: ./image
           push: true
           tags: gitlab-registry.cern.ch/swan/docker-images/jupyterhub:${{ needs.release.outputs.version }}
 

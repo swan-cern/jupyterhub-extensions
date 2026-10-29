@@ -35,7 +35,7 @@ jobs:
       run: |
         PKG_NAME_LOWER=$(echo "${PACKAGE}" | tr '[:upper:]' '[:lower:]')
         PKG_VER=$(echo "${VERSION}" | sed -e "s/v//g")
-        sed -i "s/\( $PKG_NAME_LOWER==*\)[^ ]*/\1$PKG_VER/" JupyterHubImage/Dockerfile
+        sed -i "s/\( $PKG_NAME_LOWER==*\)[^ ]*/\1$PKG_VER/" image/Dockerfile
 
     - name: Create pull request
       env:
@@ -48,7 +48,7 @@ jobs:
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
         git checkout -b "$BRANCH"
-        git add JupyterHubImage/Dockerfile
+        git add image/Dockerfile
         git commit -m "$MESSAGE"
         git push origin "$BRANCH"
         gh pr create --title "$MESSAGE" --body "" --head "$BRANCH" --base master

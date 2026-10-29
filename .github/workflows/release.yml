@@ -106,7 +106,7 @@ jobs:
             --title "${TAG}" \
             --notes-file /tmp/release_body.md
 
-      - name: Trigger image update in JupyterHubImage/
+      - name: Trigger update-packages workflow
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.version.outputs.version }}
