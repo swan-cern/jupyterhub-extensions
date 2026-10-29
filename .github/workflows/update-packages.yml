@@ -1,0 +1,54 @@
+name: SWAN CI/CD pipeline
+
+on: 
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Package Name'
+        required: true
+      version:
+        description: 'Package Version'
+        required: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}  # Deny all permissions by default at workflow level
+
+jobs:
+  update-package:
+    runs-on: ubuntu-latest
+    env:
+      PACKAGE: ${{ inputs.package }}
+      VERSION: ${{ inputs.version }}
+    permissions:
+        contents: write # Required for pushing branches
+        pull-requests: write # Required for creating pull requests
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        ref: master
+        persist-credentials: false
+
+    - name: Update package version
+      run: |
+        PKG_NAME_LOWER=$(echo " ${PACKAGE}" | tr '[:upper:]' '[:lower:]')
+        PKG_VER=$(echo "${VERSION}" | sed -e "s/v//g")
+        sed -i "s/\( $PKG_NAME_LOWER==*\)[^ ]*/\1$PKG_VER/" Dockerfile
+
+    - name: Create pull request
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        BRANCH="${PACKAGE}-${VERSION}"
+        MESSAGE="Updated package ${PACKAGE} to version ${VERSION}"
+
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+        git checkout -b "$BRANCH"
+        git add Dockerfile
+        git commit -m "$MESSAGE"
+        git push origin "$BRANCH"
+        gh pr create --title "$MESSAGE" --body "" --head "$BRANCH" --base master
