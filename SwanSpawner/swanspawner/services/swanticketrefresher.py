@@ -5,7 +5,6 @@ import os
 from functools import partial
 from subprocess import call
 
-from tornado.gen import coroutine
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.log import app_log
@@ -17,16 +16,25 @@ def check_ticket(username):
     call(["sudo", "--preserve-env=SWAN_DEV", "%s/check_ticket.sh" % options.hooks_dir, username])
 
 
-@coroutine
-def check_tickets(url, api_token):
+async def check_tickets(url, api_token):
     """Check & refresh tickets for all users with an open session"""
-    auth_header = {"Authorization": "token %s" % api_token}
-    req = HTTPRequest(url=url + "/users?state=active", headers=auth_header)
+    headers = {
+        "Authorization": f"token {api_token}",
+        "Accept": "application/jupyterhub-pagination+json",
+    }
+    req = HTTPRequest(url=f"{url}/users?state=active", headers=headers)
     client = AsyncHTTPClient()
+    users = []
+    while True:
+        resp = await client.fetch(req)
+        page = json.loads(resp.body.decode("utf8", "replace"))
 
-    resp = yield client.fetch(req)
+        users.extend(page["items"])
 
-    users = json.loads(resp.body.decode("utf8", "replace"))
+        next_page_info = page["_pagination"]["next"]
+        if not next_page_info:
+            break
+        req.url = next_page_info["url"]
 
     for user in users:
         check_ticket(user["name"])
