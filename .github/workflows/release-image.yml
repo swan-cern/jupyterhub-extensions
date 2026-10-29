@@ -1,5 +1,5 @@
-name: Release
-run-name: Release by @${{ github.actor }}
+name: Release-Image
+run-name: Release-Image by @${{ github.actor }}
 
 on:
   workflow_dispatch:
@@ -17,7 +17,7 @@ jobs:
     permissions:
       contents: write # Required for pushing tags and creating releases
     outputs:
-      new_tag: ${{ steps.version.outputs.new_tag }}
+      version: ${{ steps.version.outputs.version }}
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -28,10 +28,17 @@ jobs:
       - name: Calculate next version
         id: version
         run: |
-          LAST_TAG=$(git describe --tags --abbrev=0)
-          LAST_VERSION="${LAST_TAG#v}"
+          # Based on the jupyter-images release workflow
+          LAST_TAG=$(git tag -l "JupyterHubImage/v*" --sort=-v:refname | head -n 1)
+          if [ -z "$LAST_TAG" ]; then
+            echo "::error::No existing tag found for JupyterHubImage"
+            exit 1
+          fi
+          LAST_VERSION="${LAST_TAG#JupyterHubImage/v}"
           IFS='.' read -r MAJOR MINOR <<< "$LAST_VERSION"
-          echo "new_tag=v${MAJOR}.$((MINOR + 1))" >> "$GITHUB_OUTPUT"
+          VERSION="v${MAJOR}.$((MINOR + 1))"
+          echo "new_tag=JupyterHubImage/${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "last_tag=${LAST_TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Create and push tag
@@ -48,7 +55,7 @@ jobs:
           NEW_TAG: ${{ steps.version.outputs.new_tag }}
           LAST_TAG: ${{ steps.version.outputs.last_tag }}
         run: |
-          NOTES=$(git log "${LAST_TAG}..${NEW_TAG}" --pretty='- %h %s')
+          NOTES=$(git log "${LAST_TAG}..${NEW_TAG}" --pretty='- %h %s' -- JupyterHubImage)
           gh release create "$NEW_TAG" --notes "$NOTES"
 
   build-and-push:
@@ -71,8 +78,9 @@ jobs:
       - name: Build and push image to GitLab
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
+          context: ./JupyterHubImage
           push: true
-          tags: gitlab-registry.cern.ch/swan/docker-images/jupyterhub:${{ needs.release.outputs.new_tag }}
+          tags: gitlab-registry.cern.ch/swan/docker-images/jupyterhub:${{ needs.release.outputs.version }}
 
   update-swan-charts:
     runs-on: ubuntu-latest
@@ -88,4 +96,4 @@ jobs:
             --repo swan-cern/swan-charts \
             --ref master \
             -f image=jupyterhub \
-            -f version="${{ needs.release.outputs.new_tag }}"
+            -f version="${{ needs.release.outputs.version }}"

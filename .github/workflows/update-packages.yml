@@ -1,4 +1,4 @@
-name: SWAN CI/CD pipeline
+name: Update packages of JupyterHub image
 
 on: 
   workflow_dispatch:
@@ -33,9 +33,9 @@ jobs:
 
     - name: Update package version
       run: |
-        PKG_NAME_LOWER=$(echo " ${PACKAGE}" | tr '[:upper:]' '[:lower:]')
+        PKG_NAME_LOWER=$(echo "${PACKAGE}" | tr '[:upper:]' '[:lower:]')
         PKG_VER=$(echo "${VERSION}" | sed -e "s/v//g")
-        sed -i "s/\( $PKG_NAME_LOWER==*\)[^ ]*/\1$PKG_VER/" Dockerfile
+        sed -i "s/\( $PKG_NAME_LOWER==*\)[^ ]*/\1$PKG_VER/" JupyterHubImage/Dockerfile
 
     - name: Create pull request
       env:
@@ -48,7 +48,7 @@ jobs:
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
         git checkout -b "$BRANCH"
-        git add Dockerfile
+        git add JupyterHubImage/Dockerfile
         git commit -m "$MESSAGE"
         git push origin "$BRANCH"
         gh pr create --title "$MESSAGE" --body "" --head "$BRANCH" --base master
