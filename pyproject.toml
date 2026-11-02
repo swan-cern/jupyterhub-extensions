@@ -83,7 +83,3 @@ ignore = [
 "SwanHub/swanhub/spawn_handler.py" = [
     "LOG014", # exc-info-outside-except-handler
 ]
-"SwanCuller/swanculler/app.py" = [
-    "E701",    # multiple-statements-on-one-line-colon
-    "PLW0603", # global-statement
-]

@@ -1,7 +1,6 @@
 # SwanCuller
 
-JupyterHub service that checks and cleans user sessions.
-It also calls bash scripts to check/renew kerberos tokens for the users, if their sessions still exist, or remove them if not in use.
+JupyterHub services that checks and cleans user sessions.
 
 ## Requirements
 
@@ -15,19 +14,21 @@ Install the package:
 pip install swanculler
 ```
 
-## Usage
+## `swanblockedusersculler` service usage
+
+`swanblockedusersculler` is a JupyterHub service that checks and delete user sessions for blocked users.
 
 Call the binary and specify configuration parameters:
 ```bash
-swanculler --cull_every=600
+swanblockedusersculler --auth_check_interval=600 --authz_api_url ... --audience ... --auth-url ...
 ```
 
 Configuration parameters:
 * url: The JupyterHub API URL (default=$JUPYTERHUB_API_URL)
-* timeout: The idle timeout (in seconds) (default=600)
-* cull_every: The interval (in seconds) for checking for idle servers to cull (default=0)
-* max_age: The maximum age (in seconds) of servers that should be culled even if they are active (default=0)
-* cull_users: Cull users in addition to servers (default=False)
+* auth_check_interval: The interval (in seconds) for checking for blocked users (default=14400)
 * concurrency: Limit the number of concurrent requests made to the Hub (default=10)
-* hooks_dir: Path to the directory for the krb tickets script (check_ticket.sh) (default="/srv/jupyterhub/culler)
-* disable_hooks: Whether to  call the krb tickets scripts or not (default=False)
+* audience: Audience for CERN access token
+* authz_api_url: URL to fetch user identity from authorization service
+* auth_url: URL to fetch CERN access token
+* auth_client_id: Client ID for blocked user check (default=$AUTH_CLIENT_ID)
+* auth_client_secret: Client secret for blocked user check (default=$AUTH_CLIENT_SECRET)
