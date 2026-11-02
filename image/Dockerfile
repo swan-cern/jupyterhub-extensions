@@ -4,6 +4,8 @@ LABEL maintainer="swan-admins@cern.ch"
 
 ARG PYTHON_VERSION=3.14
 
+ENV TZ=UTC
+
 # ----- Install CERN customizations ----- #
 
 # Install support packages
@@ -12,7 +14,7 @@ RUN dnf install -y epel-release && \
     dnf install -y python3-pip \
                    # needed by kS4U
                    perl-Data-Dumper \
-                   # needed by swanculler
+                   # needed by swanticketrefresher service
                    sudo \
                    # useful for debugging
                    vim \
@@ -31,6 +33,7 @@ RUN pip3 install --no-cache uv && \
         psycopg2-binary==2.9.13 \
         pycurl==7.48.0 \
         py-spy==0.4.2 \
+        jupyterhub-idle-culler==1.4.0 \
         # SWAN packages
         keycloakauthenticator==4.0.13 \
         swanculler==1.0.9 \
