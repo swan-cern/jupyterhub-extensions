@@ -1,10 +1,10 @@
 """Script to periodically refresh Kerberos tokens for SWAN sessions"""
 
-import json
 import os
 from functools import partial
 from subprocess import call
 
+from tornado.escape import json_decode
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.log import app_log
@@ -27,7 +27,7 @@ async def check_tickets(url, api_token):
     users = []
     while True:
         resp = await client.fetch(req)
-        page = json.loads(resp.body.decode("utf8", "replace"))
+        page = json_decode(resp.body)
 
         users.extend(page["items"])
 
