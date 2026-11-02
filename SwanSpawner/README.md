@@ -120,3 +120,17 @@ Options type selection
   # ...
 ```
 An example yaml file can be seen in [options_form_config.yaml]()
+
+## Ticket refresh service
+
+This module includes a `swanticketrefresher` command intended to be run as a JupyterHub service, that calls bash scripts to check and renew kerberos tokens for the users.
+
+Call the script and specify configuration parameters:
+```bash
+swanticketrefresher --every=600
+```
+
+Configuration parameters:
+* `--url`: The JupyterHub API URL (default=$JUPYTERHUB_API_URL)
+* `--every`: The interval (in seconds) for checking tickets (default=600)
+* `--hooks_dir`: Path to the directory for the krb tickets script (check_ticket.sh) (default="/srv/jupyterhub/culler")
