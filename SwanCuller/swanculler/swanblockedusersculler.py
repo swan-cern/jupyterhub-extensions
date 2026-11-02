@@ -9,6 +9,7 @@ try:
 except ImportError:
     from urllib import quote, urlencode
 
+from tornado.escape import json_decode
 from tornado.gen import coroutine, multi
 from tornado.httpclient import AsyncHTTPClient, HTTPClientError, HTTPRequest
 from tornado.ioloop import IOLoop, PeriodicCallback
@@ -47,28 +48,39 @@ def check_blocked_users(url, api_token, client_id, client_secret, auth_url, audi
     Detect blocked users and cull both their servers and the user.
     """
     # Step 0: Get users from JupyterHub API
-    auth_header = {"Authorization": "token %s" % api_token}
-    req = HTTPRequest(url=url + "/users", headers=auth_header)
+    headers = {
+        "Authorization": f"token {api_token}",
+        "Accept": "application/jupyterhub-pagination+json",
+    }
     client = AsyncHTTPClient()
 
     if concurrency:
         semaphore = Semaphore(concurrency)
 
         @coroutine
-        def fetch(req):
+        def fetch(req, **kwargs):
             """client.fetch wrapped in a semaphore to limit concurrency"""
             yield semaphore.acquire()
             try:
-                return (yield client.fetch(req))
+                return (yield client.fetch(req, **kwargs))
             finally:
                 yield semaphore.release()
 
     else:
         fetch = client.fetch
 
-    resp = yield fetch(req)
+    next_url = f"{url}/users"
+    users = []
+    while next_url:
+        resp = yield fetch(next_url, headers=headers)
+        page = json_decode(resp.body)
 
-    users = json.loads(resp.body.decode("utf8", "replace"))
+        users.extend(page["items"])
+
+        next_page_info = page["_pagination"]["next"]
+        next_url = None
+        if next_page_info:
+            next_url = next_page_info["url"]
 
     # Step 1: Get Token for Authorization Service APIs (no Token Exchange permissions - too powerful)
     token_req = HTTPRequest(
