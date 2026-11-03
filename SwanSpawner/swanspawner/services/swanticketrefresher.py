@@ -1,12 +1,11 @@
 """Script to periodically refresh Kerberos tokens for SWAN sessions"""
 
-import json
 import os
 from functools import partial
 from subprocess import call
 
-from tornado.gen import coroutine
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+from tornado.escape import json_decode
+from tornado.httpclient import AsyncHTTPClient
 from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.log import app_log
 from tornado.options import define, options, parse_command_line
@@ -17,16 +16,23 @@ def check_ticket(username):
     call(["sudo", "--preserve-env=SWAN_DEV", "%s/check_ticket.sh" % options.hooks_dir, username])
 
 
-@coroutine
-def check_tickets(url, api_token):
+async def check_tickets(url, api_token):
     """Check & refresh tickets for all users with an open session"""
-    auth_header = {"Authorization": "token %s" % api_token}
-    req = HTTPRequest(url=url + "/users?state=active", headers=auth_header)
+    headers = {
+        "Authorization": f"token {api_token}",
+        "Accept": "application/jupyterhub-pagination+json",
+    }
+    next_url = f"{url}/users?state=active"
     client = AsyncHTTPClient()
+    users = []
+    while next_url:
+        resp = await client.fetch(next_url, headers=headers)
+        page = json_decode(resp.body)
 
-    resp = yield client.fetch(req)
+        users.extend(page["items"])
 
-    users = json.loads(resp.body.decode("utf8", "replace"))
+        next_page_info = page["_pagination"]["next"]
+        next_url = next_page_info["url"] if next_page_info else None
 
     for user in users:
         check_ticket(user["name"])
