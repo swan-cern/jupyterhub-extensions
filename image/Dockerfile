@@ -36,7 +36,7 @@ RUN pip3 install --no-cache uv && \
         jupyterhub-idle-culler==1.4.0 \
         # SWAN packages
         keycloakauthenticator==4.0.13 \
-        swanculler==1.0.9 \
+        swanculler==1.0.10 \
         swanhub==1.0.24 \
         swanspawner==1.2.55
 
