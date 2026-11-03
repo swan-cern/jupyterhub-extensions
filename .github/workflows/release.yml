@@ -38,6 +38,7 @@ jobs:
     permissions:
       id-token: write # Required for authentication with PyPI using OIDC
       contents: write # Required to push commits and tags
+      actions: write # Required to start the update-packages workflow
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -105,13 +106,13 @@ jobs:
             --title "${TAG}" \
             --notes-file /tmp/release_body.md
 
-      - name: Trigger image update in jupyterhub-image
+      - name: Trigger update-packages workflow
         env:
-          GH_TOKEN: ${{ secrets.WORKFLOW_ACCESS_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          gh workflow run SWAN_CI_CD_pipeline.yml \
-            --repo swan-cern/jupyterhub-image \
+          gh workflow run update-packages.yml \
+            --repo "${GITHUB_REPOSITORY}" \
             --ref master \
             -f package="${EXTENSION}" \
             -f version="${VERSION}"

@@ -1,0 +1,99 @@
+name: Release-Image
+run-name: Release-Image by @${{ github.actor }}
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}  # Deny all permissions by default at workflow level
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: tag-release
+    permissions:
+      contents: write # Required for pushing tags and creating releases
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Calculate next version
+        id: version
+        run: |
+          # Based on the jupyter-images release workflow
+          LAST_TAG=$(git tag -l "image/v*" --sort=-v:refname | head -n 1)
+          if [ -z "$LAST_TAG" ]; then
+            echo "::error::No existing image/v* tag found"
+            exit 1
+          fi
+          LAST_VERSION="${LAST_TAG#image/v}"
+          IFS='.' read -r MAJOR MINOR <<< "$LAST_VERSION"
+          VERSION="v${MAJOR}.$((MINOR + 1))"
+          echo "new_tag=image/${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "last_tag=${LAST_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag
+        env:
+          WORKFLOW_ACCESS_TOKEN: ${{ secrets.WORKFLOW_ACCESS_TOKEN }}
+        run: |
+          git tag "${{ steps.version.outputs.new_tag }}"
+          git remote set-url origin "https://x-access-token:${WORKFLOW_ACCESS_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push origin "${{ steps.version.outputs.new_tag }}"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_TAG: ${{ steps.version.outputs.new_tag }}
+          LAST_TAG: ${{ steps.version.outputs.last_tag }}
+        run: |
+          NOTES=$(git log "${LAST_TAG}..${NEW_TAG}" --pretty='- %h %s' -- image)
+          gh release create "$NEW_TAG" --notes "$NOTES"
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    environment: build-and-push
+    needs: release
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Log in to GitLab Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: gitlab-registry.cern.ch
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITLAB_TOKEN }}
+
+      - name: Build and push image to GitLab
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ./image
+          push: true
+          tags: gitlab-registry.cern.ch/swan/docker-images/jupyterhub:${{ needs.release.outputs.version }}
+
+  update-swan-charts:
+    runs-on: ubuntu-latest
+    environment: update-swan-charts
+    needs: [release, build-and-push]
+
+    steps:
+      - name: Trigger image version update in swan-charts
+        env:
+          GH_TOKEN: ${{ secrets.WORKFLOW_ACCESS_TOKEN }}
+        run: |
+          gh workflow run "Update jupyter and jupyterhub images" \
+            --repo swan-cern/swan-charts \
+            --ref master \
+            -f image=jupyterhub \
+            -f version="${{ needs.release.outputs.version }}"
