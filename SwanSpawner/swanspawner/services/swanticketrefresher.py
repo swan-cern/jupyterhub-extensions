@@ -32,9 +32,7 @@ async def check_tickets(url, api_token):
         users.extend(page["items"])
 
         next_page_info = page["_pagination"]["next"]
-        next_url = None
-        if next_page_info:
-            next_url = next_page_info["url"]
+        next_url = next_page_info["url"] if next_page_info else None
 
     for user in users:
         check_ticket(user["name"])
