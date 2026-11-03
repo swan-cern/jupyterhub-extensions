@@ -104,7 +104,6 @@ def mock_http(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize("is_blocked", (True, False))
 @pytest.mark.parametrize("is_disabled", (True, False))
 async def test_check_blocked(mock_http, is_blocked, is_disabled):
@@ -132,7 +131,6 @@ async def test_check_blocked(mock_http, is_blocked, is_disabled):
         assert len(delete_calls) == 0
 
 
-@pytest.mark.asyncio
 async def test_check_blocked_mix_of_users(mock_http):
     users = [
         make_user("blocked_user"),
@@ -160,7 +158,6 @@ async def test_check_blocked_mix_of_users(mock_http):
     assert all("blocked_user" in c.url for c in delete_calls)
 
 
-@pytest.mark.asyncio
 async def test_check_blocked_paginated(mock_http):
     users = [make_user(f"user{i}") for i in range(5)]
 

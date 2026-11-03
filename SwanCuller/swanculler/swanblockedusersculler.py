@@ -78,9 +78,7 @@ def check_blocked_users(url, api_token, client_id, client_secret, auth_url, audi
         users.extend(page["items"])
 
         next_page_info = page["_pagination"]["next"]
-        next_url = None
-        if next_page_info:
-            next_url = next_page_info["url"]
+        next_url = next_page_info["url"] if next_page_info else None
 
     # Step 1: Get Token for Authorization Service APIs (no Token Exchange permissions - too powerful)
     token_req = HTTPRequest(
