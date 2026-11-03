@@ -5,7 +5,7 @@ from functools import partial
 from subprocess import call
 
 from tornado.escape import json_decode
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+from tornado.httpclient import AsyncHTTPClient
 from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.log import app_log
 from tornado.options import define, options, parse_command_line
@@ -22,19 +22,19 @@ async def check_tickets(url, api_token):
         "Authorization": f"token {api_token}",
         "Accept": "application/jupyterhub-pagination+json",
     }
-    req = HTTPRequest(url=f"{url}/users?state=active", headers=headers)
+    next_url = f"{url}/users?state=active"
     client = AsyncHTTPClient()
     users = []
-    while True:
-        resp = await client.fetch(req)
+    while next_url:
+        resp = await client.fetch(next_url, headers=headers)
         page = json_decode(resp.body)
 
         users.extend(page["items"])
 
         next_page_info = page["_pagination"]["next"]
-        if not next_page_info:
-            break
-        req.url = next_page_info["url"]
+        next_url = None
+        if next_page_info:
+            next_url = next_page_info["url"]
 
     for user in users:
         check_ticket(user["name"])
