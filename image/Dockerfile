@@ -38,7 +38,7 @@ RUN pip3 install --no-cache uv && \
         keycloakauthenticator==4.0.13 \
         swanculler==1.0.10 \
         swanhub==1.0.24 \
-        swanspawner==1.2.55
+        swanspawner==1.2.56
 
 
 # Install kS4U
