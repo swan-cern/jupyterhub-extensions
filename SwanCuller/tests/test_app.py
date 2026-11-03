@@ -1,8 +1,10 @@
 import json
 from datetime import UTC, datetime
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 from swanculler.swanblockedusersculler import check_blocked_users
+from tornado.httpclient import HTTPRequest
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -33,6 +35,8 @@ class MockHTTPClient:
         self._handler = handler
 
     async def fetch(self, req, **kwargs):
+        if not isinstance(req, HTTPRequest):
+            req = HTTPRequest(req, **kwargs)
         self.calls.append(req)
         return self._handler(req)
 
@@ -46,6 +50,30 @@ def _identity(blocked=False, disabled=False):
         200,
         json.dumps({"data": [{"blocked": blocked, "disabled": disabled}]}).encode(),
     )
+
+
+def _paginate_users(req, users, limit=200):
+    if req.headers.get("Accept") == "application/jupyterhub-pagination+json":
+        offset = int(parse_qs(urlsplit(req.url).query).get("offset", ["0"])[0])
+        next_offset = offset + limit
+        next_page = None
+        if next_offset < len(users):
+            next_page = {
+                "offset": next_offset,
+                "limit": limit,
+                "url": f"{HUB_URL}/users?offset={next_offset}&limit={limit}",
+            }
+        return MockHTTPResponse(
+            200,
+            json.dumps(
+                {
+                    "items": users[offset:next_offset],
+                    "_pagination": {"offset": offset, "limit": limit, "total": len(users), "next": next_page},
+                }
+            ).encode(),
+        )
+    else:
+        return MockHTTPResponse(200, json.dumps(users[:limit]).encode())
 
 
 HUB_URL = "http://hub/api"
@@ -83,8 +111,8 @@ async def test_check_blocked(mock_http, is_blocked, is_disabled):
     users = [make_user("alice")]
 
     def handler(req):
-        if req.method == "GET" and req.url == f"{HUB_URL}/users":
-            return MockHTTPResponse(200, json.dumps(users).encode())
+        if req.method == "GET" and req.url.startswith(f"{HUB_URL}/users"):
+            return _paginate_users(req, users)
         if req.method == "POST":
             return _token_ok()
         if "/accounts" in req.url:
@@ -112,8 +140,8 @@ async def test_check_blocked_mix_of_users(mock_http):
     ]
 
     def handler(req):
-        if req.method == "GET" and req.url == f"{HUB_URL}/users":
-            return MockHTTPResponse(200, json.dumps(users).encode())
+        if req.method == "GET" and req.url.startswith(f"{HUB_URL}/users"):
+            return _paginate_users(req, users)
         if req.method == "POST":
             return _token_ok()
         if "/blocked_user/accounts" in req.url:
@@ -130,3 +158,28 @@ async def test_check_blocked_mix_of_users(mock_http):
     # Only blocked_user: server DELETE + user DELETE
     assert len(delete_calls) == 2
     assert all("blocked_user" in c.url for c in delete_calls)
+
+
+@pytest.mark.asyncio
+async def test_check_blocked_paginated(mock_http):
+    users = [make_user(f"user{i}") for i in range(5)]
+
+    def handler(req):
+        if req.method == "GET" and req.url.startswith(f"{HUB_URL}/users"):
+            return _paginate_users(req, users, limit=2)
+        if req.method == "POST":
+            return _token_ok()
+        if "/accounts" in req.url:
+            return _identity(blocked=True)
+        if req.method == "DELETE":
+            return MockHTTPResponse(204)
+        return MockHTTPResponse(200, b"[]")
+
+    client = mock_http(handler=handler)
+    await check_blocked_users(HUB_URL, API_TOKEN, CLIENT_ID, CLIENT_SECRET, AUTH_URL, AUDIENCE, AUTHZ_URL)
+    get_users_calls = [c for c in client.calls if c.method == "GET" and "/users" in c.url]
+    delete_calls = [c for c in client.calls if c.method == "DELETE"]
+    # 3 pages to get all users
+    assert len(get_users_calls) == 3
+    # 10 delete calls (server DELETE + user DELETE for 5 users)
+    assert len(delete_calls) == 10
