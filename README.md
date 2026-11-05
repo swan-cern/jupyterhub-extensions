@@ -18,7 +18,7 @@ these steps:
 
 #### Install dependencies
 
-- Create a virtual enviroment and activate it:
+- Create a virtual environment and activate it:
 
 ```bash
 uv venv
