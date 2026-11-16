@@ -31,8 +31,8 @@ RUN pip3 install --no-cache uv && \
     uv venv /opt/venv --python ${PYTHON_VERSION} && \
     uv pip install \
         psycopg2-binary==2.9.13 \
-        pycurl==7.48.0 \
-        py-spy==0.4.2 \
+        pycurl==7.49.0 \
+        py-spy==0.4.3 \
         jupyterhub-idle-culler==1.4.0 \
         # SWAN packages
         keycloakauthenticator==4.0.13 \
