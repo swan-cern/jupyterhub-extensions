@@ -1,4 +1,3 @@
-import asyncio
 import json
 from unittest.mock import MagicMock
 from urllib.error import HTTPError
@@ -7,12 +6,10 @@ import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
 from jwt.algorithms import RSAAlgorithm
-from oauthenticator.generic import GenericOAuthenticator
-from oauthenticator.oauth2 import OAuthLoginHandler
-from tornado import web
+from oauthenticator.oidc import OIDCOAuthenticator
 from traitlets import TraitError
 
-from ..auth import KeyCloakAuthenticator, OIDCOAuthLoginHandler
+from ..auth import KeyCloakAuthenticator
 
 
 def _generate_mock_public_private_key_pair():
@@ -47,9 +44,8 @@ def _get_mock_token(private_key, token_id, expired=False):
 
 
 @pytest.fixture
-def unconfigured_authenticator(monkeypatch):
-    monkeypatch.setattr(asyncio, "ensure_future", lambda coro: coro.close())
-    auth = KeyCloakAuthenticator(oidc_issuer="http://fake-issuer")
+def unconfigured_authenticator():
+    auth = KeyCloakAuthenticator(openid_provider_url="http://fake-issuer", manage_groups=True)
     auth.check_signature = False  # disabled by default; check_signature tests enable it explicitly
     return auth
 
@@ -65,7 +61,7 @@ def authenticator(unconfigured_authenticator):
     unconfigured_authenticator.token_url = "http://fake/token"
     unconfigured_authenticator.client_id = "dummy-client"
     unconfigured_authenticator.client_secret = "dummy-secret"
-    unconfigured_authenticator.configured = True
+    unconfigured_authenticator.openid_configuration = OIDC_DISCOVERY_DOC
     return unconfigured_authenticator
 
 
@@ -74,6 +70,8 @@ def authenticator(unconfigured_authenticator):
 # ---------------------------------------------------------------------------
 
 OIDC_DISCOVERY_DOC = {
+    "issuer": "http://fake-issuer",
+    "jwks_uri": "http://fake/certs",
     "authorization_endpoint": "http://fake/auth",
     "token_endpoint": "http://fake/token",
     "userinfo_endpoint": "http://fake/userinfo",
@@ -95,35 +93,7 @@ class MockFetchResponse:
         self.time_info = {"queue": 0.0}
 
 
-class TestOIDCOAuthLoginHandler:
-    class TestGet:
-        def _make_handler(self, monkeypatch, configured):
-            handler = OIDCOAuthLoginHandler.__new__(OIDCOAuthLoginHandler)
-            monkeypatch.setattr(
-                OIDCOAuthLoginHandler, "authenticator", property(lambda _: MagicMock(configured=configured))
-            )
-            return handler
-
-        def test_raises_when_not_configured(self, monkeypatch):
-            handler = self._make_handler(monkeypatch, configured=False)
-            with pytest.raises(web.HTTPError) as exc_info:
-                handler.get()
-            assert exc_info.value.status_code == 500
-
-        def test_calls_super_when_configured(self, monkeypatch):
-            handler = self._make_handler(monkeypatch, configured=True)
-            super_called = []
-            monkeypatch.setattr(OAuthLoginHandler, "get", lambda _: super_called.append(True))
-            handler.get()
-            assert super_called
-
-
 class TestKeyCloakAuthenticator:
-    class TestInit:
-        def test_raises_if_not_oidc_issuer(self):
-            with pytest.raises(Exception, match="No OIDC issuer url provided"):
-                KeyCloakAuthenticator()
-
     class TestValidators:
         def test_pre_spawn_hook_raises_for_non_callable(self, unconfigured_authenticator):
             with pytest.raises(TraitError):
@@ -137,39 +107,18 @@ class TestKeyCloakAuthenticator:
             roles = authenticator.claim_roles_key(authenticator, {})
             assert roles == set()
 
-    class TestGetOidcConfigs:
-        @pytest.mark.parametrize(
-            "doc",
-            [
-                {},
-                {"authorization_endpoint": "http://fake/auth"},
-                {"authorization_endpoint": "http://fake/auth", "token_endpoint": "http://fake/token"},
-                {"token_endpoint": "http://fake/token"},
-            ],
-        )
-        async def test_missing_required_authorisation_fields(self, unconfigured_authenticator, monkeypatch, doc):
-            async def mock_httpfetch(url, **kwargs):
-                return doc
-
-            monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
-
-            with pytest.raises(Exception, match="Unable to retrieve OIDC necessary values"):
-                await unconfigured_authenticator._get_oidc_configs_helper()
-
-            assert not unconfigured_authenticator.configured
-
+    class TestLoadOpenidConfiguration:
         async def test_set_urls(self, unconfigured_authenticator, monkeypatch):
             async def mock_httpfetch(url, **kwargs):
                 return OIDC_DISCOVERY_DOC
 
             monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
 
-            await unconfigured_authenticator._get_oidc_configs_helper()
+            await unconfigured_authenticator._load_openid_configuration()
 
             assert unconfigured_authenticator.authorize_url == "http://fake/auth"
             assert unconfigured_authenticator.token_url == "http://fake/token"
             assert unconfigured_authenticator.userdata_url == "http://fake/userinfo"
-            assert unconfigured_authenticator.configured
 
         async def test_enable_logout_end_session_no_existing_redirect_url(
             self, unconfigured_authenticator, monkeypatch
@@ -182,7 +131,7 @@ class TestKeyCloakAuthenticator:
 
             monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
 
-            await unconfigured_authenticator._get_oidc_configs_helper()
+            await unconfigured_authenticator._load_openid_configuration()
 
             assert unconfigured_authenticator.logout_redirect_url == "http://fake/logout"
 
@@ -196,7 +145,7 @@ class TestKeyCloakAuthenticator:
 
             monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
 
-            await unconfigured_authenticator._get_oidc_configs_helper()
+            await unconfigured_authenticator._load_openid_configuration()
 
             assert unconfigured_authenticator.logout_redirect_url == (
                 "http://fake/logout?post_logout_redirect_uri=http://fake/post-logout&client_id=dummy-client"
@@ -218,7 +167,7 @@ class TestKeyCloakAuthenticator:
 
             monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
 
-            await unconfigured_authenticator._get_oidc_configs_helper()
+            await unconfigured_authenticator._load_openid_configuration()
 
             assert unconfigured_authenticator.logout_redirect_url == original_logout_url
 
@@ -232,13 +181,13 @@ class TestKeyCloakAuthenticator:
                 nonlocal call_count
                 call_count += 1
                 if call_count == 1:
-                    return {**OIDC_DISCOVERY_DOC, "jwks_uri": "http://fake/certs"}
+                    return OIDC_DISCOVERY_DOC
                 return jwks
 
             monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
             unconfigured_authenticator.check_signature = True
 
-            await unconfigured_authenticator._get_oidc_configs_helper()
+            await unconfigured_authenticator._load_openid_configuration()
 
             assert unconfigured_authenticator.public_key is not None
             assert call_count == 2
@@ -253,13 +202,13 @@ class TestKeyCloakAuthenticator:
                 nonlocal call_count
                 call_count += 1
                 if call_count == 1:
-                    return {**OIDC_DISCOVERY_DOC, "jwks_uri": "http://fake/certs"}
+                    return OIDC_DISCOVERY_DOC
                 return jwks
 
             monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
             unconfigured_authenticator.check_signature = True
 
-            await unconfigured_authenticator._get_oidc_configs_helper()
+            await unconfigured_authenticator._load_openid_configuration()
 
             assert unconfigured_authenticator.public_key is not None
 
@@ -273,53 +222,49 @@ class TestKeyCloakAuthenticator:
 
             monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
 
-            await unconfigured_authenticator._get_oidc_configs_helper()
+            await unconfigured_authenticator._load_openid_configuration()
 
             assert call_count == 1
             assert unconfigured_authenticator.public_key is None
 
-        async def test_retries_after_failure(self, unconfigured_authenticator, monkeypatch):
-            call_count = 0
+    class TestAllowedRoles:
+        async def _check_allowed(self, authenticator, roles):
+            auth_model = {"name": "test-user", "admin": None, "auth_state": {"roles": roles}}
+            auth_model = await authenticator._apply_managed_groups(auth_model)
+            return await authenticator.check_allowed("test-user", auth_model)
 
-            async def mock_helper(self):
-                nonlocal call_count
-                call_count += 1
-                if call_count == 1:
-                    raise Exception("transient failure")
-                unconfigured_authenticator.configured = True
+        async def test_allow_all_permits_all(self, unconfigured_authenticator):
+            unconfigured_authenticator.allow_all = True
+            assert await self._check_allowed(unconfigured_authenticator, ["any-role"])
+            assert await self._check_allowed(unconfigured_authenticator, [])
 
-            sleep_calls = []
+        async def test_matching_role_permits(self, unconfigured_authenticator):
+            unconfigured_authenticator.allowed_groups = {"admin"}
+            assert await self._check_allowed(unconfigured_authenticator, ["admin", "user"])
 
-            async def mock_sleep(duration):
-                sleep_calls.append(duration)
+        async def test_no_matching_role_denies(self, unconfigured_authenticator):
+            unconfigured_authenticator.allowed_groups = {"admin"}
+            assert not await self._check_allowed(unconfigured_authenticator, ["user"])
 
-            monkeypatch.setattr(KeyCloakAuthenticator, "_get_oidc_configs_helper", mock_helper)
-            monkeypatch.setattr(asyncio, "sleep", mock_sleep)
+        async def test_admin_role_sets_admin_and_permits(self, unconfigured_authenticator):
+            unconfigured_authenticator.admin_groups = {"swan-admins"}
+            auth_model = {"name": "test-user", "admin": None, "auth_state": {"roles": ["swan-admins"]}}
+            auth_model = await unconfigured_authenticator._apply_managed_groups(auth_model)
+            assert auth_model["admin"]
+            assert await unconfigured_authenticator.check_allowed("test-user", auth_model)
 
-            await unconfigured_authenticator._get_oidc_configs()
-
-            assert call_count == 2
-            assert len(sleep_calls) == 1
-            assert sleep_calls[0] == 60
-
-    class TestValidateRoles:
-        def test_empty_allowed_roles_permits_all(self, unconfigured_authenticator):
-            assert unconfigured_authenticator._validate_roles({"any-role"})
-            assert unconfigured_authenticator._validate_roles(set())
-
-        def test_matching_role_permits(self, unconfigured_authenticator):
-            unconfigured_authenticator._allowed_roles = {"admin"}
-            assert unconfigured_authenticator._validate_roles({"admin", "user"})
-
-        def test_no_matching_role_denies(self, unconfigured_authenticator):
-            unconfigured_authenticator._allowed_roles = {"admin"}
-            assert not unconfigured_authenticator._validate_roles({"user"})
+        async def test_non_admin_role_does_not_set_admin(self, unconfigured_authenticator):
+            unconfigured_authenticator.admin_groups = {"swan-admins"}
+            auth_model = {"name": "test-user", "admin": None, "auth_state": {"roles": ["user"]}}
+            auth_model = await unconfigured_authenticator._apply_managed_groups(auth_model)
+            assert not auth_model["admin"]
+            assert not await unconfigured_authenticator.check_allowed("test-user", auth_model)
 
     class TestDecodeToken:
         def _setup(self, authenticator, public_key):
             authenticator.public_key = public_key
             authenticator.client_id = "dummy-client-id"
-            authenticator.oidc_issuer = "dummy-oidc-url"
+            authenticator.jwt_issuer = "dummy-oidc-url"
             authenticator.check_signature = True
 
         def test_returns_decoded_payload_for_valid_token(self, authenticator, key_pair):
@@ -342,7 +287,7 @@ class TestKeyCloakAuthenticator:
             # public_key from key_pair A, token signed with key B — signature mismatch
             authenticator.public_key = key_pair[0]
             authenticator.client_id = "dummy-client-id"
-            authenticator.oidc_issuer = "dummy-oidc-url"
+            authenticator.jwt_issuer = "dummy-oidc-url"
             authenticator.check_signature = False
             token = _get_mock_token(other_private_key, "test-token")
             assert authenticator._decode_token(token, options={}) is not None
@@ -493,7 +438,7 @@ class TestKeyCloakAuthenticator:
             return MockUser()
 
         async def test_returns_false_when_not_configured(self, authenticator):
-            authenticator.configured = False
+            authenticator.openid_configuration = None
             result = await authenticator.refresh_user(self._make_mock_user())
             assert not result
 
@@ -562,55 +507,47 @@ class TestKeyCloakAuthenticator:
             result = await authenticator.refresh_user(user)
             assert not result
 
+    class TestModifyAuthStateHook:
+        def test_raises_when_decode_token_raises(self, authenticator, monkeypatch):
+            def mock_decode(*_):
+                raise Exception("bad token")
+
+            monkeypatch.setattr(authenticator, "_decode_token", mock_decode)
+            with pytest.raises(Exception, match="bad token"):
+                authenticator.modify_auth_state_hook(authenticator, {"access_token": "dummy-token"})
+
+        def test_raises_when_claim_roles_key_raises(self, authenticator, monkeypatch):
+            monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
+            monkeypatch.setattr(
+                authenticator, "claim_roles_key", lambda *_: (_ for _ in ()).throw(Exception("roles error"))
+            )
+            with pytest.raises(Exception, match="roles error"):
+                authenticator.modify_auth_state_hook(authenticator, {"access_token": "dummy-token"})
+
+        def test_writes_roles_to_auth_state(self, authenticator, monkeypatch):
+            decoded_token = {"resource_access": {"dummy-client": {"roles": ["swan-admins"]}}}
+            monkeypatch.setattr(authenticator, "_decode_token", lambda *_: decoded_token)
+
+            auth_state = authenticator.modify_auth_state_hook(authenticator, {"access_token": "dummy-token"})
+
+            assert auth_state["roles"] == ["swan-admins"]
+
     class TestAuthenticate:
         def _make_mock_user(self):
-            return {"name": "test-user", "auth_state": {"access_token": "dummy-token"}}
+            return {"name": "test-user", "admin": None, "auth_state": {"access_token": "dummy-token", "roles": []}}
 
         def _patch_super(self, monkeypatch, return_value):
             async def mock_super(self, handler, data=None):
                 return return_value
 
-            monkeypatch.setattr(GenericOAuthenticator, "authenticate", mock_super)
+            monkeypatch.setattr(OIDCOAuthenticator, "authenticate", mock_super)
 
         async def test_returns_none_when_super_returns_none(self, authenticator, monkeypatch):
             self._patch_super(monkeypatch, None)
             assert await authenticator.authenticate(None) is None
 
-        async def test_returns_none_when_decode_token_raises(self, authenticator, monkeypatch):
-            self._patch_super(monkeypatch, self._make_mock_user())
-
-            def mock_decode(*_):
-                raise Exception("bad token")
-
-            monkeypatch.setattr(authenticator, "_decode_token", mock_decode)
-            assert await authenticator.authenticate(None) is None
-
-        async def test_returns_none_when_claim_roles_key_raises(self, authenticator, monkeypatch):
-            self._patch_super(monkeypatch, self._make_mock_user())
-            monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
-            monkeypatch.setattr(
-                authenticator, "claim_roles_key", lambda *_: (_ for _ in ()).throw(Exception("roles error"))
-            )
-            assert await authenticator.authenticate(None) is None
-
-        async def test_returns_none_when_user_roles_not_a_set(self, authenticator, monkeypatch):
-            self._patch_super(monkeypatch, self._make_mock_user())
-            monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
-            monkeypatch.setattr(authenticator, "claim_roles_key", lambda *_: ["not", "a", "set"])
-            assert await authenticator.authenticate(None) is None
-
-        async def test_returns_none_when_validate_roles_fails(self, authenticator, monkeypatch):
-            self._patch_super(monkeypatch, self._make_mock_user())
-            monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
-            monkeypatch.setattr(authenticator, "claim_roles_key", lambda *_: {"user-role"})
-            monkeypatch.setattr(authenticator, "_validate_roles", lambda *_: False)
-            assert await authenticator.authenticate(None) is None
-
         async def test_returns_none_when_exchange_tokens_raises(self, authenticator, monkeypatch):
             self._patch_super(monkeypatch, self._make_mock_user())
-            monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
-            monkeypatch.setattr(authenticator, "claim_roles_key", lambda *_: {"user-role"})
-            monkeypatch.setattr(authenticator, "_validate_roles", lambda *_: True)
 
             async def mock_exchange_tokens(_):
                 raise Exception("exchange failed")
@@ -620,9 +557,6 @@ class TestKeyCloakAuthenticator:
 
         async def test_returns_user_on_success(self, authenticator, monkeypatch):
             self._patch_super(monkeypatch, self._make_mock_user())
-            monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
-            monkeypatch.setattr(authenticator, "claim_roles_key", lambda *_: {"user-role"})
-            monkeypatch.setattr(authenticator, "_validate_roles", lambda *_: True)
 
             async def mock_exchange_tokens(_):
                 return {"service-a": "exchanged"}
@@ -634,20 +568,6 @@ class TestKeyCloakAuthenticator:
             assert result is not None
             assert result["auth_state"]["exchanged_tokens"] == {"service-a": "exchanged"}
             assert not result["admin"]
-
-        async def test_sets_admin_flag_for_admin_role(self, authenticator, monkeypatch):
-            self._patch_super(monkeypatch, self._make_mock_user())
-            monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
-            monkeypatch.setattr(authenticator, "claim_roles_key", lambda *_: {"swan-admins"})
-            monkeypatch.setattr(authenticator, "_validate_roles", lambda *_: True)
-
-            async def mock_exchange_tokens(_):
-                return {}
-
-            monkeypatch.setattr(authenticator, "_exchange_tokens", mock_exchange_tokens)
-
-            result = await authenticator.authenticate(None)
-            assert result["admin"]
 
     class TestPreSpawnStart:
         async def test_does_nothing_when_no_hook(self, authenticator):
