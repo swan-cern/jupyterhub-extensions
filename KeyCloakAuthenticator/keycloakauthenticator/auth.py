@@ -10,10 +10,13 @@ from urllib import parse
 from urllib.error import HTTPError
 
 import jwt
+from jupyterhub.handlers.login import LogoutHandler
 from jupyterhub.utils import maybe_future
 from jwt.algorithms import RSAAlgorithm
+from oauthenticator.oauth2 import OAuthLogoutHandler
 from oauthenticator.oidc import OIDCOAuthenticator
 from tornado.httpclient import HTTPRequest
+from tornado.httputil import url_concat
 from traitlets import Any, Bool, List, TraitError, Unicode, default, validate
 
 from .metrics import (
@@ -28,13 +31,39 @@ from .metrics import (
 )
 
 
+class KeyCloakLogoutHandler(OAuthLogoutHandler):
+    async def render_logout_page(self):
+        authenticator = self.authenticator
+        post_logout_redirect_url = authenticator.post_logout_redirect_url
+        end_session_url = (authenticator.openid_configuration or {}).get("end_session_endpoint")
+        if authenticator.enable_logout and end_session_url:
+            if post_logout_redirect_url:
+                end_session_url = url_concat(
+                    end_session_url,
+                    {"post_logout_redirect_uri": post_logout_redirect_url, "client_id": authenticator.client_id},
+                )
+            self.redirect(end_session_url)
+        elif post_logout_redirect_url:
+            self.redirect(post_logout_redirect_url)
+        else:
+            # Use JupyterHub's default LogoutHandler, as OAuthLogoutHandler would log out of SSO even when enable_logout is False
+            return await LogoutHandler.render_logout_page(self)
+
+
 class KeyCloakAuthenticator(OIDCOAuthenticator):
     """KeyCloakAuthenticator based on upstream jupyterhub/oauthenticator"""
+
+    logout_handler = KeyCloakLogoutHandler
 
     enable_logout = Bool(
         default_value=True,
         config=True,
         help="If True, it will logout in SSO.",
+    )
+
+    post_logout_redirect_url = Unicode(
+        config=True,
+        help="""URL to redirect to after logging out.""",
     )
 
     # Use Any instead of Callable for compatibility with Python < 3.7
@@ -108,6 +137,8 @@ class KeyCloakAuthenticator(OIDCOAuthenticator):
 
         return get_roles
 
+    public_key = None
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -118,24 +149,9 @@ class KeyCloakAuthenticator(OIDCOAuthenticator):
         if self.manage_groups:
             self.auth_state_groups_key = "roles"
 
-    async def _load_openid_configuration(self):
-        # Upstream fills logout_redirect_url with end_session_endpoint when it is unset,
-        # keep the configured value so that we handle the SSO logout ourselves below
-        post_logout_redirect_url = self.logout_redirect_url
-        await super()._load_openid_configuration()
-        self.logout_redirect_url = post_logout_redirect_url
-
-        data = self.openid_configuration
-
-        end_session_url = data.get("end_session_endpoint")
-        if self.enable_logout and end_session_url:
-            if self.logout_redirect_url:
-                end_session_url += f"?post_logout_redirect_uri={self.logout_redirect_url}&client_id={self.client_id}"
-            # Update parent class OAuthenticator.logout_redirect_url
-            self.logout_redirect_url = end_session_url
-
+    async def _load_jwk_signature(self):
         if self.check_signature:
-            jwks_uri = data["jwks_uri"]
+            jwks_uri = self.jwks_uri
 
             self.log.info("Fetching JWKs data")
             jwk_data = await self.httpfetch(jwks_uri, label="fetching jwks")
@@ -150,10 +166,10 @@ class KeyCloakAuthenticator(OIDCOAuthenticator):
             self.log.info("JWT signature verification is disabled")
             self.public_key = None
 
-        # All good, let's finish
-        self.log.info("KeycloakAuthenticator fully configured")
+    async def _decode_token(self, token, options=None):
+        if self.check_signature and not self.public_key:
+            await self._load_jwk_signature()
 
-    def _decode_token(self, token, options=None):
         if options is None:
             options = {}
         if not self.check_signature:
@@ -270,9 +286,9 @@ class KeyCloakAuthenticator(OIDCOAuthenticator):
             self.log.info(f"Refresh token request completed in {time.time() - start} seconds")
             return access_t, refresh_t
 
-    def modify_auth_state_hook(self, authenticator, auth_state):
+    async def modify_auth_state_hook(self, authenticator, auth_state):
         try:
-            decoded_token = self._decode_token(auth_state["access_token"])
+            decoded_token = await self._decode_token(auth_state["access_token"])
             user_roles = self.claim_roles_key(self, decoded_token)
             auth_state["roles"] = list(user_roles)
         except Exception:
@@ -324,7 +340,7 @@ class KeyCloakAuthenticator(OIDCOAuthenticator):
 
                 # no verification of the refresh token signature as it is not needed, the auth server
                 # verifies it
-                decoded_refresh_token = self._decode_token(
+                decoded_refresh_token = await self._decode_token(
                     auth_state["refresh_token"], options={"verify_signature": False}
                 )
 
@@ -340,7 +356,7 @@ class KeyCloakAuthenticator(OIDCOAuthenticator):
                     # We need to refresh access token (which will also refresh the refresh token)
                     access_token, refresh_token = await self._refresh_token(auth_state["refresh_token"])
                     # check signature for new access token, if it fails we catch in the exception below
-                    self._decode_token(access_token)
+                    await self._decode_token(access_token)
                     auth_state["access_token"] = access_token
                     auth_state["refresh_token"] = refresh_token
                     try:
@@ -356,7 +372,7 @@ class KeyCloakAuthenticator(OIDCOAuthenticator):
                     self.log.info(
                         "User %s oAuth tokens refreshed, took %s seconds" % (user.name, (time.time() - start))
                     )
-                    return {"auth_state": auth_state}
+                    return {"auth_state": auth_state, "groups": None}
 
             except HTTPError as e:
                 self.log.error("Failure calling the renew endpoint: %s (code: %s)" % (e.read(), e.code))

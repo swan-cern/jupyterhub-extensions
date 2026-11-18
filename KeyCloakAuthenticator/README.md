@@ -32,7 +32,7 @@ c.JupyterHub.authenticator_class = "keycloakauthenticator.KeyCloakAuthenticator"
 c.KeyCloakAuthenticator.username_claim = "cern_upn"
 
 # URL to redirect to after logout is complete with auth provider.
-c.KeyCloakAuthenticator.logout_redirect_url = "https://cern.ch/swan"
+c.KeyCloakAuthenticator.post_logout_redirect_url = "https://cern.ch/swan"
 c.KeyCloakAuthenticator.oauth_callback_url = "https://swan.cern.ch/hub/oauth_callback"
 
 # Specify the issuer url, to get all the endpoints automatically from .well-known/openid-configuration
