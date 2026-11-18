@@ -1,15 +1,17 @@
 import json
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 from urllib.error import HTTPError
+from urllib.parse import parse_qs
 
 import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
+from jupyterhub.handlers.login import LogoutHandler
 from jwt.algorithms import RSAAlgorithm
 from oauthenticator.oidc import OIDCOAuthenticator
 from traitlets import TraitError
 
-from ..auth import KeyCloakAuthenticator
+from ..auth import KeyCloakAuthenticator, KeyCloakLogoutHandler
 
 
 def _generate_mock_public_private_key_pair():
@@ -120,57 +122,6 @@ class TestKeyCloakAuthenticator:
             assert unconfigured_authenticator.token_url == "http://fake/token"
             assert unconfigured_authenticator.userdata_url == "http://fake/userinfo"
 
-        async def test_enable_logout_end_session_no_existing_redirect_url(
-            self, unconfigured_authenticator, monkeypatch
-        ):
-            unconfigured_authenticator.enable_logout = True
-            unconfigured_authenticator.logout_redirect_url = ""
-
-            async def mock_httpfetch(url, **kwargs):
-                return {**OIDC_DISCOVERY_DOC, "end_session_endpoint": "http://fake/logout"}
-
-            monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
-
-            await unconfigured_authenticator._load_openid_configuration()
-
-            assert unconfigured_authenticator.logout_redirect_url == "http://fake/logout"
-
-        async def test_enable_logout_end_session_existing_redirect_url(self, unconfigured_authenticator, monkeypatch):
-            unconfigured_authenticator.enable_logout = True
-            unconfigured_authenticator.logout_redirect_url = "http://fake/post-logout"
-            unconfigured_authenticator.client_id = "dummy-client"
-
-            async def mock_httpfetch(url, **kwargs):
-                return {**OIDC_DISCOVERY_DOC, "end_session_endpoint": "http://fake/logout"}
-
-            monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
-
-            await unconfigured_authenticator._load_openid_configuration()
-
-            assert unconfigured_authenticator.logout_redirect_url == (
-                "http://fake/logout?post_logout_redirect_uri=http://fake/post-logout&client_id=dummy-client"
-            )
-
-        @pytest.mark.parametrize(
-            "enable_logout,doc",
-            [
-                (False, {**OIDC_DISCOVERY_DOC, "end_session_endpoint": "http://fake/logout"}),
-                (True, OIDC_DISCOVERY_DOC),
-            ],
-        )
-        async def test_logout_url_not_updated(self, unconfigured_authenticator, monkeypatch, enable_logout, doc):
-            unconfigured_authenticator.enable_logout = enable_logout
-            original_logout_url = unconfigured_authenticator.logout_redirect_url
-
-            async def mock_httpfetch(url, **kwargs):
-                return doc
-
-            monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
-
-            await unconfigured_authenticator._load_openid_configuration()
-
-            assert unconfigured_authenticator.logout_redirect_url == original_logout_url
-
         async def test_check_signature_true_sig_key_present(self, unconfigured_authenticator, monkeypatch, key_pair):
             public_key, _ = key_pair
             jwks = _make_jwks(public_key, use_sig=True)
@@ -188,6 +139,7 @@ class TestKeyCloakAuthenticator:
             unconfigured_authenticator.check_signature = True
 
             await unconfigured_authenticator._load_openid_configuration()
+            await unconfigured_authenticator._load_jwk_signature()
 
             assert unconfigured_authenticator.public_key is not None
             assert call_count == 2
@@ -209,6 +161,7 @@ class TestKeyCloakAuthenticator:
             unconfigured_authenticator.check_signature = True
 
             await unconfigured_authenticator._load_openid_configuration()
+            await unconfigured_authenticator._load_jwk_signature()
 
             assert unconfigured_authenticator.public_key is not None
 
@@ -223,9 +176,74 @@ class TestKeyCloakAuthenticator:
             monkeypatch.setattr(unconfigured_authenticator, "httpfetch", mock_httpfetch)
 
             await unconfigured_authenticator._load_openid_configuration()
+            await unconfigured_authenticator._load_jwk_signature()
 
             assert call_count == 1
             assert unconfigured_authenticator.public_key is None
+
+    class TestLogoutHandler:
+        END_SESSION_URL = "http://fake/logout"
+        POST_LOGOUT_URL = "http://fake/post-logout"
+
+        @pytest.fixture
+        def handler(self, authenticator, monkeypatch):
+            authenticator.openid_configuration = {**OIDC_DISCOVERY_DOC, "end_session_endpoint": self.END_SESSION_URL}
+            # as filled by upstream when loading the OIDC configuration
+            authenticator.logout_redirect_url = self.END_SESSION_URL
+            monkeypatch.setattr(KeyCloakLogoutHandler, "authenticator", authenticator)
+            handler = KeyCloakLogoutHandler.__new__(KeyCloakLogoutHandler)
+            handler.redirect = MagicMock()
+            return handler
+
+        @pytest.fixture
+        def default_logout_page(self, monkeypatch):
+            mock = AsyncMock()
+            monkeypatch.setattr(LogoutHandler, "render_logout_page", mock)
+            return mock
+
+        async def test_sso_logout_with_post_logout_redirect_url(self, handler, authenticator):
+            authenticator.post_logout_redirect_url = self.POST_LOGOUT_URL
+
+            await handler.render_logout_page()
+
+            url = handler.redirect.call_args.args[0]
+            base, query = url.split("?", 1)
+            assert base == self.END_SESSION_URL
+            assert parse_qs(query) == {
+                "post_logout_redirect_uri": [self.POST_LOGOUT_URL],
+                "client_id": ["dummy-client"],
+            }
+
+        async def test_sso_logout_without_post_logout_redirect_url(self, handler):
+            await handler.render_logout_page()
+
+            # the end_session_endpoint upstream stored in logout_redirect_url is not used as redirect target
+            handler.redirect.assert_called_once_with(self.END_SESSION_URL)
+
+        async def test_sso_logout_disabled_redirects_to_post_logout_redirect_url(self, handler, authenticator):
+            authenticator.enable_logout = False
+            authenticator.post_logout_redirect_url = self.POST_LOGOUT_URL
+
+            await handler.render_logout_page()
+
+            handler.redirect.assert_called_once_with(self.POST_LOGOUT_URL)
+
+        async def test_no_end_session_endpoint_redirects_to_post_logout_redirect_url(self, handler, authenticator):
+            authenticator.openid_configuration = OIDC_DISCOVERY_DOC
+            authenticator.post_logout_redirect_url = self.POST_LOGOUT_URL
+
+            await handler.render_logout_page()
+
+            handler.redirect.assert_called_once_with(self.POST_LOGOUT_URL)
+
+        async def test_sso_logout_disabled_shows_logout_page(self, handler, authenticator, default_logout_page):
+            authenticator.enable_logout = False
+
+            await handler.render_logout_page()
+
+            # no redirect to the end_session_endpoint stored in logout_redirect_url
+            handler.redirect.assert_not_called()
+            default_logout_page.assert_awaited_once_with(handler)
 
     class TestAllowedRoles:
         async def _check_allowed(self, authenticator, roles):
@@ -267,21 +285,21 @@ class TestKeyCloakAuthenticator:
             authenticator.jwt_issuer = "dummy-oidc-url"
             authenticator.check_signature = True
 
-        def test_returns_decoded_payload_for_valid_token(self, authenticator, key_pair):
+        async def test_returns_decoded_payload_for_valid_token(self, authenticator, key_pair):
             public_key, private_key = key_pair
             self._setup(authenticator, public_key)
             token = _get_mock_token(private_key, "test-token")
-            result = authenticator._decode_token(token, options={})
+            result = await authenticator._decode_token(token)
             assert result is not None
             assert result["jti"] == "test-token"
 
-        def test_returns_none_for_expired_token(self, authenticator, key_pair):
+        async def test_returns_none_for_expired_token(self, authenticator, key_pair):
             public_key, private_key = key_pair
             self._setup(authenticator, public_key)
             token = _get_mock_token(private_key, "test-token", expired=True)
-            assert authenticator._decode_token(token, options={}) is None
+            assert await authenticator._decode_token(token) is None
 
-        def test_skips_signature_when_check_signature_disabled(self, authenticator, key_pair):
+        async def test_skips_signature_when_check_signature_disabled(self, authenticator, key_pair):
             _, _ = key_pair
             _, other_private_key = _generate_mock_public_private_key_pair()
             # public_key from key_pair A, token signed with key B — signature mismatch
@@ -290,17 +308,17 @@ class TestKeyCloakAuthenticator:
             authenticator.jwt_issuer = "dummy-oidc-url"
             authenticator.check_signature = False
             token = _get_mock_token(other_private_key, "test-token")
-            assert authenticator._decode_token(token, options={}) is not None
+            assert await authenticator._decode_token(token) is not None
 
-        def test_skips_audience_when_verify_aud_disabled(self, authenticator, key_pair):
+        async def test_skips_audience_when_verify_aud_disabled(self, authenticator, key_pair):
             public_key, private_key = key_pair
             self._setup(authenticator, public_key)
             authenticator.client_id = "wrong-audience"
             authenticator.verify_aud = False
             token = _get_mock_token(private_key, "test-token")
-            assert authenticator._decode_token(token, options={}) is not None
+            assert await authenticator._decode_token(token) is not None
 
-        def test_default_options_immutability(self, authenticator, key_pair):
+        async def test_default_options_immutability(self, authenticator, key_pair):
             public_key, _ = key_pair
             self._setup(authenticator, public_key)
 
@@ -310,12 +328,12 @@ class TestKeyCloakAuthenticator:
 
             # first time bad token passes since check_signature is false
             authenticator.check_signature = False
-            assert authenticator._decode_token(token) is not None
+            assert await authenticator._decode_token(token) is not None
 
             # make sure this fails since check_signature is now true
             authenticator.check_signature = True
             with pytest.raises(jwt.exceptions.InvalidSignatureError):
-                authenticator._decode_token(token)
+                await authenticator._decode_token(token)
 
     class TestExchangeTokens:
         async def test_empty_response_body_skips_service(self, authenticator, monkeypatch):
@@ -443,12 +461,12 @@ class TestKeyCloakAuthenticator:
             assert not result
 
         async def test_returns_false_when_refresh_token_expired(self, authenticator, monkeypatch):
-            monkeypatch.setattr(authenticator, "_decode_token", lambda token, options=None: {"exp": 0})
+            monkeypatch.setattr(authenticator, "_decode_token", AsyncMock(return_value={"exp": 0}))
             result = await authenticator.refresh_user(self._make_mock_user())
             assert not result
 
         async def test_proceeds_when_no_exp_in_refresh_token(self, authenticator, monkeypatch):
-            monkeypatch.setattr(authenticator, "_decode_token", lambda token, options=None: {})
+            monkeypatch.setattr(authenticator, "_decode_token", AsyncMock(return_value={}))
 
             async def mock_refresh_token(_):
                 return "new-access", "new-refresh"
@@ -463,7 +481,7 @@ class TestKeyCloakAuthenticator:
             assert result
 
         async def test_returns_updated_auth_state_on_success(self, authenticator, monkeypatch):
-            monkeypatch.setattr(authenticator, "_decode_token", lambda token, options=None: {"exp": 9999999999})
+            monkeypatch.setattr(authenticator, "_decode_token", AsyncMock(return_value={"exp": 9999999999}))
 
             async def mock_refresh_token(_):
                 return "new-access", "new-refresh"
@@ -481,7 +499,7 @@ class TestKeyCloakAuthenticator:
             assert result["auth_state"]["exchanged_tokens"] == {"service-a": "exchanged"}
 
         async def test_returns_false_when_exchange_tokens_fails(self, authenticator, monkeypatch):
-            monkeypatch.setattr(authenticator, "_decode_token", lambda token, options=None: {"exp": 9999999999})
+            monkeypatch.setattr(authenticator, "_decode_token", AsyncMock(return_value={}))
 
             async def mock_refresh_token(_):
                 return "new-access", "new-refresh"
@@ -508,27 +526,27 @@ class TestKeyCloakAuthenticator:
             assert not result
 
     class TestModifyAuthStateHook:
-        def test_raises_when_decode_token_raises(self, authenticator, monkeypatch):
-            def mock_decode(*_):
+        async def test_raises_when_decode_token_raises(self, authenticator, monkeypatch):
+            async def mock_decode(*_):
                 raise Exception("bad token")
 
             monkeypatch.setattr(authenticator, "_decode_token", mock_decode)
             with pytest.raises(Exception, match="bad token"):
-                authenticator.modify_auth_state_hook(authenticator, {"access_token": "dummy-token"})
+                await authenticator.modify_auth_state_hook(authenticator, {"access_token": "dummy-token"})
 
-        def test_raises_when_claim_roles_key_raises(self, authenticator, monkeypatch):
-            monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
+        async def test_raises_when_claim_roles_key_raises(self, authenticator, monkeypatch):
+            monkeypatch.setattr(authenticator, "_decode_token", AsyncMock(return_value={}))
             monkeypatch.setattr(
                 authenticator, "claim_roles_key", lambda *_: (_ for _ in ()).throw(Exception("roles error"))
             )
             with pytest.raises(Exception, match="roles error"):
-                authenticator.modify_auth_state_hook(authenticator, {"access_token": "dummy-token"})
+                await authenticator.modify_auth_state_hook(authenticator, {"access_token": "dummy-token"})
 
-        def test_writes_roles_to_auth_state(self, authenticator, monkeypatch):
+        async def test_writes_roles_to_auth_state(self, authenticator, monkeypatch):
             decoded_token = {"resource_access": {"dummy-client": {"roles": ["swan-admins"]}}}
-            monkeypatch.setattr(authenticator, "_decode_token", lambda *_: decoded_token)
+            monkeypatch.setattr(authenticator, "_decode_token", AsyncMock(return_value=decoded_token))
 
-            auth_state = authenticator.modify_auth_state_hook(authenticator, {"access_token": "dummy-token"})
+            auth_state = await authenticator.modify_auth_state_hook(authenticator, {"access_token": "dummy-token"})
 
             assert auth_state["roles"] == ["swan-admins"]
 
