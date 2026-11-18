@@ -113,18 +113,20 @@ c.JupyterHub.authenticator_class = "keycloakauthenticator.auth.KeyCloakAuthentic
 c.KeyCloakAuthenticator.username_claim = "cern_upn"
 
 # URL to redirect to after logout is complete with auth provider.
-c.KeyCloakAuthenticator.logout_redirect_url = "https://cern.ch/swan"
+c.KeyCloakAuthenticator.post_logout_redirect_url = "https://cern.ch/swan"
 c.KeyCloakAuthenticator.oauth_callback_url = "http://localhost:8000/hub/oauth_callback"
 
 # Specify the issuer url, to get all the endpoints automatically from .well-known/openid-configuration
-c.KeyCloakAuthenticator.oidc_issuer = "https://auth.cern.ch/auth/realms/cern"
+c.KeyCloakAuthenticator.openid_provider_url = "https://auth.cern.ch/auth/realms/cern"
 
 # If you need to set a different scope, like adding the offline option for longer lived refresh token
 c.KeyCloakAuthenticator.scope = ["profile", "email", "offline_access", "openid"]
-# Only allow users with this specific roles (none, to allow all)
-c.KeyCloakAuthenticator.allowed_roles = []
-# Specify the role to set a user as admin
-c.KeyCloakAuthenticator.admin_role = "swan-admins"
+# Sync the roles from Keycloak as JupyterHub groups (required for allowed_groups and admin_groups)
+c.KeyCloakAuthenticator.manage_groups = True
+# Only allow users with these specific roles (or set allow_all = True to allow everyone)
+c.KeyCloakAuthenticator.allowed_groups = {"swan-admins", "swan-qa", "swan-devs"}
+# Specify the roles that make a user admin
+c.KeyCloakAuthenticator.admin_groups = {"swan-admins"}
 
 
 # Spawner configuration

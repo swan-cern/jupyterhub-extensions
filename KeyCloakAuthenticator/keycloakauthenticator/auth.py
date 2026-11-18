@@ -10,12 +10,13 @@ from urllib import parse
 from urllib.error import HTTPError
 
 import jwt
+from jupyterhub.handlers.login import LogoutHandler
 from jupyterhub.utils import maybe_future
 from jwt.algorithms import RSAAlgorithm
-from oauthenticator.generic import GenericOAuthenticator
-from oauthenticator.oauth2 import OAuthLoginHandler
-from tornado import web
+from oauthenticator.oauth2 import OAuthLogoutHandler
+from oauthenticator.oidc import OIDCOAuthenticator
 from tornado.httpclient import HTTPRequest
+from tornado.httputil import url_concat
 from traitlets import Any, Bool, List, TraitError, Unicode, default, validate
 
 from .metrics import (
@@ -30,28 +31,39 @@ from .metrics import (
 )
 
 
-# Use a login handler wrapper to ensure the configuration was loaded before redirecting the user
-# Otherwise, the login will end up in infinite loop of redirects
-class OIDCOAuthLoginHandler(OAuthLoginHandler):
-    def get(self):
-        if not self.authenticator.configured:
-            raise web.HTTPError(500, "Error configuring authenticator from IDP")
-        super().get()
+class KeyCloakLogoutHandler(OAuthLogoutHandler):
+    async def render_logout_page(self):
+        authenticator = self.authenticator
+        post_logout_redirect_url = authenticator.post_logout_redirect_url
+        end_session_url = (authenticator.openid_configuration or {}).get("end_session_endpoint")
+        if authenticator.enable_logout and end_session_url:
+            if post_logout_redirect_url:
+                end_session_url = url_concat(
+                    end_session_url,
+                    {"post_logout_redirect_uri": post_logout_redirect_url, "client_id": authenticator.client_id},
+                )
+            self.redirect(end_session_url)
+        elif post_logout_redirect_url:
+            self.redirect(post_logout_redirect_url)
+        else:
+            # Use JupyterHub's default LogoutHandler, as OAuthLogoutHandler would log out of SSO even when enable_logout is False
+            return await LogoutHandler.render_logout_page(self)
 
 
-class KeyCloakAuthenticator(GenericOAuthenticator):
+class KeyCloakAuthenticator(OIDCOAuthenticator):
     """KeyCloakAuthenticator based on upstream jupyterhub/oauthenticator"""
 
-    oidc_issuer = Unicode(
-        default_value="",
-        config=True,
-        help="OIDC issuer URL for automatic discovery of configuration",
-    )
+    logout_handler = KeyCloakLogoutHandler
 
     enable_logout = Bool(
         default_value=True,
         config=True,
         help="If True, it will logout in SSO.",
+    )
+
+    post_logout_redirect_url = Unicode(
+        config=True,
+        help="""URL to redirect to after logging out.""",
     )
 
     # Use Any instead of Callable for compatibility with Python < 3.7
@@ -64,26 +76,11 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         """,
     )
 
-    # Use list instead of set to allow easy configuration in Helm/Kbernetes yaml files
-    # This gets converted to a set internally
-    allowed_roles = List(
-        Unicode(),
-        default_value=[],
-        config=True,
-        help="List with the roles for which the login will be accepted. If an empty list is given (default) all users are allowed.",
-    )
-
-    admin_role = Unicode(
-        default_value="swan-admins",
-        config=True,
-        help="Users with this role login as jupyterhub administrators",
-    )
-
     pre_spawn_hook = Any(
         allow_none=True,
         config=True,
         help="""
-        Callable to execute before spawning a session. Usefull to inject extra variables, like the oauth tokens
+        Callable to execute before spawning a session. Useful to inject extra variables, like the oauth tokens
         Example::
             def pre_spawn_hook(authenticator, spawner, auth_state):
                 spawner.environment['ACCESS_TOKEN'] = auth_state['exchanged_tokens']['eos-service']
@@ -140,43 +137,21 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
 
         return get_roles
 
+    public_key = None
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         # Force auth state so that we can store the tokens in the user dict
         self.enable_auth_state = True
-        self._allowed_roles = set(self.allowed_roles)
 
-        if not self.oidc_issuer:
-            raise Exception("No OIDC issuer url provided")
+        # Read JupyterHub groups from auth_state["roles"]
+        if self.manage_groups:
+            self.auth_state_groups_key = "roles"
 
-        # Try to configure the authenticator
-        self.configured = False
-        asyncio.ensure_future(self._get_oidc_configs())
-        self.login_handler = OIDCOAuthLoginHandler
-
-    async def _get_oidc_configs_helper(self):
-        data = await self.httpfetch(
-            f"{self.oidc_issuer}/.well-known/openid-configuration", label="fetching oidc config"
-        )
-
-        if not set(["authorization_endpoint", "token_endpoint", "userinfo_endpoint"]).issubset(data.keys()):
-            raise Exception("Unable to retrieve OIDC necessary values")
-
-        self.authorize_url = data["authorization_endpoint"]
-        self.token_url = data["token_endpoint"]
-        self.userdata_url = data["userinfo_endpoint"]
-
-        end_session_url = data.get("end_session_endpoint")
-        if self.enable_logout and end_session_url:
-            if self.logout_redirect_url:
-                end_session_url += "?post_logout_redirect_uri=%s" % self.logout_redirect_url
-                end_session_url += "&client_id=%s" % self.client_id
-            # Update parent class OAuthenticator.logout_redirect_url
-            self.logout_redirect_url = end_session_url
-
+    async def _load_jwk_signature(self):
         if self.check_signature:
-            jwks_uri = data["jwks_uri"]
+            jwks_uri = self.jwks_uri
 
             self.log.info("Fetching JWKs data")
             jwk_data = await self.httpfetch(jwks_uri, label="fetching jwks")
@@ -191,29 +166,10 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             self.log.info("JWT signature verification is disabled")
             self.public_key = None
 
-        self.configured = True
-        # All good, let's finish
-        self.log.info("KeycloakAuthenticator fully configured")
+    async def _decode_token(self, token, options=None):
+        if self.check_signature and not self.public_key:
+            await self._load_jwk_signature()
 
-    async def _get_oidc_configs(self):
-        self.log.info("Configuring OIDC from %s" % self.oidc_issuer)
-
-        # Try to load the configs until it succeeds
-        while True:
-            try:
-                await self._get_oidc_configs_helper()
-                break
-            except Exception:
-                self.log.error(
-                    "Failure to retrieve the openid configuration, will try again in 1 min (auth calls will fail)",
-                    exc_info=True,
-                )
-                await asyncio.sleep(60)
-
-    def _validate_roles(self, user_roles):
-        return not self._allowed_roles or (self._allowed_roles & user_roles)
-
-    def _decode_token(self, token, options=None):
         if options is None:
             options = {}
         if not self.check_signature:
@@ -234,7 +190,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 self.public_key,
                 options=options,
                 audience=self.client_id,
-                issuer=self.oidc_issuer,
+                issuer=self.jwt_issuer,
                 algorithms=self.jwt_signing_algorithms,
             )
             return decoded_token
@@ -330,6 +286,17 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             self.log.info(f"Refresh token request completed in {time.time() - start} seconds")
             return access_t, refresh_t
 
+    async def modify_auth_state_hook(self, authenticator, auth_state):
+        try:
+            decoded_token = await self._decode_token(auth_state["access_token"])
+            user_roles = self.claim_roles_key(self, decoded_token)
+            auth_state["roles"] = list(user_roles)
+        except Exception:
+            self.log.exception("Unable to retrieve the roles, denying access.")
+            raise
+
+        return auth_state
+
     async def authenticate(self, handler, data=None):
         with metric_authenticate.time():
             user = await super().authenticate(handler, data=data)
@@ -337,30 +304,13 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 return None
 
             try:
-                decoded_token = self._decode_token(user["auth_state"]["access_token"])
-                user_roles = self.claim_roles_key(self, decoded_token)
-                user["auth_state"]["roles"] = list(user_roles)
-            except Exception:
-                self.log.error("Unable to retrieve the roles, denying access.", exc_info=True)
-                return None
-
-            if not isinstance(user_roles, set):
-                self.log.error("User roles is not a 'set', denying access")
-                return None
-
-            if not self._validate_roles(user_roles):
-                self.log.info(f"User '{user['name']}' doesn't have apropriate role to be allowed")
-                return None
-            try:
                 user["auth_state"]["exchanged_tokens"] = await self._exchange_tokens(user["auth_state"]["access_token"])
             except Exception:
                 self.log.error("Failed to exchange tokens during authenticate.", exc_info=True)
                 return None
 
-            user["admin"] = self.admin_role and (self.admin_role in user_roles)
             self.log.info(
-                "Authentication Successful for user: %s, roles: %s, admin: %s"
-                % (user["name"], user_roles, user["admin"])
+                f"Authentication Successful for user: {user['name']}, roles: {user['auth_state']['roles']}, admin: {user['admin']}"
             )
 
             return user
@@ -381,7 +331,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             start = time.time()
 
             # The config was not loaded yet, just fail
-            if not self.configured:
+            if not self.openid_configuration:
                 return False
 
             try:
@@ -390,7 +340,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
 
                 # no verification of the refresh token signature as it is not needed, the auth server
                 # verifies it
-                decoded_refresh_token = self._decode_token(
+                decoded_refresh_token = await self._decode_token(
                     auth_state["refresh_token"], options={"verify_signature": False}
                 )
 
@@ -406,7 +356,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                     # We need to refresh access token (which will also refresh the refresh token)
                     access_token, refresh_token = await self._refresh_token(auth_state["refresh_token"])
                     # check signature for new access token, if it fails we catch in the exception below
-                    self._decode_token(access_token)
+                    await self._decode_token(access_token)
                     auth_state["access_token"] = access_token
                     auth_state["refresh_token"] = refresh_token
                     try:
@@ -422,7 +372,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                     self.log.info(
                         "User %s oAuth tokens refreshed, took %s seconds" % (user.name, (time.time() - start))
                     )
-                    return {"auth_state": auth_state}
+                    return {"auth_state": auth_state, "groups": None}
 
             except HTTPError as e:
                 self.log.error("Failure calling the renew endpoint: %s (code: %s)" % (e.read(), e.code))
