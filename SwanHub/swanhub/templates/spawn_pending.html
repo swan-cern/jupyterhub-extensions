@@ -1,38 +1,30 @@
 {% extends "templates/spawn_pending.html" %}
 {% from "_macros.html" import swan_loader with context %}
 
-{% block main %}
-<main class="container">
-  <div class="row">
-    {% call swan_loader() %}
-      <div class="text-center">
-        <h4>Starting your session...</h4>
-        <p>You will be redirected automatically when it's ready for you.</p>
-      </div>
-    {% endcall %}
-  </div>
-</main>
+{% block message %}
+  {% call swan_loader() %}
+    <div class="text-center">
+      <h4>Starting your session...</h4>
+      <p>You will be redirected automatically when it's ready for you.</p>
+    </div>
+  {% endcall %}
 {% endblock %}
 
 {% block script %}
+{{ super() }}
 <script type="text/javascript">
-// hook up event-stream for progress
-const evtSource = new EventSource("{{ progress_url }}");
-evtSource.onmessage = function(e) {
-  const evt = JSON.parse(e.data);
-  console.log(evt);
-  if (evt.ready) {
-    evtSource.close();
-    // reload the current page
-    // which should result in a redirect to the running server
-    window.location.reload();
-  }
-  if (evt.failed) {
-    evtSource.close();
-    window.location.replace('{{base_url}}spawn?failed');
-  }
-}
-// signal that page has finished loading (mostly for tests)
-window._jupyterhub_page_loaded = true;
+  // Redirect on failure (upstream stays on the spawn pending page)
+  const evtSource = new EventSource("{{ progress_url }}");
+  evtSource.addEventListener("message", function(e) {
+    const evt = JSON.parse(e.data);
+    if (evt.ready) {
+      evtSource.close();
+    } else if (evt.failed) {
+      evtSource.close();
+      setTimeout(() => {
+        window.location.replace('{{base_url}}spawn?failed');
+      }, 1000);
+    }
+  });
 </script>
 {% endblock %}
