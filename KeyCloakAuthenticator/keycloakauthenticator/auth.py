@@ -404,7 +404,7 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                     self.log.info(
                         "User %s oAuth tokens refreshed, took %s seconds" % (user.name, (time.time() - start))
                     )
-                    return {"auth_state": auth_state}
+                    return {"auth_state": auth_state, "groups": None}
 
             except HTTPError as e:
                 self.log.error("Failure calling the renew endpoint: %s (code: %s)" % (e.read(), e.code))
