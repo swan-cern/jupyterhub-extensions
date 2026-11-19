@@ -2,6 +2,7 @@ import asyncio
 import json
 from unittest.mock import MagicMock
 from urllib.error import HTTPError
+from urllib.parse import quote_plus
 
 import jwt
 import pytest
@@ -49,7 +50,7 @@ def _get_mock_token(private_key, token_id, expired=False):
 @pytest.fixture
 def unconfigured_authenticator(monkeypatch):
     monkeypatch.setattr(asyncio, "ensure_future", lambda coro: coro.close())
-    auth = KeyCloakAuthenticator(oidc_issuer="http://fake-issuer")
+    auth = KeyCloakAuthenticator(oidc_issuer="http://fake-issuer", manage_groups=True)
     auth.check_signature = False  # disabled by default; check_signature tests enable it explicitly
     return auth
 
@@ -199,7 +200,7 @@ class TestKeyCloakAuthenticator:
             await unconfigured_authenticator._get_oidc_configs_helper()
 
             assert unconfigured_authenticator.logout_redirect_url == (
-                "http://fake/logout?post_logout_redirect_uri=http://fake/post-logout&client_id=dummy-client"
+                f"http://fake/logout?post_logout_redirect_uri={quote_plus('http://fake/post-logout')}&client_id=dummy-client"
             )
 
         @pytest.mark.parametrize(
@@ -302,18 +303,43 @@ class TestKeyCloakAuthenticator:
             assert len(sleep_calls) == 1
             assert sleep_calls[0] == 60
 
-    class TestValidateRoles:
-        def test_empty_allowed_roles_permits_all(self, unconfigured_authenticator):
-            assert unconfigured_authenticator._validate_roles({"any-role"})
-            assert unconfigured_authenticator._validate_roles(set())
+    class TestAllowedRoles:
+        async def _check_allowed(self, authenticator, roles):
+            auth_model = {"name": "test-user", "admin": None, "auth_state": {"roles": roles}}
+            auth_model = await authenticator._apply_managed_groups(auth_model)
+            return await authenticator.check_allowed("test-user", auth_model)
 
-        def test_matching_role_permits(self, unconfigured_authenticator):
-            unconfigured_authenticator._allowed_roles = {"admin"}
-            assert unconfigured_authenticator._validate_roles({"admin", "user"})
+        async def test_allow_all_permits_all(self, unconfigured_authenticator):
+            unconfigured_authenticator.allow_all = True
+            assert await self._check_allowed(unconfigured_authenticator, ["any-role"])
+            assert await self._check_allowed(unconfigured_authenticator, [])
 
-        def test_no_matching_role_denies(self, unconfigured_authenticator):
-            unconfigured_authenticator._allowed_roles = {"admin"}
-            assert not unconfigured_authenticator._validate_roles({"user"})
+        async def test_matching_role_permits(self, unconfigured_authenticator):
+            unconfigured_authenticator.allowed_groups = {"users"}
+            assert await self._check_allowed(unconfigured_authenticator, ["admins", "users"])
+
+        async def test_no_matching_role_denies(self, unconfigured_authenticator):
+            unconfigured_authenticator.allowed_groups = {"users"}
+            assert not await self._check_allowed(unconfigured_authenticator, ["non-user"])
+
+        async def test_admin_no_matching_role_permits(self, unconfigured_authenticator):
+            unconfigured_authenticator.admin_groups = {"admins"}
+            unconfigured_authenticator.allowed_groups = {"users"}
+            assert await self._check_allowed(unconfigured_authenticator, ["admins"])
+
+        async def test_admin_role_sets_admin_and_permits(self, unconfigured_authenticator):
+            unconfigured_authenticator.admin_groups = {"admins"}
+            auth_model = {"name": "test-user", "admin": None, "auth_state": {"roles": ["admins"]}}
+            auth_model = await unconfigured_authenticator._apply_managed_groups(auth_model)
+            assert auth_model["admin"]
+            assert await unconfigured_authenticator.check_allowed("test-user", auth_model)
+
+        async def test_non_admin_role_does_not_set_admin(self, unconfigured_authenticator):
+            unconfigured_authenticator.admin_groups = {"admins"}
+            auth_model = {"name": "test-user", "admin": None, "auth_state": {"roles": ["users"]}}
+            auth_model = await unconfigured_authenticator._apply_managed_groups(auth_model)
+            assert not auth_model["admin"]
+            assert not await unconfigured_authenticator.check_allowed("test-user", auth_model)
 
     class TestDecodeToken:
         def _setup(self, authenticator, public_key):
@@ -562,9 +588,34 @@ class TestKeyCloakAuthenticator:
             result = await authenticator.refresh_user(user)
             assert not result
 
+    class TestModifyAuthStateHook:
+        def test_raises_when_decode_token_raises(self, authenticator, monkeypatch):
+            def mock_decode(*_):
+                raise Exception("bad token")
+
+            monkeypatch.setattr(authenticator, "_decode_token", mock_decode)
+            with pytest.raises(Exception, match="bad token"):
+                authenticator.modify_auth_state_hook(authenticator, {"access_token": "dummy-token"})
+
+        def test_raises_when_claim_roles_key_raises(self, authenticator, monkeypatch):
+            monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
+            monkeypatch.setattr(
+                authenticator, "claim_roles_key", lambda *_: (_ for _ in ()).throw(Exception("roles error"))
+            )
+            with pytest.raises(Exception, match="roles error"):
+                authenticator.modify_auth_state_hook(authenticator, {"access_token": "dummy-token"})
+
+        def test_writes_roles_to_auth_state(self, authenticator, monkeypatch):
+            decoded_token = {"resource_access": {"dummy-client": {"roles": ["swan-admins"]}}}
+            monkeypatch.setattr(authenticator, "_decode_token", lambda *_: decoded_token)
+
+            auth_state = authenticator.modify_auth_state_hook(authenticator, {"access_token": "dummy-token"})
+
+            assert auth_state["roles"] == ["swan-admins"]
+
     class TestAuthenticate:
         def _make_mock_user(self):
-            return {"name": "test-user", "auth_state": {"access_token": "dummy-token"}}
+            return {"name": "test-user", "admin": None, "auth_state": {"access_token": "dummy-token", "roles": []}}
 
         def _patch_super(self, monkeypatch, return_value):
             async def mock_super(self, handler, data=None):
@@ -576,41 +627,10 @@ class TestKeyCloakAuthenticator:
             self._patch_super(monkeypatch, None)
             assert await authenticator.authenticate(None) is None
 
-        async def test_returns_none_when_decode_token_raises(self, authenticator, monkeypatch):
-            self._patch_super(monkeypatch, self._make_mock_user())
-
-            def mock_decode(*_):
-                raise Exception("bad token")
-
-            monkeypatch.setattr(authenticator, "_decode_token", mock_decode)
-            assert await authenticator.authenticate(None) is None
-
-        async def test_returns_none_when_claim_roles_key_raises(self, authenticator, monkeypatch):
-            self._patch_super(monkeypatch, self._make_mock_user())
-            monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
-            monkeypatch.setattr(
-                authenticator, "claim_roles_key", lambda *_: (_ for _ in ()).throw(Exception("roles error"))
-            )
-            assert await authenticator.authenticate(None) is None
-
-        async def test_returns_none_when_user_roles_not_a_set(self, authenticator, monkeypatch):
-            self._patch_super(monkeypatch, self._make_mock_user())
-            monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
-            monkeypatch.setattr(authenticator, "claim_roles_key", lambda *_: ["not", "a", "set"])
-            assert await authenticator.authenticate(None) is None
-
-        async def test_returns_none_when_validate_roles_fails(self, authenticator, monkeypatch):
-            self._patch_super(monkeypatch, self._make_mock_user())
-            monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
-            monkeypatch.setattr(authenticator, "claim_roles_key", lambda *_: {"user-role"})
-            monkeypatch.setattr(authenticator, "_validate_roles", lambda *_: False)
-            assert await authenticator.authenticate(None) is None
-
         async def test_returns_none_when_exchange_tokens_raises(self, authenticator, monkeypatch):
             self._patch_super(monkeypatch, self._make_mock_user())
             monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
             monkeypatch.setattr(authenticator, "claim_roles_key", lambda *_: {"user-role"})
-            monkeypatch.setattr(authenticator, "_validate_roles", lambda *_: True)
 
             async def mock_exchange_tokens(_):
                 raise Exception("exchange failed")
@@ -622,7 +642,6 @@ class TestKeyCloakAuthenticator:
             self._patch_super(monkeypatch, self._make_mock_user())
             monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
             monkeypatch.setattr(authenticator, "claim_roles_key", lambda *_: {"user-role"})
-            monkeypatch.setattr(authenticator, "_validate_roles", lambda *_: True)
 
             async def mock_exchange_tokens(_):
                 return {"service-a": "exchanged"}
@@ -634,20 +653,6 @@ class TestKeyCloakAuthenticator:
             assert result is not None
             assert result["auth_state"]["exchanged_tokens"] == {"service-a": "exchanged"}
             assert not result["admin"]
-
-        async def test_sets_admin_flag_for_admin_role(self, authenticator, monkeypatch):
-            self._patch_super(monkeypatch, self._make_mock_user())
-            monkeypatch.setattr(authenticator, "_decode_token", lambda *_: {})
-            monkeypatch.setattr(authenticator, "claim_roles_key", lambda *_: {"swan-admins"})
-            monkeypatch.setattr(authenticator, "_validate_roles", lambda *_: True)
-
-            async def mock_exchange_tokens(_):
-                return {}
-
-            monkeypatch.setattr(authenticator, "_exchange_tokens", mock_exchange_tokens)
-
-            result = await authenticator.authenticate(None)
-            assert result["admin"]
 
     class TestPreSpawnStart:
         async def test_does_nothing_when_no_hook(self, authenticator):
