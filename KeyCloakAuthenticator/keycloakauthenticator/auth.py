@@ -16,6 +16,7 @@ from oauthenticator.generic import GenericOAuthenticator
 from oauthenticator.oauth2 import OAuthLoginHandler
 from tornado import web
 from tornado.httpclient import HTTPRequest
+from tornado.httputil import url_concat
 from traitlets import Any, Bool, List, TraitError, Unicode, default, validate
 
 from .metrics import (
@@ -64,26 +65,11 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         """,
     )
 
-    # Use list instead of set to allow easy configuration in Helm/Kbernetes yaml files
-    # This gets converted to a set internally
-    allowed_roles = List(
-        Unicode(),
-        default_value=[],
-        config=True,
-        help="List with the roles for which the login will be accepted. If an empty list is given (default) all users are allowed.",
-    )
-
-    admin_role = Unicode(
-        default_value="swan-admins",
-        config=True,
-        help="Users with this role login as jupyterhub administrators",
-    )
-
     pre_spawn_hook = Any(
         allow_none=True,
         config=True,
         help="""
-        Callable to execute before spawning a session. Usefull to inject extra variables, like the oauth tokens
+        Callable to execute before spawning a session. Useful to inject extra variables, like the oauth tokens
         Example::
             def pre_spawn_hook(authenticator, spawner, auth_state):
                 spawner.environment['ACCESS_TOKEN'] = auth_state['exchanged_tokens']['eos-service']
@@ -145,7 +131,10 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
 
         # Force auth state so that we can store the tokens in the user dict
         self.enable_auth_state = True
-        self._allowed_roles = set(self.allowed_roles)
+
+        # Read JupyterHub groups from auth_state["roles"]
+        if self.manage_groups:
+            self.auth_state_groups_key = "roles"
 
         if not self.oidc_issuer:
             raise Exception("No OIDC issuer url provided")
@@ -170,8 +159,10 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
         end_session_url = data.get("end_session_endpoint")
         if self.enable_logout and end_session_url:
             if self.logout_redirect_url:
-                end_session_url += "?post_logout_redirect_uri=%s" % self.logout_redirect_url
-                end_session_url += "&client_id=%s" % self.client_id
+                end_session_url = url_concat(
+                    end_session_url,
+                    {"post_logout_redirect_uri": self.logout_redirect_url, "client_id": self.client_id},
+                )
             # Update parent class OAuthenticator.logout_redirect_url
             self.logout_redirect_url = end_session_url
 
@@ -209,9 +200,6 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                     exc_info=True,
                 )
                 await asyncio.sleep(60)
-
-    def _validate_roles(self, user_roles):
-        return not self._allowed_roles or (self._allowed_roles & user_roles)
 
     def _decode_token(self, token, options=None):
         if options is None:
@@ -330,6 +318,17 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
             self.log.info(f"Refresh token request completed in {time.time() - start} seconds")
             return access_t, refresh_t
 
+    def modify_auth_state_hook(self, authenticator, auth_state):
+        try:
+            decoded_token = self._decode_token(auth_state["access_token"])
+            user_roles = self.claim_roles_key(self, decoded_token)
+            auth_state["roles"] = list(user_roles)
+        except Exception:
+            self.log.exception("Unable to retrieve the roles, denying access.")
+            raise
+
+        return auth_state
+
     async def authenticate(self, handler, data=None):
         with metric_authenticate.time():
             user = await super().authenticate(handler, data=data)
@@ -337,30 +336,13 @@ class KeyCloakAuthenticator(GenericOAuthenticator):
                 return None
 
             try:
-                decoded_token = self._decode_token(user["auth_state"]["access_token"])
-                user_roles = self.claim_roles_key(self, decoded_token)
-                user["auth_state"]["roles"] = list(user_roles)
-            except Exception:
-                self.log.error("Unable to retrieve the roles, denying access.", exc_info=True)
-                return None
-
-            if not isinstance(user_roles, set):
-                self.log.error("User roles is not a 'set', denying access")
-                return None
-
-            if not self._validate_roles(user_roles):
-                self.log.info(f"User '{user['name']}' doesn't have apropriate role to be allowed")
-                return None
-            try:
                 user["auth_state"]["exchanged_tokens"] = await self._exchange_tokens(user["auth_state"]["access_token"])
             except Exception:
                 self.log.error("Failed to exchange tokens during authenticate.", exc_info=True)
                 return None
 
-            user["admin"] = self.admin_role and (self.admin_role in user_roles)
             self.log.info(
-                "Authentication Successful for user: %s, roles: %s, admin: %s"
-                % (user["name"], user_roles, user["admin"])
+                f"Authentication Successful for user: {user['name']}, roles: {user['auth_state']['roles']}, admin: {user['admin']}"
             )
 
             return user
