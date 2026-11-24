@@ -112,6 +112,11 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
             except Exception:
                 self.log.exception("Failed to collect spawn failure logs")
         try:
+            # Log why the pod was stopped (e.g. evicted for exceeding its ephemeral-storage limit)
+            pod = self.pod_reflector.pods.get(f"{self.namespace}/{self.pod_name}") if self.pod_reflector else None
+            status = pod["status"] if pod else {}
+            if status.get("reason"):
+                self.log.warning(f"Pod {self.pod_name} stopped by K8s: {status['reason']}: {status.get('message', '')}")
             await super().stop()
         finally:
             username = self.user.name
