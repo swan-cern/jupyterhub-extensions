@@ -71,9 +71,9 @@ class SwanGPUPodHookHandler(SwanEosPodHookHandler):
         node_affinity = V1NodeAffinity(required_during_scheduling_ignored_during_execution=node_selector)
         self.pod.spec.affinity = V1Affinity(node_affinity=node_affinity)
 
-        # Allow scheduling on Oracle for any user requesting a GPU
+        # Allow scheduling GPU sessions on Liqo virtual nodes
         tolerations = self.pod.spec.tolerations or []
-        tolerations.append(V1Toleration(key="oracle/gpu", operator="Equal", value="true", effect="NoSchedule"))
+        tolerations.append(V1Toleration(key="virtual-node.liqo.io/not-allowed", operator="Exists", effect="NoExecute"))
         self.pod.spec.tolerations = tolerations
 
         if spawner.SWAN_EVENTS_ROLE in spawner.user_roles:
