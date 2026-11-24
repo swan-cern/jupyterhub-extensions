@@ -5,7 +5,7 @@ from math import ceil
 from kubernetes_asyncio.client.rest import ApiException
 from kubernetes_asyncio.config.incluster_config import SERVICE_CERT_FILENAME
 from kubespawner import KubeSpawner
-from traitlets import Dict, Float, Unicode
+from traitlets import Dict, Float
 
 from ._gpuinfo import AvailableGPUs
 from .swanspawner import define_SwanSpawner_from
@@ -40,12 +40,6 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
     accpy = Dict(
         config=True,
         help="URL of the Acc-Py user image.",
-    )
-
-    swan_container_namespace = Unicode(
-        default_value="swan",
-        config=True,
-        help="Namespace SWAN runs in.",
     )
 
     # Constant that sets a role name for participants of SWAN events
@@ -96,7 +90,7 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
             logs = await asyncio.wait_for(
                 self.api.read_namespaced_pod_log(
                     self.pod_name,
-                    self.swan_container_namespace,
+                    self.namespace,
                     container="notebook",
                     tail_lines=tail_lines,
                     timestamps=True,
@@ -121,7 +115,7 @@ class SwanKubeSpawner(define_SwanSpawner_from(KubeSpawner)):
             await super().stop()
         finally:
             username = self.user.name
-            namespace = self.swan_container_namespace
+            namespace = self.namespace
 
             # Delete Kubernetes secret storing EOS kerberos ticket of the user
             # Only needed when EOS is enabled (== local_home is False)

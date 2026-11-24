@@ -42,7 +42,7 @@ class SwanEosPodHookHandler(SwanTNPodHookHandler):
 
     async def _init_eos_secret(self):
         # Get configuration parameters from environment variables
-        swan_container_namespace = self.spawner.swan_container_namespace
+        namespace = self.spawner.namespace
 
         username = escapism.escape(self.spawner.user.name, safe=self.spawner.safe_chars, escape_char="-").lower()
         eos_secret_name = "eos-tokens-%s" % username
@@ -69,7 +69,7 @@ class SwanEosPodHookHandler(SwanTNPodHookHandler):
 
         secret_meta = V1ObjectMeta()
         secret_meta.name = eos_secret_name
-        secret_meta.namespace = swan_container_namespace
+        secret_meta.namespace = namespace
         secret_meta.labels = {"swan_user": username}
         secret_data.metadata = secret_meta
         secret_data.data = {}
@@ -77,11 +77,11 @@ class SwanEosPodHookHandler(SwanTNPodHookHandler):
 
         try:
             # eos-tokens secret is cleaned when user session ends, so try creating it
-            await self.spawner.api.create_namespaced_secret(swan_container_namespace, secret_data)
+            await self.spawner.api.create_namespaced_secret(namespace, secret_data)
         except ApiException:
             # A secret with the same name exists, probably a remnant of a wrongly-terminated session, then replace it
             try:
-                await self.spawner.api.replace_namespaced_secret(eos_secret_name, swan_container_namespace, secret_data)
+                await self.spawner.api.replace_namespaced_secret(eos_secret_name, namespace, secret_data)
             except ApiException as e:
                 raise Exception("Could not create required eos secret: %s\n" % e)
 

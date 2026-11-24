@@ -60,7 +60,7 @@ class SwanSparkCondorPodHookHandler(SwanGPUPodHookHandler):
         Create config for Spark on k8s
         """
 
-        swan_container_namespace = self.spawner.swan_container_namespace
+        namespace = self.spawner.namespace
         username = self.spawner.user.name
         hadoop_secret_name = f"hadoop-tokens-{username}"
 
@@ -86,23 +86,21 @@ class SwanSparkCondorPodHookHandler(SwanGPUPodHookHandler):
             secret_data = V1Secret()
             secret_meta = V1ObjectMeta()
             secret_meta.name = hadoop_secret_name
-            secret_meta.namespace = swan_container_namespace
+            secret_meta.namespace = namespace
             secret_data.metadata = secret_meta
             secret_data.data = {}
             secret_data.data["k8s-user.config"] = k8suser_config_base64
 
             try:
-                await self.spawner.api.read_namespaced_secret(hadoop_secret_name, swan_container_namespace)
+                await self.spawner.api.read_namespaced_secret(hadoop_secret_name, namespace)
                 exists = True
             except ApiException:
                 exists = False
 
             if exists:
-                await self.spawner.api.replace_namespaced_secret(
-                    hadoop_secret_name, swan_container_namespace, secret_data
-                )
+                await self.spawner.api.replace_namespaced_secret(hadoop_secret_name, namespace, secret_data)
             else:
-                await self.spawner.api.create_namespaced_secret(swan_container_namespace, secret_data)
+                await self.spawner.api.create_namespaced_secret(namespace, secret_data)
         except ApiException as e:
             raise RuntimeError("Could not create required hadoop secret") from e
 
@@ -223,7 +221,7 @@ class SwanSparkCondorPodHookHandler(SwanGPUPodHookHandler):
         computing resources.
         """
 
-        swan_container_namespace = self.spawner.swan_container_namespace
+        namespace = self.spawner.namespace
         computing_ports_service = f"computing-ports-{self.spawner.user.name}"
         notebook_container = self._get_pod_container("notebook")
 
@@ -249,15 +247,11 @@ class SwanSparkCondorPodHookHandler(SwanGPUPodHookHandler):
             # Create V1Service which allocates random ports
             try:
                 # use existing if possible
-                service = await self.spawner.api.read_namespaced_service(
-                    computing_ports_service, swan_container_namespace
-                )
+                service = await self.spawner.api.read_namespaced_service(computing_ports_service, namespace)
             except ApiException:
                 # not existing, create
                 try:
-                    service = await self.spawner.api.create_namespaced_service(
-                        swan_container_namespace, service_template
-                    )
+                    service = await self.spawner.api.create_namespaced_service(namespace, service_template)
                 except ApiException as e:
                     raise RuntimeError(
                         "Could not create service that allocates random ports for computing integrations"
@@ -289,9 +283,7 @@ class SwanSparkCondorPodHookHandler(SwanGPUPodHookHandler):
 
                 ports.append(str(node_port))
 
-            await self.spawner.api.replace_namespaced_service(
-                computing_ports_service, swan_container_namespace, service
-            )
+            await self.spawner.api.replace_namespaced_service(computing_ports_service, namespace, service)
 
             # Add ports env for computing integrations
             notebook_container.env = self._add_or_replace_by_name(
