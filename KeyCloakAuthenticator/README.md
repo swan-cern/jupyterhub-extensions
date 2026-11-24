@@ -40,10 +40,12 @@ c.KeyCloakAuthenticator.oidc_issuer = "https://auth.cern.ch/auth/realms/cern"
 
 # If you need to set a different scope, like adding the offline option for longer lived refresh token
 c.KeyCloakAuthenticator.scope = ["profile", "email", "offline_access"]
-# Only allow users with this specific roles (none, to allow all)
-c.KeyCloakAuthenticator.allowed_roles = []
-# Specify the role to set a user as admin
-c.KeyCloakAuthenticator.admin_role = "swan-admin"
+# Sync the roles from Keycloak as JupyterHub groups (required for allowed_groups and admin_groups)
+c.KeyCloakAuthenticator.manage_groups = True
+# Only allow users with these specific roles (or set allow_all = True to allow everyone)
+c.KeyCloakAuthenticator.allowed_groups = {"swan-admins", "swan-qa", "swan-devs"}
+# Specify the roles that make a user admin
+c.KeyCloakAuthenticator.admin_groups = {"swan-admin"}
 
 
 # If you have the roles in a non default place inside the user token, you can retrieve them
