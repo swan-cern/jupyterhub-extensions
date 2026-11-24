@@ -28,6 +28,9 @@ cat << EOF > $REQUEST_BODY_FILE
         "name": "$EOS_TOKENS_SECRET_NAME",
         "labels": {
             "swan_user":"$USER"
+        },
+        "annotations": {
+            "liqo.io/allow-reflection": "true"
         }
     },
     "data": {

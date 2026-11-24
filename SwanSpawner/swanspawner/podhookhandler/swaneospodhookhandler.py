@@ -71,6 +71,8 @@ class SwanEosPodHookHandler(SwanTNPodHookHandler):
         secret_meta.name = eos_secret_name
         secret_meta.namespace = namespace
         secret_meta.labels = {"swan_user": username}
+        # liqo: Only objects with this annotation are reflected to the remote cluster
+        secret_meta.annotations = {"liqo.io/allow-reflection": "true"}
         secret_data.metadata = secret_meta
         secret_data.data = {}
         secret_data.data["krb5cc"] = eos_token_base64
