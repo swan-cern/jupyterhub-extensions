@@ -38,12 +38,6 @@ class SpawnHandlersConfigs(SingletonConfigurable):
         help="True if this SWAN deployment is exposed to the Technical Network.",
     )
 
-    local_home = Bool(
-        default_value=False,
-        config=True,
-        help="If True, a physical directory on the host will be the home and not eos.",
-    )
-
     spawn_error_message = Unicode(
         default_value="Error spawning your session",
         config=True,
