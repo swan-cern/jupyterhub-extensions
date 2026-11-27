@@ -19,7 +19,7 @@ from kubernetes_asyncio.client.models import (
     V1VolumeMount,
 )
 from kubernetes_asyncio.client.rest import ApiException
-from tornado.httpclient import AsyncHTTPClient
+from tornado.httpclient import AsyncHTTPClient, HTTPClientError
 
 from .swantnpodhookhandler import SwanTNPodHookHandler
 
@@ -65,7 +65,7 @@ class SwanEosPodHookHandler(SwanTNPodHookHandler):
             self.spawner.log.info(
                 f"CERNBox home request for {username}: HTTP {response.code} in {response.request_time:.2f}s"
             )
-        except Exception as e:
+        except HTTPClientError as e:
             self.spawner.log.warning(f"CERNBox home request for {username} failed: {e}")
 
     async def _init_eos_secret(self):
