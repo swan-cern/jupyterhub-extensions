@@ -2,6 +2,7 @@ import asyncio
 from subprocess import CalledProcessError
 
 import escapism
+from jupyterhub.utils import url_path_join
 from kubernetes_asyncio.client.models import (
     V1ConfigMapVolumeSource,
     V1Container,
@@ -18,6 +19,7 @@ from kubernetes_asyncio.client.models import (
     V1VolumeMount,
 )
 from kubernetes_asyncio.client.rest import ApiException
+from tornado.httpclient import AsyncHTTPClient, HTTPClientError
 
 from .swantnpodhookhandler import SwanTNPodHookHandler
 
@@ -35,10 +37,36 @@ class SwanEosPodHookHandler(SwanTNPodHookHandler):
         # When eos is enabled, create eos token and side-container for token refresh
         # Note: Spark also requires the side container so Spark is disabled when EOS is disabled.
         if self.spawner.eos_enabled:
+            await self._create_cernbox_home()
             eos_secret_name = await self._init_eos_secret()
             self._init_eos_containers(eos_secret_name)
 
         return self.pod
+
+    async def _create_cernbox_home(self):
+        """
+        CERNBox creates a missing home (first-time users) on an authenticated request.
+        """
+        token = self.spawner.environment.get("CERNBOX_ACCESS_TOKEN")
+        if not token:
+            return
+
+        username = self.spawner.user.name
+        home = self.spawner.eos_path_format.format(username=username)
+        try:
+            response = await AsyncHTTPClient().fetch(
+                url_path_join("https://cernbox.cern.ch/remote.php/webdav", home),
+                method="PROPFIND",
+                headers={"Authorization": f"Bearer {token}", "Depth": "0"},
+                allow_nonstandard_methods=True,
+                follow_redirects=False,
+                request_timeout=10,
+            )
+            self.spawner.log.info(
+                f"CERNBox home request for {username}: HTTP {response.code} in {response.request_time:.2f}s"
+            )
+        except HTTPClientError as e:
+            self.spawner.log.warning(f"CERNBox home request for {username} failed: {e}")
 
     async def _init_eos_secret(self):
         # Get configuration parameters from environment variables
